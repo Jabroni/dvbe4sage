@@ -43,7 +43,7 @@ public class ProcessEPG
 					Transformer channelSerializer = channelsHandler.getTransformer();
 					channelSerializer.setOutputProperty(OutputKeys.ENCODING,"UTF-8");
 					channelSerializer.setOutputProperty(OutputKeys.INDENT, "yes");
-					String channelsXMLPath = System.getenv("ALLUSERSPROFILE") + "\\Application Data\\LM Gestion\\SageTV XMLTV Importer\\channels.xml";
+					String channelsXMLPath = System.getenv("ALLUSERSPROFILE") + "\\Application Data\\LM Gestion\\SageTV XMLTV Importer\\lineups.xml";
 					System.out.println("Writing " + channelsXMLPath + " file!");
 					channelsHandler.setResult(new StreamResult(new FileOutputStream(channelsXMLPath)));
 					
