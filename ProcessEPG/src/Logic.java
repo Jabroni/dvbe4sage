@@ -462,8 +462,47 @@ public class Logic
 		// Start the output document
 		handler.startDocument();
 				
-		// Write the root "channels" element with empty attributes
-		handler.startElement(null, null, "channels", null);
+		// Create attributes list for the root "lineups" node
+		AttributesImpl lineupsAttributes = new AttributesImpl();
+		
+		// Add the "version=2" attribute to the list of attributes
+		lineupsAttributes.addAttribute(null, null, "version", "CDATA", "2");
+		
+		// Write the root "lineups" element with its attributes
+		handler.startElement(null, null, "lineups", lineupsAttributes);
+		
+		// Now create attributes for "lineup" element
+		AttributesImpl lineupAttributes = new AttributesImpl();
+		
+		// Add the "id=1" attribute to the list
+		lineupAttributes.addAttribute(null, null, "id", "CDATA", "1");
+		
+		// Add the "Name=Yes" attribute to the list
+		lineupAttributes.addAttribute(null, null, "name", "CDATA", "Yes");
+		
+		// Add the "Country=ISR" attribute to the list
+		lineupAttributes.addAttribute(null, null, "country", "CDATA", "ISR");
+		
+		// Add the "Region=" attribute to the list
+		lineupAttributes.addAttribute(null, null, "region", "CDATA", "");
+		
+		// Add the "Provider=YES" attribute to the list
+		lineupAttributes.addAttribute(null, null, "provider", "CDATA", "YES");
+		
+		// Add the "tv-standard=DVB" attribute to the list
+		lineupAttributes.addAttribute(null, null, "tv-standard", "CDATA", "DVB");
+		
+		// Add the "tv-source=Satellite" attribute to the list
+		lineupAttributes.addAttribute(null, null, "ts-source", "CDATA", "Satellite");
+		
+		// Add the "set-top-box=false" attribute to the list
+		lineupAttributes.addAttribute(null, null, "set-top-box", "CDATA", "false");
+		
+		// Add the "private=false" attribute to the list
+		lineupAttributes.addAttribute(null, null, "private", "CDATA", "false");
+		
+		// Write the single "lineup" element with its attributes
+		handler.startElement(null, null, "lineup", lineupAttributes);
 		
 		// Now, output the channels
 		Iterator<Channel> channels = allChannels.values().iterator();
@@ -487,11 +526,14 @@ public class Logic
 			// Add the "call-sign" attribute
 			attributes.addAttribute(null, null, "call-sign", "CDATA", name);
 			
-			// Add the "channel" attribute
-			attributes.addAttribute(null, null, "channel", "CDATA", Integer.toString(channel.getNumber()));
+			// Add the "number" attribute
+			attributes.addAttribute(null, null, "number", "CDATA", Integer.toString(channel.getNumber()));
 			
-			// Add the "lineup" attribute
-			attributes.addAttribute(null, null, "lineup", "CDATA", "1");
+			// Add the "time-offset" attribute
+			attributes.addAttribute(null, null, "time-offset", "CDATA", "0");
+			
+			// Add the "xmltv-id" attribute
+			attributes.addAttribute(null, null, "xmltv-id", "CDATA", Integer.toString(channel.getNumber()));
 			
 			// And write the "channel" tag
 			handler.startElement(null, null, "channel", attributes);
@@ -500,8 +542,11 @@ public class Logic
 			handler.endElement(null, null, "channel");
 		}
 		
-		// Close the "channels" element
-		handler.endElement(null, null, "channels");
+		// Close the "lineup" element
+		handler.endElement(null, null, "lineup");
+		
+		// Close the "lineups" element
+		handler.endElement(null, null, "lineups");
 		
 		// End the output document
 		handler.endDocument();
