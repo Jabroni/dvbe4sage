@@ -25,7 +25,7 @@ public class Logic
 		offset = Math.abs(offset);
 		DecimalFormat myFormat = new DecimalFormat("00");
 		return Integer.toString(time.get(Calendar.YEAR)) + 
-			   myFormat.format(time.get(Calendar.MONTH)) +
+			   myFormat.format(time.get(Calendar.MONTH) + 1) +
 			   myFormat.format(time.get(Calendar.DAY_OF_MONTH)) +
 			   myFormat.format(time.get(Calendar.HOUR_OF_DAY)) +
 			   myFormat.format(time.get(Calendar.MINUTE)) +
