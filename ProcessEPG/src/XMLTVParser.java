@@ -21,7 +21,7 @@ public class XMLTVParser extends DefaultHandler
 	{
 		Calendar result = Calendar.getInstance(TimeZone.getTimeZone("GMT" + dateTime.substring(15, 20)));
 		result.set(Integer.parseInt(dateTime.substring(0, 4)),
-				   Integer.parseInt(dateTime.substring(4, 6)),
+				   Integer.parseInt(dateTime.substring(4, 6)) - 1,
 				   Integer.parseInt(dateTime.substring(6, 8)),
 				   Integer.parseInt(dateTime.substring(8, 10)),
 				   Integer.parseInt(dateTime.substring(10, 12)),
