@@ -1031,6 +1031,96 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	// Boil out if no PAT packets have been found so far
 	//else if(!m_FoundPATPacket)
 	//	return;
+
+	// Fix PMT
+	if(pid == m_PmtPid)
+	{
+		// Copy the packet
+		BYTE copyPacket[TS_PACKET_LEN];
+		memcpy(copyPacket, currentPacket, TS_PACKET_LEN);
+
+		// Find the pointer byte - should be the first one after the TS header
+		BYTE pointer = currentPacket[TS_LEN];
+
+		// Now, find the beginning of the PMT table
+		pmt_t* const pmt = (pmt_t* const)(copyPacket + TS_LEN + 1 + pointer);
+
+		// And get the remaining length of the table
+		int remainingLength = HILO(pmt->section_length);
+
+		// Adjust input buffer pointer
+		const BYTE* inputBuffer = (const BYTE*)pmt + PMT_LEN;
+
+		// Remove CRC and prefix
+		remainingLength -= CRC_LENGTH + PMT_LEN - 3;
+
+		// Skip program info, if present
+		const USHORT programInfoLength = HILO(pmt->program_info_length);
+		inputBuffer += programInfoLength;
+		remainingLength -= programInfoLength;
+
+		// Save the inputBuffer and the remaining length
+		const BYTE* const saveInputBuffer = inputBuffer;
+		const int saveRemainingLength = remainingLength;
+
+		// Adjust the output buffer pointer
+		BYTE* outputBuffer = currentPacket + (saveInputBuffer - copyPacket);
+
+		// Loop through the stream infor 4 times
+		for(int i = 0; i < 4; i++)
+		{
+			// Restore the input buffer and the remaining length
+			inputBuffer = saveInputBuffer;
+			remainingLength = saveRemainingLength;
+
+			// For each stream descriptor do
+			while(remainingLength != 0)
+			{
+				// Get stream info
+				const pmt_info_t* const streamInfo = (const pmt_info_t* const)inputBuffer;
+
+				// Get ES info length
+				USHORT ESInfoLength = HILO(streamInfo->ES_info_length);
+
+				// Copy flag is initially false
+				bool copy = false;
+
+				// Now, depending on the pass
+				switch(i)
+				{
+					// We take care of the video first
+					case 0:
+						copy = (streamInfo->stream_type == 2 || streamInfo->stream_type == 1);
+						break;
+					// Here we take care of the audio in the right language
+					case 1:
+						copy = (streamInfo->stream_type == 4 || streamInfo->stream_type == 3);
+						break;
+					// Here we take care of all other audio streams
+					case 2:
+						break;
+					// Here we take care of all other streams
+					default:
+						copy = (streamInfo->stream_type != 2 && streamInfo->stream_type != 3 && streamInfo->stream_type != 4);
+						break;
+				}
+
+				// If needed, copy the info
+				if(copy)
+				//if(i == 0)
+				{
+					memcpy(outputBuffer, inputBuffer, PMT_INFO_LEN + ESInfoLength);
+					outputBuffer += PMT_INFO_LEN + ESInfoLength;
+				}
+
+				// Go to next ES info
+				inputBuffer += PMT_INFO_LEN + ESInfoLength;
+				remainingLength -= PMT_INFO_LEN + ESInfoLength;
+			}
+		}
+		// Calculate the new CRC and put it there
+		*(long*)outputBuffer = htonl(_dvb_crc32(currentPacket + TS_LEN + 1 + pointer, HILO(pmt->section_length)  - 1));
+	}
 	
 	// If this is an ES PID
 	if(m_IsESPid[pid])
