@@ -20,7 +20,9 @@ Configuration::Configuration() :
 	m_TSPacketsPerOutputBuffer(GetPrivateProfileInt(TEXT("Output"), TEXT("TSPacketsPerOutputBuffer"), 160000, INI_FILE_NAME)),
 	m_TSPacketsOutputThreshold(GetPrivateProfileInt(TEXT("Output"), TEXT("TSPacketsOutputThreshold"), 70, INI_FILE_NAME)),
 	m_DisableWriteBuffering(GetPrivateProfileInt(TEXT("Output"), TEXT("DisableWriteBuffering"), 0, INI_FILE_NAME) == 0 ? false : true),
-	m_ListeningPort((USHORT)GetPrivateProfileInt(TEXT("Encoder"), TEXT("ListeningPort"), 6969, INI_FILE_NAME))
+	m_ListeningPort((USHORT)GetPrivateProfileInt(TEXT("Encoder"), TEXT("ListeningPort"), 6969, INI_FILE_NAME)),
+	m_PATDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Recording"), TEXT("PATDilutionFactor"), 1, INI_FILE_NAME)),
+	m_PMTDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Recording"), TEXT("PMTDilutionFactor"), 1, INI_FILE_NAME))
 {	
 	// Buffer
 	TCHAR buffer[1024];
@@ -51,4 +53,8 @@ Configuration::Configuration() :
 	// Get DECSA.dll name
 	GetPrivateProfileString(TEXT("General"), TEXT("DECSADllName"), TEXT("FFDeCSA_64_MMX.dll"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
 	m_DECSADllName = buffer;
+
+	// Get the preferred audio language
+	GetPrivateProfileString(TEXT("Recording"), TEXT("PreferredAudioLanguage"), TEXT("eng"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
+	m_PreferredAudioLanguage = buffer;
 }

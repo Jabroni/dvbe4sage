@@ -26,6 +26,9 @@ class Configuration
 	hash_set<int>				m_DVBS2Tuners;
 	string						m_DECSADllName;
 	const bool					m_DisableWriteBuffering;
+	string						m_PreferredAudioLanguage;
+	const USHORT				m_PATDilutionFactor;
+	const USHORT				m_PMTDilutionFactor;
 public:
 	Configuration();
 	
@@ -50,6 +53,9 @@ public:
 	USHORT getNumberOfVirtualTuners() const			{ return m_NumberOfVirtualTuners; }
 	LPCTSTR getDECSADllName() const					{ return m_DECSADllName.c_str(); }
 	bool getDisableWriteBuffering() const			{ return m_DisableWriteBuffering; }
+	LPCTSTR getPrefferedAudioLanguage() const		{ return m_PreferredAudioLanguage.c_str(); }
+	USHORT getPATDilutionFactor() const				{ return m_PATDilutionFactor; }
+	USHORT getPMTDilutionFactor() const				{ return m_PMTDilutionFactor; }
 };
 
 extern Configuration g_Configuration;

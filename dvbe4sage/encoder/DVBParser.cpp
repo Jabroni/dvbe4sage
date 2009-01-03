@@ -305,7 +305,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 				// Make sure the remainder is just stuffing '\xFF' bytes
 				for(int i = lengthToCopy; i < remainingLength; i++)
 					if(inputBuffer[i] != (BYTE)'\xFF' && inputBuffer[i] != (BYTE)'\0')
-						g_Logger.log(2, true, TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
+						g_Logger.log(3, true, TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
 			}
 		}
 }
@@ -1001,9 +1001,19 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	// Copy the contents of the current input buffer
 	memcpy(currentPacket, (BYTE*)packet, TS_PACKET_LEN);
 
-	// Fix PAT
+	// Skip or fix PAT
 	if(pid == 0)
 	{
+		// First, determine if we need to skip this packet
+		// See if we reach the right packet to round it up
+		m_PATCounter %= g_Configuration.getPATDilutionFactor();
+		// If the counter is not 0, increment it and boil out
+		if(m_PATCounter++ != 0)
+			return;
+		// Now, adjust the continuity counter
+		((ts_t* const)currentPacket)->continuity_counter = m_PATContinuityCounter;
+		m_PATContinuityCounter = (m_PATContinuityCounter + 1) % 16;
+
 		// Find the pointer byte - should be the first one after the TS header
 		BYTE pointer = currentPacket[TS_LEN];
 		// Now, find the beginning of the PAT table
@@ -1035,6 +1045,16 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	// Fix PMT
 	if(pid == m_PmtPid)
 	{
+		// First, determine if we need to skip this packet
+		// See if we reach the right packet to round it up
+		m_PMTCounter %= g_Configuration.getPMTDilutionFactor();
+		// If the counter is not 0, increment it and boil out
+		if(m_PMTCounter++ != 0)
+			return;
+		// Now, adjust the continuity counter
+		((ts_t* const)currentPacket)->continuity_counter = m_PMTContinuityCounter;
+		m_PMTContinuityCounter = (m_PMTContinuityCounter + 1) % 16;
+
 		// Copy the packet
 		BYTE copyPacket[TS_PACKET_LEN];
 		memcpy(copyPacket, currentPacket, TS_PACKET_LEN);
@@ -1094,10 +1114,17 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 						break;
 					// Here we take care of the audio in the right language
 					case 1:
-						copy = (streamInfo->stream_type == 4 || streamInfo->stream_type == 3);
+						copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
+										matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
+										ESInfoLength,
+										g_Configuration.getPrefferedAudioLanguage()));
 						break;
 					// Here we take care of all other audio streams
 					case 2:
+						copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
+										!matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
+										ESInfoLength,
+										g_Configuration.getPrefferedAudioLanguage()));
 						break;
 					// Here we take care of all other streams
 					default:
@@ -1242,7 +1269,11 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_IsEncrypted(false),
 	m_FileLength((__int64)0),
 	m_MaxFileLength(maxFileLength),
-	m_CurrentPosition(0)
+	m_CurrentPosition(0),
+	m_PATCounter(0),
+	m_PATContinuityCounter(0),
+	m_PMTCounter(0),
+	m_PMTContinuityCounter(0)
 {
 	// Make sure last ECM packet is zeroed out
 	ZeroMemory(m_LastECMPacket, sizeof(m_LastECMPacket));
@@ -1379,4 +1410,20 @@ void ESCAParser::setESPid(USHORT pid,
 	// If one of the PIDs is not ES, consider it encrypted
 	if(!isESPid)
 		m_IsEncrypted = true;
+}
+
+bool ESCAParser::matchAudioLanguage(const BYTE* const buffer,
+									const int bufferLength,
+									LPCTSTR language)
+{
+	int langLen = strlen(language);
+	for(int i = 0; i <= bufferLength - langLen; i++)
+	{
+		bool stop = false;
+		for(int j = 0; !stop && j < langLen; j++)
+			stop = (buffer[i + j] != language[j]);
+		if(!stop)
+			return true;
+	}
+	return false;
 }

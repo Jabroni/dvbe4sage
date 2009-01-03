@@ -159,8 +159,17 @@ private:
 	const USHORT			m_Sid;								// SID of the program being recorded
 	const USHORT			m_PmtPid;							// PID of PMT of the program being recorded
 
+	// Different dilution stuff
+	USHORT					m_PATCounter;						// Running PAT packet counter
+	USHORT					m_PATContinuityCounter;				// Current PAT continuity counter
+	USHORT					m_PMTCounter;						// Running PMT packet counter
+	USHORT					m_PMTContinuityCounter;				// Current PMT continuity counter
+
 	// Internal write method to handle cyclic buffers
 	int write(int bytesToWrite);
+
+	// Check audio language in ES descriptor
+	static bool matchAudioLanguage(const BYTE* const buffer, const int bufferLength, LPCTSTR language);
 
 	// Default and copy constructors are disallowed
 	ESCAParser();
