@@ -12,6 +12,7 @@
 #include "recorder.h"
 #include "configuration.h"
 #include "virtualtuner.h"
+#include "misc.h"
 
 Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pPluginsHandler(NULL),
@@ -351,7 +352,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, %s=%d, Transponder Autodiscovery=FALSE, Duration=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%c, Modulation=%s, FEC=%s\n"),
 			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), useSid ? TEXT("SID") : TEXT("Channel"), channel, duration,
 			frequency, symbolRate, polarization == BDA_POLARISATION_LINEAR_V ? 'V' : 'H',
-			modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), fecRate == BDA_BCC_RATE_2_3 ? TEXT("2/3") : TEXT("3/4"));
+			modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), printableFEC(fecRate));
 
 	// If we found the tuner
 	if(tuner != NULL)

@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "Configuration.h"
+#include "misc.h"
 
 Configuration g_Configuration;
 
@@ -48,7 +49,7 @@ Configuration::Configuration() :
 
 	// Get the initial FEC setting
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialFEC"), TEXT("3/4"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
-	m_InitialFEC = buffer[0] == TCHAR('3') ? BDA_BCC_RATE_3_4 : BDA_BCC_RATE_2_3;
+	m_InitialFEC = getFECFromString(buffer);
 
 	// Get DECSA.dll name
 	GetPrivateProfileString(TEXT("General"), TEXT("DECSADllName"), TEXT("FFDeCSA_64_MMX.dll"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);

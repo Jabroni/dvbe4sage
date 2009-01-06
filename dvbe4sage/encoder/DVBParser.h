@@ -78,6 +78,7 @@ private:
 	hash_map<USHORT, Service>			m_Services;			// SID to Service descriptor map
 	hash_map<USHORT, USHORT>			m_Channels;			// Channel number to SID map
 	hash_map<USHORT, USHORT>			m_PMTPids;			// SID to PMT PID map
+	hash_map<USHORT, USHORT>			m_CATypeForSid;		// SID to CA type map
 	hash_map<USHORT, hash_set<USHORT>>	m_ESPidsForSid;		// SID to ES PIDs map
 	hash_map<USHORT, hash_set<USHORT>>	m_CAPidsForSid;		// SID to CA PIDs map
 	hash_map<USHORT, SectionBuffer>		m_BufferForPid;		// PID to Table map
@@ -94,11 +95,12 @@ public:
 	PSIParser(DVBParser* const pParent) : m_CurrentTid(0), m_pParent(pParent), m_AllowParsing(true) {}
 
 	// Query methods
-	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid);
-	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids);
-	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids);
-	bool getSidForChannel(USHORT channel, USHORT& sid);
-	bool getTransponderForSid(USHORT sid, Transponder& transponder);
+	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const;
+	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids) const;
+	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const;
+	bool getSidForChannel(USHORT channel, USHORT& sid) const;
+	bool getTransponderForSid(USHORT sid, Transponder& transponder) const;
+	USHORT getCATypeForSid(USHORT sid) const;
 
 	// Clear method
 	void clear();
@@ -158,6 +160,7 @@ private:
 	hash_map<USHORT, bool>	m_IsESPid;							// PID to bool map, true for ES, false for CA
 	const USHORT			m_Sid;								// SID of the program being recorded
 	const USHORT			m_PmtPid;							// PID of PMT of the program being recorded
+	const USHORT			m_CAType;							// CA type of the program being recorded
 
 	// Different dilution stuff
 	USHORT					m_PATCounter;						// Running PAT packet counter
@@ -177,7 +180,7 @@ private:
 
 public:
 	// The only valid constructor
-	ESCAParser(Recorder* const pRecorder, FILE* const pFile, PluginsHandler* const pPluginsHandler, USHORT sid, USHORT pmtPid, __int64 maxFileLength);
+	ESCAParser(Recorder* const pRecorder, FILE* const pFile, PluginsHandler* const pPluginsHandler, USHORT sid, USHORT pmtPid, USHORT caType, __int64 maxFileLength);
 
 	// Destructor
 	virtual ~ESCAParser();
@@ -238,11 +241,12 @@ public:
 	void parseTSStream(const BYTE* inputBuffer, int inputBufferLength);	
 
 	// Query methods - delegated to the internal PSI parser
-	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid)				{ return m_PSIParser.getPMTPidForSid(sid, pmtPid); }
-	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids)		{ return m_PSIParser.getESPidsForSid(sid, esPids); }
-	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids)		{ return m_PSIParser.getCAPidsForSid(sid, caPids); }
-	bool getSidForChannel(USHORT channel, USHORT& sid)				{ return m_PSIParser.getSidForChannel(channel, sid); }
-	bool getTransponderForSid(USHORT sid, Transponder& transponder)	{ return m_PSIParser.getTransponderForSid(sid, transponder); }
+	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const					{ return m_PSIParser.getPMTPidForSid(sid, pmtPid); }
+	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids) const		{ return m_PSIParser.getESPidsForSid(sid, esPids); }
+	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const		{ return m_PSIParser.getCAPidsForSid(sid, caPids); }
+	bool getSidForChannel(USHORT channel, USHORT& sid) const				{ return m_PSIParser.getSidForChannel(channel, sid); }
+	bool getTransponderForSid(USHORT sid, Transponder& transponder) const	{ return m_PSIParser.getTransponderForSid(sid, transponder); }
+	USHORT getCATypeForSid(USHORT sid) const								{ return m_PSIParser.getCATypeForSid(sid); }
 
 	// Lock and unlock
 	void lock();

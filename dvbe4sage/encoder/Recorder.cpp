@@ -225,7 +225,7 @@ bool Recorder::changeState()
 						if(pParser->getCAPidsForSid(m_Sid, caPids))
 						{
 							// Create the parser
-							m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, m_Size);
+							m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, pParser->getCATypeForSid(m_Sid), m_Size);
 							// Assign recorder's parser to PAT PID
 							pParser->assignParserToPid(0, m_pParser);
 							m_pParser->setESPid(0, true);

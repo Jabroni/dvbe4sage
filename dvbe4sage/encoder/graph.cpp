@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <tchar.h>
 #include "Logger.h"
+#include "misc.h"
 
 // Constructor, initializes member variables
 // and calls InitializeGraphBuilder
@@ -1202,7 +1203,7 @@ bool CBDAFilterGraph::tuneChannel(int channelNumber,
 
 				g_Logger.log(0, true, TEXT("Autotuning on tuner=\"%s\", Ordinal=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%c, Modulation=%s, FEC=%s\n"),
 					getTunerName(), getTunerOrdinal(), m_ulCarrierFrequency, m_ulSymbolRate, m_SignalPolarisation == BDA_POLARISATION_LINEAR_V ? 'V' : 'H',
-					m_Modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), m_FECRate == BDA_BCC_RATE_2_3 ? TEXT("2/3") : TEXT("3/4"));
+					m_Modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), printableFEC(m_FECRate));
 
 				ChangeSetting();
 

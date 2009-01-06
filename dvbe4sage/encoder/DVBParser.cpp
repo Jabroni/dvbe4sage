@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "Recorder.h"
 #include "configuration.h"
+#include "misc.h"
 
 // Define constants
 #define	CRC_LENGTH			4
@@ -418,11 +419,8 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			if(descriptor->descriptor_tag == '\x09')
 			{
 				const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
-				// Get the CA type
-				USHORT caType = HILO(caDescriptor->CA_type);
-				// +++++++++++++++++ Make sure it's NDS Videoguard
-				if(caType != 0x90C && caType != 0x90D)
-					g_Logger.log(0, true, TEXT("Wrong CA type %hX!\n"), caType);
+				// Put the CA type into the map
+				m_CATypeForSid[programNumber] = HILO(caDescriptor->CA_type);
 				// Add the ECM pid
 				m_CAPidsForSid[programNumber].insert(HILO(caDescriptor->CA_PID));
 				// Add hardcoded EMM PID for YES
@@ -583,12 +581,8 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 						}
 						break;
 					}
-					case 0x5F:
-					case 0xCC:
-						// I currently don't know what to do with these codes
-						break;
 					default:
-						g_Logger.log(2, true, TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
+						g_Logger.log(3, true, TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
 										(UINT)genericDescriptor->descriptor_tag); 
 						break;
 				}
@@ -650,10 +644,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 				g_Logger.log(3, true, TEXT("### Found bouquet with name %s\n"), bouquetName.c_str());
 				break;
 			}
-			case 0x5C:
-				break;
 			default:
-				g_Logger.log(2, true, TEXT("!!! Unknown bouquet descriptor, type=%02X\n"), (UINT)bouquetDescriptor->descriptor_tag); 
+				g_Logger.log(3, true, TEXT("!!! Unknown bouquet descriptor, type=%02X\n"), (UINT)bouquetDescriptor->descriptor_tag); 
 				break;
 		}
 		// Adjust input buffer pointer
@@ -853,7 +845,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					// Get the modulation type
 					transponder.modulation = satDescriptor->modulationtype == 1 ? BDA_MOD_QPSK : BDA_MOD_8VSB;
 					// Get the FEC rate
-					transponder.fec = satDescriptor->fec_inner == 3 ? BDA_BCC_RATE_3_4 : BDA_BCC_RATE_2_3;
+					transponder.fec = getFECFromDescriptor(satDescriptor->fec_inner);
 					// Get the polarization
 					transponder.polarization = satDescriptor->polarization == 0 ? BDA_POLARISATION_LINEAR_H : BDA_POLARISATION_LINEAR_V;
 					
@@ -864,7 +856,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 						m_Transponders[tid] = transponder;
 						g_Logger.log(2, true, TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%c, Modulation=%s, FEC=%s\n"),
 							tid, transponder.frequency, transponder.symbolRate, transponder.polarization == BDA_POLARISATION_LINEAR_H ? CHAR('H') : CHAR('V'),
-							transponder.modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), transponder.fec == BDA_BCC_RATE_3_4 ? TEXT("3/4") : TEXT("2/3"));
+							transponder.modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), printableFEC(transponder.fec));
 					}
 					break;
 				}
@@ -898,7 +890,7 @@ void PSIParser::parseUnknownTable(const pat_t* const table,
 
 // Query methods
 bool PSIParser::getPMTPidForSid(USHORT sid,
-								USHORT& pmtPid)
+								USHORT& pmtPid) const
 {
 	hash_map<USHORT, USHORT>::const_iterator it = m_PMTPids.find(sid);
 	if(it != m_PMTPids.end())
@@ -911,7 +903,7 @@ bool PSIParser::getPMTPidForSid(USHORT sid,
 }
 
 bool PSIParser::getESPidsForSid(USHORT sid,
-								hash_set<USHORT>& esPids)
+								hash_set<USHORT>& esPids) const
 {
 	hash_map<USHORT, hash_set<USHORT>>::const_iterator it = m_ESPidsForSid.find(sid);
 	if(it != m_ESPidsForSid.end())
@@ -924,7 +916,7 @@ bool PSIParser::getESPidsForSid(USHORT sid,
 }
 
 bool PSIParser::getCAPidsForSid(USHORT sid,
-								hash_set<USHORT>& caPids)
+								hash_set<USHORT>& caPids) const
 {
 	hash_map<USHORT, hash_set<USHORT>>::const_iterator it = m_CAPidsForSid.find(sid);
 	if(it != m_CAPidsForSid.end())
@@ -937,7 +929,7 @@ bool PSIParser::getCAPidsForSid(USHORT sid,
 }
 
 bool PSIParser::getSidForChannel(USHORT channel,
-								 USHORT& sid)
+								 USHORT& sid) const
 {
 	hash_map<USHORT, USHORT>::const_iterator it = m_Channels.find(channel);
 	if(it != m_Channels.end())
@@ -950,7 +942,7 @@ bool PSIParser::getSidForChannel(USHORT channel,
 }
 
 bool PSIParser::getTransponderForSid(USHORT sid,
-									 Transponder& transponder)
+									 Transponder& transponder) const
 {
 	hash_map<USHORT, Service>::const_iterator it1 = m_Services.find(sid);
 	if(it1 != m_Services.end())
@@ -967,6 +959,15 @@ bool PSIParser::getTransponderForSid(USHORT sid,
 	}
 	else
 		return false;
+}
+
+USHORT PSIParser::getCATypeForSid(USHORT sid) const
+{
+	hash_map<USHORT, USHORT>::const_iterator it = m_CATypeForSid.find(sid);
+	if(it != m_CATypeForSid.end())
+		return it->second;
+	else
+		return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1165,7 +1166,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 	if(m_pPluginsHandler != NULL)
 	{
 		// EMM packets go directly to the plugins
-		if(caPid == 0xC0)
+		if(caPid == g_Configuration.getEMMPid())
 		{
 //#define _FOR_JOKER
 #ifdef _FOR_JOKER
@@ -1184,7 +1185,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 //				emmFile = NULL;
 //			}
 #endif //_FOR_JOKER
-			m_pPluginsHandler->putCAPacket(this, false, 0x90C, m_Sid, caPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, false, m_CAType, m_Sid, caPid, currentPacket + 4);
 		}
 		// For ECM packets, see if the content is new
 		else if(memcmp(m_LastECMPacket, currentPacket + 4, PACKET_SIZE) != 0)
@@ -1194,7 +1195,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			// Purge the pending packets immediately using the old key
 			decryptAndWritePending(true);
 			// And send to the plugins
-			m_pPluginsHandler->putCAPacket(this, true, 0x90C, m_Sid, caPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, true, m_CAType, m_Sid, caPid, currentPacket + 4);
 		}
 	}
 }
@@ -1251,6 +1252,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 					   PluginsHandler* const pPluginsHandler,
 					   USHORT sid,
 					   USHORT pmtPid,
+					   USHORT caType,
 					   __int64 maxFileLength) :
 	m_HasOddKey(false),
 	m_HasEvenKey(false),
@@ -1262,6 +1264,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_DeferWriting(true),
 	m_Sid(sid),
 	m_PmtPid(pmtPid),
+	m_CAType(caType),
 	m_FoundPATPacket(false),
 	m_ExitWorkerThread(false),
 	m_pRecorder(pRecorder),

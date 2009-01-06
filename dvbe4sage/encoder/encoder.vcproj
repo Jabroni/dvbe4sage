@@ -247,6 +247,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\misc.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\pluginshandler.cpp"
 				>
 			</File>
@@ -326,6 +330,10 @@
 			</File>
 			<File
 				RelativePath=".\mdapi.h"
+				>
+			</File>
+			<File
+				RelativePath=".\misc.h"
 				>
 			</File>
 			<File
