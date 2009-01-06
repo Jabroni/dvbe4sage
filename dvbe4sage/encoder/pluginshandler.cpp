@@ -304,6 +304,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 								 const hash_set<USHORT>& caids,
 								 USHORT sid,
 								 USHORT caPid,
+								 USHORT emmPid,
 								 const BYTE* const currentPacket)
 {
 	// Do this in critical section
@@ -320,16 +321,14 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	currentClient.caids = caids;
 	currentClient.caller = caller;
 	currentClient.sid = sid;
+	currentClient.emmPid = emmPid;
 	if(isEcmPacket)
 	{
 		g_Logger.log(2, true, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
 		currentClient.ecmPid = caPid;
 	}
 	else
-	{
-		currentClient.emmPid = caPid;
 		g_Logger.log(3, true, TEXT("A new EMM packet for SID=%hu received and put to the queue\n"), sid);
-	}
 	
 	// Make a new request
 	Request request;
@@ -461,7 +460,7 @@ void PluginsHandler::processECMPacketQueue()
 						tp.CA[i].dwProviderId = *it;
 						tp.CA[i].wCA_Type = *it;
 						tp.CA[i].wECM = m_pCurrentClient->ecmPid;
-						tp.CA[i].wEMM = g_Configuration.getEMMPid();
+						tp.CA[i].wEMM = m_pCurrentClient->emmPid;
 					}
 					tp.wCACount = (WORD)i;
 					tp.wSID = m_pCurrentClient->sid;

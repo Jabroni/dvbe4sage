@@ -81,7 +81,7 @@ public:
 	// Window procedure for handling messages
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 	// CA packets handler
-	void putCAPacket(ESCAParser* caller, bool isEcmPacket, const hash_set<USHORT>& caids, USHORT sid, USHORT caPid, const BYTE* const currentPacket);
+	void putCAPacket(ESCAParser* caller, bool isEcmPacket, const hash_set<USHORT>& caids, USHORT sid, USHORT caPid, USHORT emmPid, const BYTE* const currentPacket);
 	// Routine processing packet queue
 	void processECMPacketQueue();
 	// Remove obsolete caller

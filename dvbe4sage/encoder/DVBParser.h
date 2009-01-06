@@ -69,8 +69,9 @@ private:
 	void parsePATTable(const pat_t* const table, int remainingLength, bool& abandonPacket);
 	void parsePMTTable(const pmt_t* const table, int remainingLength);
 	void parseSDTTable(const sdt_t* const table, int remainingLength);
-	void parseBATTable(const nit_t* const table,  int remainingLength);
-	void parseNITTable(const nit_t* const table,  int remainingLength);
+	void parseBATTable(const nit_t* const table, int remainingLength);
+	void parseNITTable(const nit_t* const table, int remainingLength);
+	void parseCATTable(const cat_t* const table, int remainingLength);
 	void parseUnknownTable(const pat_t* const table, const int remainingLength) const;
 
 	// Other important data
@@ -83,6 +84,7 @@ private:
 	hash_map<USHORT, hash_set<USHORT>>	m_CAPidsForSid;		// SID to CA PIDs map
 	hash_map<USHORT, SectionBuffer>		m_BufferForPid;		// PID to Table map
 	USHORT								m_CurrentTid;		// Current transponder ID
+	USHORT								m_EMMPid;			// EMM PID
 	DVBParser* const					m_pParent;			// Parent stream parser objects
 	bool								m_AllowParsing;		// Becomes false before stopping the graph
 	time_t								m_TimeStamp;		// Last update time stamp
@@ -93,7 +95,7 @@ private:
 
 public:
 	// Constructor
-	PSIParser(DVBParser* const pParent) : m_CurrentTid(0), m_pParent(pParent), m_AllowParsing(true) { time(&m_TimeStamp); }
+	PSIParser(DVBParser* const pParent) : m_CurrentTid(0), m_pParent(pParent), m_AllowParsing(true), m_EMMPid(0) { time(&m_TimeStamp); }
 
 	// Query methods
 	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const;
@@ -103,6 +105,7 @@ public:
 	bool getTransponderForSid(USHORT sid, Transponder& transponder) const;
 	bool getCATypesForSid(USHORT sid, hash_set<USHORT>& caTypes) const;
 	time_t getTimeStamp() const		{ return m_TimeStamp; }
+	USHORT getEMMPid() const		{ return m_EMMPid; }
 
 	// Clear method
 	void clear();
@@ -163,6 +166,7 @@ private:
 	const USHORT			m_Sid;								// SID of the program being recorded
 	const USHORT			m_PmtPid;							// PID of PMT of the program being recorded
 	const hash_set<USHORT>	m_CATypes;							// CA type of the program being recorded
+	const USHORT			m_EMMPid;							// EMM PID
 
 	// Different dilution stuff
 	USHORT					m_PATCounter;						// Running PAT packet counter
@@ -182,7 +186,7 @@ private:
 
 public:
 	// The only valid constructor
-	ESCAParser(Recorder* const pRecorder, FILE* const pFile, PluginsHandler* const pPluginsHandler, USHORT sid, USHORT pmtPid, const hash_set<USHORT>& caTypes, __int64 maxFileLength);
+	ESCAParser(Recorder* const pRecorder, FILE* const pFile, PluginsHandler* const pPluginsHandler, USHORT sid, USHORT pmtPid, const hash_set<USHORT>& caTypes, USHORT emmPid, __int64 maxFileLength);
 
 	// Destructor
 	virtual ~ESCAParser();
@@ -250,6 +254,7 @@ public:
 	bool getTransponderForSid(USHORT sid, Transponder& transponder) const	{ return m_PSIParser.getTransponderForSid(sid, transponder); }
 	bool getCATypesForSid(USHORT sid, hash_set<USHORT>& caTypes) const		{ return m_PSIParser.getCATypesForSid(sid, caTypes); }
 	time_t getTimeStamp() const												{ return m_PSIParser.getTimeStamp(); }
+	USHORT getEMMPid() const												{ return m_PSIParser.getEMMPid(); }
 
 	// Lock and unlock
 	void lock();

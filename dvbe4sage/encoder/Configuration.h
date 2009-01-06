@@ -19,7 +19,6 @@ class Configuration
 	ModulationType				m_InitialModulation;
 	BinaryConvolutionCodeRate	m_InitialFEC;
 	const UINT					m_InitialRunningTime;
-	const USHORT				m_EMMPid;
 	const bool					m_UseSidForTuning;
 	const USHORT				m_NumberOfVirtualTuners;
 	hash_set<int>				m_ExcludeTuners;
@@ -48,7 +47,6 @@ public:
 	ModulationType getInitialModulation() const		{ return m_InitialModulation; }
 	BinaryConvolutionCodeRate getInitialFEC() const	{ return m_InitialFEC; }
 	UINT getInitialRunningTime() const				{ return m_InitialRunningTime; }
-	USHORT getEMMPid() const						{ return m_EMMPid; }
 	bool getUseSidForTuning() const					{ return m_UseSidForTuning; }
 	USHORT getNumberOfVirtualTuners() const			{ return m_NumberOfVirtualTuners; }
 	LPCTSTR getDECSADllName() const					{ return m_DECSADllName.c_str(); }

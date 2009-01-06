@@ -124,8 +124,8 @@ void DVBParser::resetParser(bool clearPSIParser)
 	m_ParserForPid.clear();
 	// Pass the internal PSI parser to PID 0 (PAT)
 	assignParserToPid(0, &m_PSIParser);
-	// Pass the internal PSI parser to PID 0x10 (NIT)
-	//assignParserToPid(0x10, &m_PSIParser);
+	// Pass the internal PSI parser to PID 0x01 (CAT)
+	assignParserToPid(0x01, &m_PSIParser);
 	// Pass the internal PSI parser to PID 0x11 (SDT and BAT)
 	assignParserToPid(0x11, &m_PSIParser);
 	// Reset the connected clients flag
@@ -173,6 +173,7 @@ void PSIParser::clear()
 	m_BufferForPid.clear();
 	m_CurrentTid = 0;
 	m_AllowParsing = true;
+	m_EMMPid = 0;
 }
 
 // This routine converts PSI TS packets to readable PSI tables
@@ -349,6 +350,9 @@ void PSIParser::parseTable(const pat_t* const table,
 			// Or if this is a NIT table
 			else if(table->table_id == (BYTE)'\x40')
 				parseNITTable((const nit_t* const)table, tableLength);	// Parse the NIT table
+			// Or if this is a CAT table
+			else if(table->table_id == (BYTE)'\x01')
+				parseCATTable((const cat_t* const)table, tableLength);	// Parse the CAT table
 			// Of it is everything else
 			else
 				parseUnknownTable(table, tableLength);					// Parse the unknown table
@@ -364,14 +368,47 @@ void PSIParser::parseTable(const pat_t* const table,
 	}
 }
 
+void PSIParser::parseCATTable(const cat_t* const table,
+							  int remainingLength)
+{
+	// Boil out if EMM PID already known
+	if(m_EMMPid != 0)
+		return;
+
+	// Adjust input buffer pointer
+	const BYTE* inputBuffer = (const BYTE*)table + CAT_LEN;
+
+	// Remove CRC and prefix
+	remainingLength -= CRC_LENGTH + CAT_LEN;
+
+	// For each CA descriptor do
+	while(remainingLength != 0)
+	{
+		// Get the generic descriptor
+		const descr_gen_t* const descriptor = CastGenericDescriptor(inputBuffer);
+		if(descriptor->descriptor_tag == '\x09')
+		{
+			// Get CA descriptor
+			const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
+			// And get the EMM PID
+			m_EMMPid =  HILO(caDescriptor->CA_PID);
+		}
+		// Adjust length and pointer
+		remainingLength -= descriptor->descriptor_length + DESCR_GEN_LEN;
+		inputBuffer += descriptor->descriptor_length + DESCR_GEN_LEN;
+	}
+	// Print the log entry
+	g_Logger.log(2, true, TEXT("Found EMM PID=0x%hX\n"), m_EMMPid);
+}
+
 void PSIParser::parsePMTTable(const pmt_t* const table,
 							  int remainingLength)
 {
 	// Get the for this PMT SID
 	USHORT programNumber = HILO(table->program_number);
 
-	// Boil out if PMT for this SID has already been parsed
-	if(m_ESPidsForSid.find(programNumber) != m_ESPidsForSid.end())
+	// Boil out if EMM PID has not been discovered yer or PMT for this SID has already been parsed
+	if(m_EMMPid == 0 || m_ESPidsForSid.find(programNumber) != m_ESPidsForSid.end())
 		return;
 
 	// Make sure both ES and CA maps don't have an entry for this SID
@@ -424,7 +461,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 				// Add the ECM pid
 				m_CAPidsForSid[programNumber].insert(HILO(caDescriptor->CA_PID));
 				// Add hardcoded EMM PID for YES
-				m_CAPidsForSid[programNumber].insert(g_Configuration.getEMMPid());
+				m_CAPidsForSid[programNumber].insert(m_EMMPid);
 			}
 
 			// Go to the next record
@@ -1181,7 +1218,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 	if(m_pPluginsHandler != NULL)
 	{
 		// EMM packets go directly to the plugins
-		if(caPid == g_Configuration.getEMMPid())
+		if(caPid == m_EMMPid)
 		{
 //#define _FOR_JOKER
 #ifdef _FOR_JOKER
@@ -1200,7 +1237,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 //				emmFile = NULL;
 //			}
 #endif //_FOR_JOKER
-			m_pPluginsHandler->putCAPacket(this, false, m_CATypes, m_Sid, caPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, false, m_CATypes, m_Sid, caPid, m_EMMPid, currentPacket + 4);
 		}
 		// For ECM packets, see if the content is new
 		else if(memcmp(m_LastECMPacket, currentPacket + 4, PACKET_SIZE) != 0)
@@ -1210,7 +1247,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			// Purge the pending packets immediately using the old key
 			decryptAndWritePending(true);
 			// And send to the plugins
-			m_pPluginsHandler->putCAPacket(this, true, m_CATypes, m_Sid, caPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, true, m_CATypes, m_Sid, caPid, m_EMMPid, currentPacket + 4);
 		}
 	}
 }
@@ -1268,6 +1305,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 					   USHORT sid,
 					   USHORT pmtPid,
 					   const hash_set<USHORT>& caTypes,
+					   USHORT emmPid,
 					   __int64 maxFileLength) :
 	m_HasOddKey(false),
 	m_HasEvenKey(false),
@@ -1280,6 +1318,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_Sid(sid),
 	m_PmtPid(pmtPid),
 	m_CATypes(caTypes),
+	m_EMMPid(emmPid),
 	m_FoundPATPacket(false),
 	m_ExitWorkerThread(false),
 	m_pRecorder(pRecorder),

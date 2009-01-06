@@ -10,7 +10,6 @@ Configuration::Configuration() :
 	m_LogLevel(GetPrivateProfileInt(TEXT("General"), TEXT("LogLevel"), 2, INI_FILE_NAME)),
 	m_NumberOfVirtualTuners((USHORT)GetPrivateProfileInt(TEXT("General"), TEXT("NumberOfVirtualTuners"), 3, INI_FILE_NAME)),
 	m_DCWTimeout(GetPrivateProfileInt(TEXT("Plugins"), TEXT("DCWTimeout"), 2, INI_FILE_NAME)),
-	m_EMMPid((USHORT)GetPrivateProfileInt(TEXT("Plugins"), TEXT("EMMPid"), 0xC0, INI_FILE_NAME)),
 	m_InitialFrequency(GetPrivateProfileInt(TEXT("Tuning"), TEXT("InitialFrequency"), 10842000, INI_FILE_NAME)),
 	m_InitialSymbolRate(GetPrivateProfileInt(TEXT("Tuning"), TEXT("InitialSymbolRate"), 27500, INI_FILE_NAME)),
 	m_TSPacketsPerBuffer(GetPrivateProfileInt(TEXT("Tuning"), TEXT("TSPacketsPerBuffer"), 1024, INI_FILE_NAME)),

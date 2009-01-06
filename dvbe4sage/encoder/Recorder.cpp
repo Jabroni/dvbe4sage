@@ -214,7 +214,7 @@ bool Recorder::changeState()
 				// Then we allow it to start the actual recording
 				// Get the PMT PID for the recorder SID
 				USHORT pmtPid = 0;
-				if(pParser->getPMTPidForSid(m_Sid, pmtPid))
+				if(pParser->getEMMPid() != 0 && pParser->getPMTPidForSid(m_Sid, pmtPid))
 				{
 					// Get the ES PIDs for the recorder SID
 					hash_set<USHORT> esPids;
@@ -228,7 +228,7 @@ bool Recorder::changeState()
 							hash_set<USHORT> caTypes;
 							pParser->getCATypesForSid(m_Sid, caTypes);
 							// Create the parser
-							m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, caTypes, m_Size);
+							m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, caTypes, pParser->getEMMPid(), m_Size);
 							// Assign recorder's parser to PAT PID
 							pParser->assignParserToPid(0, m_pParser);
 							m_pParser->setESPid(0, true);
