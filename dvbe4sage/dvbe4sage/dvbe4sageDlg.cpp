@@ -7,6 +7,7 @@
 #include "dvbe4sageDlg.h"
 #include "logger.h"
 #include "NewRecording.h"
+#include "misc.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -178,7 +179,7 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 								   _ttol(newRecording.m_TunerSymbolRate),
 								   newRecording.m_TunerPolarization == TEXT("Vertical") ? BDA_POLARISATION_LINEAR_V : BDA_POLARISATION_LINEAR_H,
 								   newRecording.m_TunerModulation == TEXT("QPSK") ? BDA_MOD_QPSK : BDA_MOD_8VSB,
-								   newRecording.m_TunerFEC == TEXT("3/4") ? BDA_BCC_RATE_3_4 : BDA_BCC_RATE_2_3,
+								   getFECFromString(newRecording.m_TunerFEC),
 								   _ttoi(newRecording.m_RecordingTunerOrdinal),
 								   false,
 								   _ttoi(newRecording.m_RecordingChannelNumber),
