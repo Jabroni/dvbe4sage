@@ -22,7 +22,7 @@ class Plugin
 	Plugin_Filter_Close_Proc			m_fpFilterClose;
 	Plugin_Extern_RecPlay_Proc			m_fpExternRecPlay;
 public:
-	virtual bool acceptsCAid(USHORT caid) { return true; }
+	virtual bool acceptsCAid(const hash_set<USHORT>& caid) { return true; }
 };
 
 class ESCAParser;
@@ -33,12 +33,12 @@ class PluginsHandler
 private:
 	struct Client
 	{
-		ESCAParser*		caller;
-		USHORT			sid;
-		USHORT			ecmPid;
-		USHORT			emmPid;
-		USHORT			caid;
-		Client() : caller(NULL), sid(0), ecmPid(0xFFFF), emmPid(0xFFFF), caid(0) {}
+		ESCAParser*				caller;
+		USHORT					sid;
+		USHORT					ecmPid;
+		USHORT					emmPid;
+		hash_set<USHORT>		caids;
+		Client() : caller(NULL), sid(0), ecmPid(0xFFFF), emmPid(0xFFFF) {}
 	};
 
 	struct Request
@@ -81,7 +81,7 @@ public:
 	// Window procedure for handling messages
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 	// CA packets handler
-	void putCAPacket(ESCAParser* caller, bool isEcmPacket, USHORT caid, USHORT sid, USHORT caPid, const BYTE* const currentPacket);
+	void putCAPacket(ESCAParser* caller, bool isEcmPacket, const hash_set<USHORT>& caids, USHORT sid, USHORT caPid, const BYTE* const currentPacket);
 	// Routine processing packet queue
 	void processECMPacketQueue();
 	// Remove obsolete caller

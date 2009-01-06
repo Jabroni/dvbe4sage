@@ -301,7 +301,7 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 // CA packets handler
 void PluginsHandler::putCAPacket(ESCAParser* caller,
 								 bool isEcmPacket,
-								 USHORT caid,
+								 const hash_set<USHORT>& caids,
 								 USHORT sid,
 								 USHORT caPid,
 								 const BYTE* const currentPacket)
@@ -317,7 +317,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 		
 	// Initialize the client fields
 	Client& currentClient = m_Clients[caller];
-	currentClient.caid = caid;
+	currentClient.caids = caids;
 	currentClient.caller = caller;
 	currentClient.sid = sid;
 	if(isEcmPacket)
@@ -450,16 +450,20 @@ void PluginsHandler::processECMPacketQueue()
 			// This client doesn't have any keys yet
 			// For each plugin, check if it handles this particular CA
 			for(list<Plugin>::iterator pit = m_Plugins.begin(); pit != m_Plugins.end(); pit++)
-				if(pit->acceptsCAid(m_pCurrentClient->caid))
+				if(pit->acceptsCAid(m_pCurrentClient->caids))
 				{
 					// And then finally tune to the program
 					TPROGRAM82 tp;
 					memset(&tp, 0, sizeof(tp));
-					tp.CA[0].dwProviderId = m_pCurrentClient->caid;
-					tp.CA[0].wCA_Type = m_pCurrentClient->caid;
-					tp.CA[0].wECM = m_pCurrentClient->ecmPid;
-					tp.CA[0].wEMM = 0xC0;
-					tp.wCACount = 1;
+					int i = 0;
+					for(hash_set<USHORT>::const_iterator it = m_pCurrentClient->caids.begin(); it != m_pCurrentClient->caids.end(); it++, i++)
+					{
+						tp.CA[i].dwProviderId = *it;
+						tp.CA[i].wCA_Type = *it;
+						tp.CA[i].wECM = m_pCurrentClient->ecmPid;
+						tp.CA[i].wEMM = g_Configuration.getEMMPid();
+					}
+					tp.wCACount = (WORD)i;
 					tp.wSID = m_pCurrentClient->sid;
 					pit->m_fpChannelChange(tp);
 					// Get the current time to handle timeouts

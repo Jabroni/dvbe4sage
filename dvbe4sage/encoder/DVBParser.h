@@ -78,21 +78,22 @@ private:
 	hash_map<USHORT, Service>			m_Services;			// SID to Service descriptor map
 	hash_map<USHORT, USHORT>			m_Channels;			// Channel number to SID map
 	hash_map<USHORT, USHORT>			m_PMTPids;			// SID to PMT PID map
-	hash_map<USHORT, USHORT>			m_CATypeForSid;		// SID to CA type map
+	hash_map<USHORT, hash_set<USHORT>>	m_CATypesForSid;	// SID to CA types map
 	hash_map<USHORT, hash_set<USHORT>>	m_ESPidsForSid;		// SID to ES PIDs map
 	hash_map<USHORT, hash_set<USHORT>>	m_CAPidsForSid;		// SID to CA PIDs map
 	hash_map<USHORT, SectionBuffer>		m_BufferForPid;		// PID to Table map
 	USHORT								m_CurrentTid;		// Current transponder ID
 	DVBParser* const					m_pParent;			// Parent stream parser objects
 	bool								m_AllowParsing;		// Becomes false before stopping the graph
+	time_t								m_TimeStamp;		// Last update time stamp
 
-	// Disallow copy default and copy constructors
+	// Disallow default and copy constructors
 	PSIParser();
 	PSIParser(PSIParser&);
 
 public:
 	// Constructor
-	PSIParser(DVBParser* const pParent) : m_CurrentTid(0), m_pParent(pParent), m_AllowParsing(true) {}
+	PSIParser(DVBParser* const pParent) : m_CurrentTid(0), m_pParent(pParent), m_AllowParsing(true) { time(&m_TimeStamp); }
 
 	// Query methods
 	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const;
@@ -100,7 +101,8 @@ public:
 	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const;
 	bool getSidForChannel(USHORT channel, USHORT& sid) const;
 	bool getTransponderForSid(USHORT sid, Transponder& transponder) const;
-	USHORT getCATypeForSid(USHORT sid) const;
+	bool getCATypesForSid(USHORT sid, hash_set<USHORT>& caTypes) const;
+	time_t getTimeStamp() const		{ return m_TimeStamp; }
 
 	// Clear method
 	void clear();
@@ -160,7 +162,7 @@ private:
 	hash_map<USHORT, bool>	m_IsESPid;							// PID to bool map, true for ES, false for CA
 	const USHORT			m_Sid;								// SID of the program being recorded
 	const USHORT			m_PmtPid;							// PID of PMT of the program being recorded
-	const USHORT			m_CAType;							// CA type of the program being recorded
+	const hash_set<USHORT>	m_CATypes;							// CA type of the program being recorded
 
 	// Different dilution stuff
 	USHORT					m_PATCounter;						// Running PAT packet counter
@@ -180,7 +182,7 @@ private:
 
 public:
 	// The only valid constructor
-	ESCAParser(Recorder* const pRecorder, FILE* const pFile, PluginsHandler* const pPluginsHandler, USHORT sid, USHORT pmtPid, USHORT caType, __int64 maxFileLength);
+	ESCAParser(Recorder* const pRecorder, FILE* const pFile, PluginsHandler* const pPluginsHandler, USHORT sid, USHORT pmtPid, const hash_set<USHORT>& caTypes, __int64 maxFileLength);
 
 	// Destructor
 	virtual ~ESCAParser();
@@ -246,7 +248,8 @@ public:
 	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const		{ return m_PSIParser.getCAPidsForSid(sid, caPids); }
 	bool getSidForChannel(USHORT channel, USHORT& sid) const				{ return m_PSIParser.getSidForChannel(channel, sid); }
 	bool getTransponderForSid(USHORT sid, Transponder& transponder) const	{ return m_PSIParser.getTransponderForSid(sid, transponder); }
-	USHORT getCATypeForSid(USHORT sid) const								{ return m_PSIParser.getCATypeForSid(sid); }
+	bool getCATypesForSid(USHORT sid, hash_set<USHORT>& caTypes) const		{ return m_PSIParser.getCATypesForSid(sid, caTypes); }
+	time_t getTimeStamp() const												{ return m_PSIParser.getTimeStamp(); }
 
 	// Lock and unlock
 	void lock();

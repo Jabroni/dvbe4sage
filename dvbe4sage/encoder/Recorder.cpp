@@ -224,8 +224,11 @@ bool Recorder::changeState()
 						hash_set<USHORT> caPids;
 						if(pParser->getCAPidsForSid(m_Sid, caPids))
 						{
+							// Get CA Types (might be empty)
+							hash_set<USHORT> caTypes;
+							pParser->getCATypesForSid(m_Sid, caTypes);
 							// Create the parser
-							m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, pParser->getCATypeForSid(m_Sid), m_Size);
+							m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, caTypes, m_Size);
 							// Assign recorder's parser to PAT PID
 							pParser->assignParserToPid(0, m_pParser);
 							m_pParser->setESPid(0, true);

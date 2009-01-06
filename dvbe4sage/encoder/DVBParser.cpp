@@ -419,8 +419,8 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			if(descriptor->descriptor_tag == '\x09')
 			{
 				const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
-				// Put the CA type into the map
-				m_CATypeForSid[programNumber] = HILO(caDescriptor->CA_type);
+				// Add the CA type into the map
+				m_CATypesForSid[programNumber].insert(HILO(caDescriptor->CA_type));
 				// Add the ECM pid
 				m_CAPidsForSid[programNumber].insert(HILO(caDescriptor->CA_PID));
 				// Add hardcoded EMM PID for YES
@@ -524,6 +524,9 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 		// Only if encountered a new service
 		if(m_Services.find(serviceID) == m_Services.end())
 		{
+			// Update timestamp
+			time(&m_TimeStamp);
+
 			// We have a new service, lets initiate its fields as needed
 			Service newService;
 			newService.TSID = HILO(table->transport_stream_id);
@@ -713,6 +716,9 @@ void PSIParser::parseBATTable(const nit_t* const table,
 							hash_map<USHORT, Service>::iterator it = m_Services.find(serviceID);
 							if(it != m_Services.end() && it->second.channelNumber == 0)
 							{
+								// Update timestamp
+								time(&m_TimeStamp);
+
 								// Prime channel number here
 								Service& myService = it->second;
 								myService.channelNumber = channelNumber;
@@ -730,7 +736,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						// Do nothing
 						break;
 					default:
-						g_Logger.log(2, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+						g_Logger.log(3, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
 									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
 						break;
 				}
@@ -778,7 +784,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 				break;
 			}
 			default:
-				g_Logger.log(2, true, TEXT("!!! Unknown network descriptor, type=%02X\n"), (UINT)networkDescriptor->descriptor_tag);
+				g_Logger.log(3, true, TEXT("!!! Unknown network descriptor, type=%02X\n"), (UINT)networkDescriptor->descriptor_tag);
 				break;
 		}
 		
@@ -853,6 +859,10 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					hash_map<USHORT, Transponder>::iterator it = m_Transponders.find(tid);
 					if(it == m_Transponders.end())
 					{
+						// Update timestamp
+						time(&m_TimeStamp);
+
+						// Prime transponder data
 						m_Transponders[tid] = transponder;
 						g_Logger.log(2, true, TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%c, Modulation=%s, FEC=%s\n"),
 							tid, transponder.frequency, transponder.symbolRate, transponder.polarization == BDA_POLARISATION_LINEAR_H ? CHAR('H') : CHAR('V'),
@@ -864,7 +874,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					// Do nothing
 					break;
 				default:
-					g_Logger.log(2, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+					g_Logger.log(3, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
 									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
 					break;
 			}
@@ -961,13 +971,17 @@ bool PSIParser::getTransponderForSid(USHORT sid,
 		return false;
 }
 
-USHORT PSIParser::getCATypeForSid(USHORT sid) const
+bool PSIParser::getCATypesForSid(USHORT sid,
+								 hash_set<USHORT>& caTypes) const
 {
-	hash_map<USHORT, USHORT>::const_iterator it = m_CATypeForSid.find(sid);
-	if(it != m_CATypeForSid.end())
-		return it->second;
+	hash_map<USHORT, hash_set<USHORT>>::const_iterator it = m_CATypesForSid.find(sid);
+	if(it != m_CATypesForSid.end())
+	{
+		caTypes = it->second;
+		return true;
+	}
 	else
-		return 0;
+		return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1129,7 +1143,8 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 						break;
 					// Here we take care of all other streams
 					default:
-						copy = (streamInfo->stream_type != 2 && streamInfo->stream_type != 3 && streamInfo->stream_type != 4);
+						copy = (streamInfo->stream_type != 1 && streamInfo->stream_type != 2 &&
+								streamInfo->stream_type != 3 && streamInfo->stream_type != 4);
 						break;
 				}
 
@@ -1185,7 +1200,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 //				emmFile = NULL;
 //			}
 #endif //_FOR_JOKER
-			m_pPluginsHandler->putCAPacket(this, false, m_CAType, m_Sid, caPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, false, m_CATypes, m_Sid, caPid, currentPacket + 4);
 		}
 		// For ECM packets, see if the content is new
 		else if(memcmp(m_LastECMPacket, currentPacket + 4, PACKET_SIZE) != 0)
@@ -1195,7 +1210,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			// Purge the pending packets immediately using the old key
 			decryptAndWritePending(true);
 			// And send to the plugins
-			m_pPluginsHandler->putCAPacket(this, true, m_CAType, m_Sid, caPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, true, m_CATypes, m_Sid, caPid, currentPacket + 4);
 		}
 	}
 }
@@ -1252,7 +1267,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 					   PluginsHandler* const pPluginsHandler,
 					   USHORT sid,
 					   USHORT pmtPid,
-					   USHORT caType,
+					   const hash_set<USHORT>& caTypes,
 					   __int64 maxFileLength) :
 	m_HasOddKey(false),
 	m_HasEvenKey(false),
@@ -1264,7 +1279,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_DeferWriting(true),
 	m_Sid(sid),
 	m_PmtPid(pmtPid),
-	m_CAType(caType),
+	m_CATypes(caTypes),
 	m_FoundPATPacket(false),
 	m_ExitWorkerThread(false),
 	m_pRecorder(pRecorder),
