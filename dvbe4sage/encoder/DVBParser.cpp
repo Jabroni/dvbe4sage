@@ -1430,9 +1430,19 @@ int ESCAParser::write(int bytesToWrite)
 	int writtenBytes = 0;
 	if(m_MaxFileLength == (__int64)-1)
 	{
-		writtenBytes = fwrite(m_OutputBuffer, 1, bytesToWrite, m_pOutFile);
-		if(writtenBytes != bytesToWrite)
-			m_pRecorder->setBrokenPipe();
+		int index = 0;
+		while((writtenBytes = fwrite(m_OutputBuffer + index, 1, bytesToWrite, m_pOutFile)) < bytesToWrite)
+			if(writtenBytes <= 0)
+			{
+				m_pRecorder->setBrokenPipe();
+				break;
+			}
+			else
+			{
+				bytesToWrite -= writtenBytes;
+				index += writtenBytes;
+			}
+			
 	}
 	else
 	{
