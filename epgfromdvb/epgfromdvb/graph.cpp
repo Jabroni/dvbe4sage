@@ -396,19 +396,19 @@ HRESULT CBDAFilterGraph::CreateTuningSpace(CComBSTR pNetworkType)
 	//hr = pIDVBSLocator->put_OtherFrequencyInUse(VARIANT_BOOL(FALSE)); // not used
 
 	// set the inner FEC type
-	hr = pIDVBSLocator->put_InnerFEC(BDA_FEC_METHOD_NOT_SET);         // not used
+	hr = pIDVBSLocator->put_InnerFEC(BDA_FEC_VITERBI);         // not used
 
 	// set the inner code rate
-	hr = pIDVBSLocator->put_InnerFECRate(BDA_BCC_RATE_NOT_SET);       // not used 
+	hr = pIDVBSLocator->put_InnerFECRate(BDA_BCC_RATE_3_4);       // not used 
 
 	// set the outer FEC type
-	hr = pIDVBSLocator->put_OuterFEC(BDA_FEC_METHOD_NOT_SET);         // not used 
+	//hr = pIDVBSLocator->put_OuterFEC(BDA_FEC_METHOD_NOT_SET);         // not used 
 
 	// set the outer code rate
-	hr = pIDVBSLocator->put_OuterFECRate(BDA_BCC_RATE_NOT_SET);       // not used 
+	//hr = pIDVBSLocator->put_OuterFECRate(BDA_BCC_RATE_NOT_SET);       // not used 
 
 	// set the modulation type
-	hr = pIDVBSLocator->put_Modulation(BDA_MOD_NOT_SET);              // not used 
+	hr = pIDVBSLocator->put_Modulation(BDA_MOD_QPSK);              // not used 
 
 	// set the symbol rate
 	hr = pIDVBSLocator->put_SymbolRate(-1);                           // not used
@@ -511,13 +511,11 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	else
 		hr= pDVBSLocator->put_SignalPolarisation(BDA_POLARISATION_LINEAR_V);
 
-	/*
-	hr = pDVBSLocator->put_InnerFEC(BDA_FEC_METHOD_NOT_SET);
-	hr = pDVBSLocator->put_InnerFECRate(BDA_BCC_RATE_2_3);
-	hr = pDVBSLocator->put_OuterFEC(BDA_FEC_METHOD_NOT_SET);
-	hr = pDVBSLocator->put_OuterFECRate(BDA_BCC_RATE_2_3);
-	hr = pDVBSLocator->put_Modulation(BDA_MOD_8PSK);
-*/
+	
+	hr = pDVBSLocator->put_InnerFEC(BDA_FEC_VITERBI);
+	hr = pDVBSLocator->put_InnerFECRate(BDA_BCC_RATE_3_4);
+	hr = pDVBSLocator->put_Modulation(BDA_MOD_QPSK);
+
 	hr = pDVBSTuneRequest->put_Locator(pDVBSLocator);
 	if(FAILED (hr))
 	{

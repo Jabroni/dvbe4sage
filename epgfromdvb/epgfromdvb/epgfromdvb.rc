@@ -27,8 +27,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,0,1
- PRODUCTVERSION 2,0,0,1
+ FILEVERSION 2,0,1,1
+ PRODUCTVERSION 2,0,1,1
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -45,12 +45,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Michael Pogrebisky"
             VALUE "FileDescription", "EPG Grabber from DVB EIT Stream"
-            VALUE "FileVersion", "2.0.0.001"
+            VALUE "FileVersion", "2.0.1.001"
             VALUE "InternalName", "epgfromdvb"
-            VALUE "LegalCopyright", "Copyright (C) 2008"
+            VALUE "LegalCopyright", "Copyright (C) 2008, 2009"
             VALUE "OriginalFilename", "epgfromdvb.exe"
             VALUE "ProductName", "EPG Grabber from DVB EIT Stream"
-            VALUE "ProductVersion", "2.0.0.001"
+            VALUE "ProductVersion", "2.0.1.001"
         END
     END
     BLOCK "VarFileInfo"

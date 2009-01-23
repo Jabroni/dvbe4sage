@@ -49,7 +49,7 @@ BOOL CBDAFilterGraph::THBDA_IOCTL_SET_PID_FILTER_INFO_Fun(VOID)
 
 	PidInf.MaxPidsNum = 3;
 	PidInf.PIDFilterMode = PID_FILTER_MODE_PASS;
-	PidInf.CurPidValidMap = 0xfc;
+	PidInf.CurPidValidMap = 0xfe;
 	PidInf.PidValue[0] = 0x00;
 	PidInf.PidValue[1] = 0x11;
 	PidInf.PidValue[2] = 0x12;
