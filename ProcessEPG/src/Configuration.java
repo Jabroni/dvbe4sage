@@ -97,6 +97,7 @@ public class Configuration
 		channelsWithAllProgrammesAsSeries.add(15);
 		channelsWithAllProgrammesAsSeries.add(501);
 		
+		hdChannels = new HashSet<Integer>();
 		hdChannels.add(500);
 		hdChannels.add(501);
 		hdChannels.add(502);
