@@ -535,6 +535,9 @@ public class Logic
 			// Add the "xmltv-id" attribute
 			attributes.addAttribute(null, null, "xmltv-id", "CDATA", Integer.toString(channel.getNumber()));
 			
+			// Add the "allow-hd" attribute
+			attributes.addAttribute(null, null, "allow-hd", "CDATA", config.isHDChannel(channel.getNumber()) ? "True" : "False");
+			
 			// And write the "channel" tag
 			handler.startElement(null, null, "channel", attributes);
 			

@@ -14,6 +14,12 @@ public class Configuration
 	public HashMap<Integer, String> categorieMapping;
 	public boolean createXMLTVImporterChannelsFile;
 	private HashSet<Integer> channelsWithAllProgrammesAsSeries;
+	private HashSet<Integer> hdChannels;
+	
+	public boolean isHDChannel(int channel)
+	{
+		return hdChannels.contains(channel);
+	}
 	
 	public boolean shouldTreatAsSeries(int category, int channel)
 	{
@@ -83,27 +89,25 @@ public class Configuration
 		parseSeries = true;
 		defaultLanguage = new String("he");
 		gmtOffset = 0;
+		
 		channelsWithAllProgrammesAsSeries = new HashSet<Integer>();
 		channelsWithAllProgrammesAsSeries.add(12);
 		channelsWithAllProgrammesAsSeries.add(13);
 		channelsWithAllProgrammesAsSeries.add(14);
 		channelsWithAllProgrammesAsSeries.add(15);
 		channelsWithAllProgrammesAsSeries.add(501);
+		
+		hdChannels.add(500);
+		hdChannels.add(501);
+		hdChannels.add(502);
+		hdChannels.add(503);
+		hdChannels.add(505);
+		
 		forceRussian = new HashSet<Integer>();
 		forceEnglish = new HashSet<Integer>();
 		forceHebrew = new HashSet<Integer>();
 		forceArabic = new HashSet<Integer>();
-		/*forceRussian.add(9);
-		forceRussian.add(181);
-		forceRussian.add(182);
-		forceRussian.add(183);
-		forceRussian.add(184);
-		forceRussian.add(185);
-		forceRussian.add(186);
-		forceRussian.add(187);
-		forceRussian.add(188);
-		forceRussian.add(189);*/
-		
+
 		categorieMapping = new HashMap<Integer, String>();
 		categorieMapping.put(0x10, "סרטים - קצרים");
 		categorieMapping.put(0x11, "סרטים - פעולה");
