@@ -341,7 +341,7 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 	HRESULT hr = S_OK;
 
 	CComPtr<IDVBSTuningSpace> pIDVBTuningSpace;
-	hr = pIDVBTuningSpace.CoCreateInstance(CLSID_DVBSTuningSpace);
+	hr = pIDVBTuningSpace.CoCreateInstance(__uuidof(DVBSTuningSpace));
 	if (FAILED(hr) || !pIDVBTuningSpace)
 	{
 		g_Logger.log(0, true, TEXT("Failed to create system tuning space."));
@@ -358,7 +358,7 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 
 	// create DVBS Locator
 	CComPtr <IDVBSLocator> pIDVBSLocator;
-	hr = CoCreateInstance(CLSID_DVBSLocator, NULL, CLSCTX_INPROC_SERVER, IID_IDVBSLocator, reinterpret_cast<void**>(&pIDVBSLocator));
+	hr = CoCreateInstance(__uuidof(DVBSLocator), NULL, CLSCTX_INPROC_SERVER, __uuidof(IDVBSLocator), reinterpret_cast<void**>(&pIDVBSLocator));
 	if (FAILED(hr) || !pIDVBSLocator)
 		return hr;
 
@@ -444,7 +444,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	}
 
 	CComPtr<IDVBSLocator> pDVBSLocator;
-	hr = pDVBSLocator.CoCreateInstance (CLSID_DVBSLocator);	
+	hr = pDVBSLocator.CoCreateInstance (__uuidof(DVBSLocator));	
 	if (FAILED(hr) || !pDVBSLocator)
 		return hr;
 
