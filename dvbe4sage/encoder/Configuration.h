@@ -28,6 +28,9 @@ class Configuration
 	string						m_PreferredAudioLanguage;
 	const USHORT				m_PATDilutionFactor;
 	const USHORT				m_PMTDilutionFactor;
+	const ULONG					m_LNBSW;
+	const ULONG					m_LNBLOF1;
+	const ULONG					m_LNBLOF2;
 public:
 	Configuration();
 	
@@ -54,6 +57,9 @@ public:
 	LPCTSTR getPrefferedAudioLanguage() const		{ return m_PreferredAudioLanguage.c_str(); }
 	USHORT getPATDilutionFactor() const				{ return m_PATDilutionFactor; }
 	USHORT getPMTDilutionFactor() const				{ return m_PMTDilutionFactor; }
+	ULONG getLNBSW() const							{ return m_LNBSW; }
+	ULONG getLNBLOF1() const						{ return m_LNBLOF1; }
+	ULONG getLNBLOF2() const						{ return m_LNBLOF2; }
 };
 
 extern Configuration g_Configuration;

@@ -5,6 +5,7 @@
 #include <tchar.h>
 #include "Logger.h"
 #include "misc.h"
+#include "configuration.h"
 
 // Constructor, initializes member variables
 // and calls InitializeGraphBuilder
@@ -418,9 +419,9 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	//			Added by Michael
 	//=====================================================================================================
 
-	pDVBSTuningSpace->put_LNBSwitch(11700*1000);
-	pDVBSTuningSpace->put_LowOscillator(9750*1000);
-	pDVBSTuningSpace->put_HighOscillator(10600*1000);
+	pDVBSTuningSpace->put_LNBSwitch(g_Configuration.getLNBSW());
+	pDVBSTuningSpace->put_LowOscillator(g_Configuration.getLNBLOF1());
+	pDVBSTuningSpace->put_HighOscillator(g_Configuration.getLNBLOF2());
 
 	//=====================================================================================================
 	//			End of added by Michael
