@@ -449,19 +449,30 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		inputBuffer += PMT_INFO_LEN;
 		remainingLength -= PMT_INFO_LEN;
 
+		// Experimental: taking only the first CA PID into account (otherwise things break)
+		bool firstTime = true;
+
 		// Loop through the ES info records (we look for the CA descriptors)
 		while(ESInfoLength != 0)
 		{
 			const descr_gen_t* const descriptor = CastGenericDescriptor(inputBuffer);
 			if(descriptor->descriptor_tag == '\x09')
 			{
-				const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
-				// Add the CA type into the map
-				m_CATypesForSid[programNumber].insert(HILO(caDescriptor->CA_type));
-				// Add the ECM pid
-				m_CAPidsForSid[programNumber].insert(HILO(caDescriptor->CA_PID));
-				// Add hardcoded EMM PID for YES
-				m_CAPidsForSid[programNumber].insert(m_EMMPid);
+				// Do it only if not done before
+				if(firstTime)
+				{
+					// Clear the first time indicator
+					firstTime = false;
+
+					// Get the descriptor pointer
+					const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
+					// Add the CA type into the map
+					m_CATypesForSid[programNumber].insert(HILO(caDescriptor->CA_type));
+					// Add the ECM pid
+					m_CAPidsForSid[programNumber].insert(HILO(caDescriptor->CA_PID));
+					// Add the EMM PID discovered earlier
+					m_CAPidsForSid[programNumber].insert(m_EMMPid);
+				}
 			}
 
 			// Go to the next record

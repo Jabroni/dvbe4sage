@@ -158,7 +158,7 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	{
 		g_Logger.log(0, true, TEXT("Cannot load tuner device and connect network provider\n"));
 		BuildGraphError();
-		return hr;
+		return hr != S_OK ? hr : E_FAIL;
 	}
 
 	// Get tuner friendly name
