@@ -31,6 +31,7 @@ class Configuration
 	const ULONG					m_LNBSW;
 	const ULONG					m_LNBLOF1;
 	const ULONG					m_LNBLOF2;
+	const USHORT				m_PMTThreshold;
 public:
 	Configuration();
 	
@@ -60,6 +61,7 @@ public:
 	ULONG getLNBSW() const							{ return m_LNBSW; }
 	ULONG getLNBLOF1() const						{ return m_LNBLOF1; }
 	ULONG getLNBLOF2() const						{ return m_LNBLOF2; }
+	USHORT	getPMTThreshold() const					{ return m_PMTThreshold; }
 };
 
 extern Configuration g_Configuration;

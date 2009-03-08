@@ -1174,6 +1174,14 @@ bool CBDAFilterGraph::tuneChannel(int channelNumber,
 								  USHORT& sid,
 								  bool autoTune)
 {
+	// Re-assign SID to channel if requested
+	if(useSid)
+		sid = (USHORT)channelNumber;
+
+	// We have nothing to do here if no autotnue is requested
+	if(!autoTune)
+		return true;
+
 	// Get the parser
 	DVBParser* pParser = &getParser();
 	
@@ -1182,19 +1190,14 @@ bool CBDAFilterGraph::tuneChannel(int channelNumber,
 
 	bool result = false;
 
-	if(useSid)
-		sid = (USHORT)channelNumber;
-
 	if(useSid || pParser->getSidForChannel((USHORT)channelNumber, sid))
 	{
 		Transponder transponder;
 		if(pParser->getTransponderForSid(sid, transponder))
 		{
 			// Tune to transponder if decessary
-			if(autoTune && !pParser->getHasConnectedClients())
+			if(!pParser->getHasConnectedClients())
 			{
-				//StopGraph();
-
 				m_ulCarrierFrequency = transponder.frequency;
 				m_ulSymbolRate = transponder.symbolRate;
 				m_SignalPolarisation = transponder.polarization;

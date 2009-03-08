@@ -214,7 +214,7 @@ bool Recorder::changeState()
 				// Then we allow it to start the actual recording
 				// Get the PMT PID for the recorder SID
 				USHORT pmtPid = 0;
-				if(pParser->getEMMPid() != 0 && pParser->getPMTPidForSid(m_Sid, pmtPid))
+				if(pParser->getPMTPidForSid(m_Sid, pmtPid))
 				{
 					// Get the ES PIDs for the recorder SID
 					hash_set<USHORT> esPids;

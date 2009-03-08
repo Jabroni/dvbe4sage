@@ -174,6 +174,7 @@ void PSIParser::clear()
 	m_CurrentTid = 0;
 	m_AllowParsing = true;
 	m_EMMPid = 0;
+	m_PMTCounter = 0;
 }
 
 // This routine converts PSI TS packets to readable PSI tables
@@ -407,8 +408,16 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 	// Get the for this PMT SID
 	USHORT programNumber = HILO(table->program_number);
 
-	// Boil out if EMM PID has not been discovered yer or PMT for this SID has already been parsed
-	if(m_EMMPid == 0 || m_ESPidsForSid.find(programNumber) != m_ESPidsForSid.end())
+	// Let's see if we already discovered EMM PID or passed PMT packets counter threshold
+	// If no, boil out
+	if(m_EMMPid == 0 && m_PMTCounter < g_Configuration.getPMTThreshold())
+	{
+		m_PMTCounter++;
+		return;
+	}
+
+	// Also boil out if PMT for this SID has already been parsed
+	if(m_ESPidsForSid.find(programNumber) != m_ESPidsForSid.end())
 		return;
 
 	// Make sure both ES and CA maps don't have an entry for this SID

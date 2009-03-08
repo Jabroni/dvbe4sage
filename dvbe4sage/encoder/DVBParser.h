@@ -84,6 +84,7 @@ private:
 	hash_map<USHORT, hash_set<USHORT>>	m_CAPidsForSid;		// SID to CA PIDs map
 	hash_map<USHORT, SectionBuffer>		m_BufferForPid;		// PID to Table map
 	USHORT								m_CurrentTid;		// Current transponder ID
+	USHORT								m_PMTCounter;		// Number of PMT packets encountered before any CAT packet
 	USHORT								m_EMMPid;			// EMM PID
 	DVBParser* const					m_pParent;			// Parent stream parser objects
 	bool								m_AllowParsing;		// Becomes false before stopping the graph
@@ -95,7 +96,15 @@ private:
 
 public:
 	// Constructor
-	PSIParser(DVBParser* const pParent) : m_CurrentTid(0), m_pParent(pParent), m_AllowParsing(true), m_EMMPid(0) { time(&m_TimeStamp); }
+	PSIParser(DVBParser* const pParent) : 
+		m_CurrentTid(0),
+		m_pParent(pParent),
+		m_AllowParsing(true),
+		m_EMMPid(0),
+		m_PMTCounter(0)
+	{
+		time(&m_TimeStamp);
+	}
 
 	// Query methods
 	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const;
