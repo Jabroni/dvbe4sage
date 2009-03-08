@@ -73,9 +73,9 @@ void NewRecording::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(NewRecording, CDialog)
 	ON_BN_CLICKED(IDC_BUTTON1, &NewRecording::OnBnClickedBrowse)
-	ON_CBN_SELCHANGE(IDC_TUNER_NAME, &NewRecording::OnCbnSelchangeTunerName)
 	ON_EN_KILLFOCUS(IDC_CHANNEL, &NewRecording::OnEnKillfocusChannel)
 	ON_BN_CLICKED(IDC_DISCOVER_TRANSPONDER, &NewRecording::OnBnClickedDiscoverTransponder)
+	ON_CBN_SELENDOK(IDC_TUNER_NAME, &NewRecording::OnCbnSelendokTunerName)
 END_MESSAGE_MAP()
 
 
@@ -98,6 +98,11 @@ BOOL NewRecording::OnInitDialog()
 		m_TunerNameBox.SetItemData(i, m_pParentDialog->getTunerOrdinal(i));
 	}
 	m_TunerNameBox.SetCurSel(0);
+
+	TCHAR buffer[2];
+	_itot_s(m_TunerNameBox.GetItemData(0), buffer, sizeof(buffer) / sizeof(buffer[0]), 10);
+	m_RecordingTunerOrdinal = buffer;
+
 	UpdateData(FALSE);
 	return TRUE;
 }
@@ -112,15 +117,6 @@ void NewRecording::OnBnClickedBrowse()
 		m_OutputFileName = dlg.GetPathName();
 		UpdateData(FALSE);
 	}
-}
-
-void NewRecording::OnCbnSelchangeTunerName()
-{
-	UpdateData(TRUE);
-	TCHAR buffer[10];
-	_itot_s(m_TunerNameBox.GetItemData(m_TunerNameBox.GetCurSel()), buffer, sizeof(buffer) / sizeof(buffer[0]), 10);
-	m_RecordingTunerOrdinal = buffer;
-	UpdateData(FALSE);
 }
 
 void NewRecording::OnEnKillfocusChannel()
@@ -139,5 +135,15 @@ void NewRecording::OnBnClickedDiscoverTransponder()
 	m_PolarizationCombo.EnableWindow(!m_TransponderAutodiscovery);
 	m_ModulationCombo.EnableWindow(!m_TransponderAutodiscovery);
 	m_FECCombo.EnableWindow(!m_TransponderAutodiscovery);
+	UpdateData(FALSE);
+}
+
+void NewRecording::OnCbnSelendokTunerName()
+{
+	UpdateData(TRUE);
+	TCHAR buffer[2];
+	int curSel = m_TunerNameBox.GetCurSel();
+	_itot_s(m_TunerNameBox.GetItemData(curSel), buffer, sizeof(buffer) / sizeof(buffer[0]), 10);
+	m_RecordingTunerOrdinal = buffer;
 	UpdateData(FALSE);
 }

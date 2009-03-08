@@ -37,7 +37,6 @@ public:
 	afx_msg void OnBnClickedBrowse();
 	CComboBox m_TunerNameBox;
 	CString m_TunerName;
-	afx_msg void OnCbnSelchangeTunerName();
 	afx_msg void OnEnKillfocusChannel();
 	BOOL m_UseSID;
 	BOOL m_TransponderAutodiscovery;
@@ -47,4 +46,5 @@ public:
 	CComboBox m_PolarizationCombo;
 	CComboBox m_ModulationCombo;
 	CComboBox m_FECCombo;
+	afx_msg void OnCbnSelendokTunerName();
 };

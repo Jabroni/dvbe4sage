@@ -1205,9 +1205,9 @@ bool CBDAFilterGraph::tuneChannel(int channelNumber,
 				m_FECRate = transponder.fec;
 				m_Tid = transponder.tid;
 
-				g_Logger.log(0, true, TEXT("Autotuning on tuner=\"%s\", Ordinal=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%c, Modulation=%s, FEC=%s\n"),
-					getTunerName(), getTunerOrdinal(), m_ulCarrierFrequency, m_ulSymbolRate, m_SignalPolarisation == BDA_POLARISATION_LINEAR_V ? 'V' : 'H',
-					m_Modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), printableFEC(m_FECRate));
+				g_Logger.log(0, true, TEXT("Autotuning on tuner=\"%s\", Ordinal=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+					getTunerName(), getTunerOrdinal(), m_ulCarrierFrequency, m_ulSymbolRate, printablePolarization(m_SignalPolarisation),
+					printableModulation(m_Modulation), printableFEC(m_FECRate));
 
 				ChangeSetting();
 

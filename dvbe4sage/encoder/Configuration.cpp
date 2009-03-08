@@ -44,11 +44,11 @@ Configuration::Configuration() :
 
 	// Get the initial polarization setting
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialPolarization"), TEXT("V"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
-	m_InitialPolarization = buffer[0] == TCHAR('V') ? BDA_POLARISATION_LINEAR_V : BDA_POLARISATION_LINEAR_H;
+	m_InitialPolarization = getPolarizationFromString(buffer);
 
 	// Get the initial modulation setting
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialModulation"), TEXT("QPSK"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
-	m_InitialModulation = buffer[0] == TCHAR('Q') ? BDA_MOD_QPSK : BDA_MOD_8VSB;
+	m_InitialModulation = getModulationFromString(buffer);
 
 	// Get the initial FEC setting
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialFEC"), TEXT("3/4"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
