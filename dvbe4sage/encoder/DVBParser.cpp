@@ -171,6 +171,7 @@ void PSIParser::clear()
 	m_ESPidsForSid.clear();
 	m_CAPidsForSid.clear();
 	m_BufferForPid.clear();
+	m_CurrentNid = 0;
 	m_CurrentTid = 0;
 	m_AllowParsing = true;
 	m_EMMPid = 0;
@@ -823,6 +824,13 @@ void PSIParser::parseNITTable(const nit_t* const table,
 	// Remove CRC and prefix
 	remainingLength -= CRC_LENGTH + NIT_LEN + networkDescriptorsLength;
 
+	// Get the current network NID
+	if(m_CurrentNid == 0)
+	{
+		m_CurrentNid = HILO(table->network_id);
+		g_Logger.log(2, true, TEXT("Current network NID is %hu\n"), m_CurrentNid);
+	}
+
 	// In the beginning we don't know which bouquet this is
 	string networkName;
 
@@ -906,11 +914,11 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					transponder.symbolRate = 10000 * BcdCharToInt(satDescriptor->symbol_rate1) + 100 * BcdCharToInt(satDescriptor->symbol_rate2) +
 											 BcdCharToInt(satDescriptor->symbol_rate3);
 					// Get the modulation type
-					transponder.modulation = satDescriptor->modulationtype == 1 ? BDA_MOD_QPSK : BDA_MOD_8VSB;
+					transponder.modulation = getModulationFromDescriptor(satDescriptor->modulationtype);
 					// Get the FEC rate
 					transponder.fec = getFECFromDescriptor(satDescriptor->fec_inner);
 					// Get the polarization
-					transponder.polarization = satDescriptor->polarization == 0 ? BDA_POLARISATION_LINEAR_H : BDA_POLARISATION_LINEAR_V;
+					transponder.polarization = getPolarizationFromDescriptor(satDescriptor->polarization);
 					
 					// Set the transponder info if not set yet
 					hash_map<USHORT, Transponder>::iterator it = m_Transponders.find(tid);
@@ -921,9 +929,9 @@ void PSIParser::parseNITTable(const nit_t* const table,
 
 						// Prime transponder data
 						m_Transponders[tid] = transponder;
-						g_Logger.log(2, true, TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%c, Modulation=%s, FEC=%s\n"),
-							tid, transponder.frequency, transponder.symbolRate, transponder.polarization == BDA_POLARISATION_LINEAR_H ? CHAR('H') : CHAR('V'),
-							transponder.modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), printableFEC(transponder.fec));
+						g_Logger.log(2, true, TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+							tid, transponder.frequency, transponder.symbolRate, printablePolarization(transponder.polarization),
+							printableModulation(transponder.modulation), printableFEC(transponder.fec));
 					}
 					break;
 				}

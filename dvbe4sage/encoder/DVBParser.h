@@ -22,6 +22,7 @@ public:
 // Auxiliary structure for transpoders
 struct Transponder
 {
+	USHORT							onid;
 	USHORT							tid;
 	ULONG							frequency;
 	ULONG							symbolRate;
@@ -43,14 +44,6 @@ private:
 		BYTE							serviceType;		// Service type
 		BYTE							runningStatus;		// Running status
 		hash_map<string, string>		serviceNames;		// Language to service name map
-
-		bool isActive() const
-		{
-			// Service is active if it has channel number, has running status "running"
-			// and the service type of TV, Radio or HD
-			return channelNumber != 0 && runningStatus == 4 && 
-				(serviceType == 1 || serviceType == 2 || serviceType == 25);
-		}
 	};
 
 	// Auxiliary structure for parsing tables
@@ -83,6 +76,7 @@ private:
 	hash_map<USHORT, hash_set<USHORT>>	m_ESPidsForSid;		// SID to ES PIDs map
 	hash_map<USHORT, hash_set<USHORT>>	m_CAPidsForSid;		// SID to CA PIDs map
 	hash_map<USHORT, SectionBuffer>		m_BufferForPid;		// PID to Table map
+	USHORT								m_CurrentNid;		// Current network ID
 	USHORT								m_CurrentTid;		// Current transponder ID
 	USHORT								m_PMTCounter;		// Number of PMT packets encountered before any CAT packet
 	USHORT								m_EMMPid;			// EMM PID
@@ -115,6 +109,7 @@ public:
 	bool getCATypesForSid(USHORT sid, hash_set<USHORT>& caTypes) const;
 	time_t getTimeStamp() const		{ return m_TimeStamp; }
 	USHORT getEMMPid() const		{ return m_EMMPid; }
+	USHORT getNid() const			{ return m_CurrentNid; }
 
 	// Clear method
 	void clear();

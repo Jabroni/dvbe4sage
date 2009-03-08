@@ -113,3 +113,93 @@ ENCODER_API BinaryConvolutionCodeRate getFECFromString(LPCTSTR str)
 		return BDA_BCC_RATE_9_10;
 	return BDA_BCC_RATE_NOT_DEFINED;
 }
+
+ENCODER_API Polarisation getPolarizationFromDescriptor(USHORT descriptor)
+{
+	switch(descriptor)
+	{
+		case 0:
+			return BDA_POLARISATION_LINEAR_H;
+		case 1:
+			return BDA_POLARISATION_LINEAR_V;
+		case 2:
+			return BDA_POLARISATION_CIRCULAR_L;
+		case 3:
+			return BDA_POLARISATION_CIRCULAR_R;
+		default:
+			return BDA_POLARISATION_NOT_DEFINED;
+	}
+}
+
+ENCODER_API LPCTSTR printablePolarization(Polarisation polarization)
+{
+	switch(polarization)
+	{
+		case BDA_POLARISATION_LINEAR_H:
+			return TEXT("H");
+		case BDA_POLARISATION_LINEAR_V:
+			return TEXT("V");
+		case BDA_POLARISATION_CIRCULAR_L:
+			return TEXT("L");
+		case BDA_POLARISATION_CIRCULAR_R:
+			return TEXT("R");
+		default:
+			return TEXT("Not defined");
+	}
+}
+
+ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str)
+{
+	if(_tcsicmp(str, TEXT("Not set")) == 0)
+		return BDA_POLARISATION_NOT_SET;	
+	if(_tcsicmp(str, TEXT("Not defined")) == 0)
+		return BDA_POLARISATION_NOT_DEFINED;
+	if(_tcsicmp(str, TEXT("H")) == 0)
+		return BDA_POLARISATION_LINEAR_H;
+	if(_tcsicmp(str, TEXT("V")) == 0)
+		return BDA_POLARISATION_LINEAR_V;
+	if(_tcsicmp(str, TEXT("L")) == 0)
+		return BDA_POLARISATION_CIRCULAR_L;
+	if(_tcsicmp(str, TEXT("R")) == 0)
+		return BDA_POLARISATION_CIRCULAR_R;
+	return BDA_POLARISATION_NOT_DEFINED;
+}
+
+ENCODER_API ModulationType getModulationFromDescriptor(USHORT descriptor)
+{
+	switch(descriptor)
+	{
+		case 1:
+			return BDA_MOD_QPSK;
+		case 2:
+			return BDA_MOD_8VSB;
+		default:
+			return BDA_MOD_NOT_DEFINED;
+	}
+}
+
+ENCODER_API LPCTSTR printableModulation(ModulationType modulation)
+{
+	switch(modulation)
+	{
+		case BDA_MOD_QPSK:
+			return TEXT("QPSK");
+		case BDA_MOD_8VSB:
+			return TEXT("8PSK");
+		default:
+			return TEXT("Not defined");
+	}
+}
+
+ENCODER_API ModulationType getModulationFromString(LPCTSTR str)
+{
+	if(_tcsicmp(str, TEXT("Not set")) == 0)
+		return BDA_MOD_NOT_SET;	
+	if(_tcsicmp(str, TEXT("Not defined")) == 0)
+		return BDA_MOD_NOT_DEFINED;
+	if(_tcsicmp(str, TEXT("QPSK")) == 0)
+		return BDA_MOD_QPSK;
+	if(_tcsicmp(str, TEXT("8PSK")) == 0)
+		return BDA_MOD_8VSB;
+	return BDA_MOD_NOT_DEFINED;
+}
