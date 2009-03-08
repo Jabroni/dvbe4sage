@@ -281,10 +281,6 @@
 				RelativePath=".\res\dvbe4sage.rc2"
 				>
 			</File>
-			<File
-				RelativePath=".\icon1.ico"
-				>
-			</File>
 		</Filter>
 	</Files>
 	<Globals>
