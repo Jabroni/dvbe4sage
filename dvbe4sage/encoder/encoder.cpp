@@ -336,7 +336,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// Get the right tuner object
 	Tuner* tuner = getTuner(tunerOrdinal, useLogicalTuner, channel, useSid);
 
-	// Boil out if and appropriate tuner is not found
+	// Boil out if an appropriate tuner is not found
 	if(tuner == NULL)
 	{
 		g_Logger.log(0, true, TEXT("Cannot start recording for %s=%d, no sutable tuner found!\n"),
@@ -346,10 +346,10 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	
 	// Make a log entry
 	if(autodiscoverTransponder)
-		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, %s=%d, Transponder Autodiscovery=TRUE, Duration=%d\n"),
+		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, %s=%d, Transponder Autodiscovery=TRUE, Duration=%I64d\n"),
 			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), useSid ? TEXT("SID") : TEXT("Channel"), channel, duration);
 	else
-		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, %s=%d, Transponder Autodiscovery=FALSE, Duration=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%c, Modulation=%s, FEC=%s\n"),
+		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, %s=%d, Transponder Autodiscovery=FALSE, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%c, Modulation=%s, FEC=%s\n"),
 			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), useSid ? TEXT("SID") : TEXT("Channel"), channel, duration,
 			frequency, symbolRate, polarization == BDA_POLARISATION_LINEAR_V ? 'V' : 'H',
 			modulation == BDA_MOD_QPSK ? TEXT("QPSK") : TEXT("8PSK"), printableFEC(fecRate));
