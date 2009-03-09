@@ -95,9 +95,9 @@ public:
 		m_pParent(pParent),
 		m_AllowParsing(true),
 		m_EMMPid(0),
-		m_PMTCounter(0)
+		m_PMTCounter(0),
+		m_TimeStamp(0)
 	{
-		time(&m_TimeStamp);
 	}
 
 	// Query methods
@@ -110,6 +110,9 @@ public:
 	time_t getTimeStamp() const		{ return m_TimeStamp; }
 	USHORT getEMMPid() const		{ return m_EMMPid; }
 	USHORT getNid() const			{ return m_CurrentNid; }
+
+	// Copy all the internal data
+	void copy(const PSIParser& other);
 
 	// Clear method
 	void clear();
@@ -235,8 +238,11 @@ private:
 	DVBParser(DVBParser&);
 
 public:
-	// Constructor and destructor
+	// Default constructor
 	DVBParser() : m_PSIParser(this), m_HasConnectedClients(false), m_LeftoverLength(0) {}
+
+	// Copy the PSI parser data
+	void copy(const DVBParser& other)										{ m_PSIParser.copy(other.m_PSIParser); }
 
 	// Reset the parser map
 	void resetParser(bool clearPSIParser);

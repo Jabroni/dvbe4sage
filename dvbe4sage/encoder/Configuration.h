@@ -26,12 +26,15 @@ class Configuration
 	string						m_DECSADllName;
 	const bool					m_DisableWriteBuffering;
 	string						m_PreferredAudioLanguage;
-	const USHORT				m_PATDilutionFactor;
-	const USHORT				m_PMTDilutionFactor;
 	const ULONG					m_LNBSW;
 	const ULONG					m_LNBLOF1;
 	const ULONG					m_LNBLOF2;
+
+	// All advanced stuff goes here
+	const USHORT				m_PATDilutionFactor;
+	const USHORT				m_PMTDilutionFactor;
 	const USHORT				m_PMTThreshold;
+	const USHORT				m_PSIMaturityTime;
 public:
 	Configuration();
 	
@@ -56,12 +59,15 @@ public:
 	LPCTSTR getDECSADllName() const					{ return m_DECSADllName.c_str(); }
 	bool getDisableWriteBuffering() const			{ return m_DisableWriteBuffering; }
 	LPCTSTR getPrefferedAudioLanguage() const		{ return m_PreferredAudioLanguage.c_str(); }
-	USHORT getPATDilutionFactor() const				{ return m_PATDilutionFactor; }
-	USHORT getPMTDilutionFactor() const				{ return m_PMTDilutionFactor; }
 	ULONG getLNBSW() const							{ return m_LNBSW; }
 	ULONG getLNBLOF1() const						{ return m_LNBLOF1; }
 	ULONG getLNBLOF2() const						{ return m_LNBLOF2; }
-	USHORT	getPMTThreshold() const					{ return m_PMTThreshold; }
+
+	// All advanced stuff goes here
+	USHORT getPATDilutionFactor() const				{ return m_PATDilutionFactor; }
+	USHORT getPMTDilutionFactor() const				{ return m_PMTDilutionFactor; }
+	USHORT getPMTThreshold() const					{ return m_PMTThreshold; }
+	USHORT getPSIMaturityTime() const				{ return m_PSIMaturityTime; }
 };
 
 extern Configuration g_Configuration;

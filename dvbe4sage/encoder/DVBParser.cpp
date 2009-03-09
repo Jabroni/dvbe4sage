@@ -1503,3 +1503,18 @@ bool ESCAParser::matchAudioLanguage(const BYTE* const buffer,
 	}
 	return false;
 }
+
+// Copy all the internal data
+void PSIParser::copy(const PSIParser& other)
+{
+	m_Transponders = other.m_Transponders;
+	m_Services = other.m_Services;	
+	m_Channels = other.m_Channels;	
+	m_PMTPids = other.m_PMTPids;	
+	m_CATypesForSid = other.m_CATypesForSid;
+	m_ESPidsForSid = other.m_ESPidsForSid;
+	m_CAPidsForSid = other.m_CAPidsForSid;
+	m_CurrentNid = other.m_CurrentNid;
+	m_CurrentTid = other.m_CurrentTid;
+	m_EMMPid = other.m_EMMPid;	
+}

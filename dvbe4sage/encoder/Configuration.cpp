@@ -24,9 +24,10 @@ Configuration::Configuration() :
 	m_TSPacketsOutputThreshold(GetPrivateProfileInt(TEXT("Output"), TEXT("TSPacketsOutputThreshold"), 70, INI_FILE_NAME)),
 	m_DisableWriteBuffering(GetPrivateProfileInt(TEXT("Output"), TEXT("DisableWriteBuffering"), 0, INI_FILE_NAME) == 0 ? false : true),
 	m_ListeningPort((USHORT)GetPrivateProfileInt(TEXT("Encoder"), TEXT("ListeningPort"), 6969, INI_FILE_NAME)),
-	m_PATDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Recording"), TEXT("PATDilutionFactor"), 1, INI_FILE_NAME)),
-	m_PMTDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Recording"), TEXT("PMTDilutionFactor"), 1, INI_FILE_NAME)),
-	m_PMTThreshold((USHORT)GetPrivateProfileInt(TEXT("Recording"), TEXT("PMTThreshold"), 2, INI_FILE_NAME))
+	m_PATDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PATDilutionFactor"), 1, INI_FILE_NAME)),
+	m_PMTDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTDilutionFactor"), 1, INI_FILE_NAME)),
+	m_PMTThreshold((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 2, INI_FILE_NAME)),
+	m_PSIMaturityTime((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PSIMaturityTime"), 10, INI_FILE_NAME))
 {	
 	// Buffer
 	TCHAR buffer[1024];
