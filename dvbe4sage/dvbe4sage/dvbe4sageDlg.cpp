@@ -15,25 +15,27 @@
 
 #define WM_READY (WM_USER + 1000)
 
+#define UI_BACKLOG	20000
+
 // This is the worker thread main function waits for events
 DWORD WINAPI logTabWorkerThreadRoutine(LPVOID param)
 {
 	// Get the pointer to the dialog
 	CDVBE4SageDlg* const dialog = (CDVBE4SageDlg* const)param;
-	BYTE buffer[50000];
+	BYTE buffer[UI_BACKLOG];
 	__int64 prevPos = 0;
 	while(dialog->continueToRun())
 	{
 		Sleep(2000);
 		__int64 currPos = _ftelli64(dialog->m_LogFile);
-		if(currPos - prevPos > 50000)
-			_fseeki64(dialog->m_LogFile, -50000, SEEK_END);
+		if(currPos - prevPos > UI_BACKLOG)
+			_fseeki64(dialog->m_LogFile, -UI_BACKLOG + 1, SEEK_END);
 		int readBytes = fread(buffer, 1, sizeof(buffer) - 1, dialog->m_LogFile);
 		buffer[readBytes] = '\0';
 		if(readBytes > 0)
 		{
 			dialog->m_LogContent.Append((LPCTSTR)buffer);
-			dialog->m_LogContent = dialog->m_LogContent.Right(50000);
+			dialog->m_LogContent = dialog->m_LogContent.Right(UI_BACKLOG);
 		}
 		prevPos = currPos;
 		::SendMessage(dialog->m_hWnd, WM_READY, (WPARAM)param, 0);
