@@ -3,16 +3,18 @@
 #include "logger.h"
 #include "configuration.h"
 
-Tuner::Tuner(int ordinal,
+Tuner::Tuner(Encoder* const pEncoder,
+			 int ordinal,
 			 ULONG initialFrequency,
 			 ULONG initialSymbolRate,
 			 Polarisation initialPolarization,
 			 ModulationType initialModulation,
 			 BinaryConvolutionCodeRate initialFec) :
+	m_pEncoder(pEncoder),
 	m_BDAFilterGraph(ordinal, initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec),
 	m_isTwinhan(false),
 	m_AutodiscoverTransponder(false),
-	m_IdleTimer(NULL),
+	m_WorkerThread(NULL),
 	m_IsTunerOK(true)
 {
 	// Build the graph
@@ -46,9 +48,6 @@ Tuner::Tuner(int ordinal,
 			m_isTwinhan = true;
 	}
 
-	// Create the timer queue
-	m_TimerQueue = CreateTimerQueue();
-
 	// Set LNB data for Twinhan
 	/*if(!m_BDAFilterGraph.THBDA_IOCTL_SET_LNB_DATA_Fun())
 		g_Logger.log(2, true, TEXT("THBDA_IOCTL_SET_LNB_DATA_Fun failed\n"));*/
@@ -56,11 +55,17 @@ Tuner::Tuner(int ordinal,
 
 Tuner::~Tuner(void)
 {
-	// Delete the timer queue
-	DeleteTimerQueue(m_TimerQueue);
+	// Wait for the running idle thread to return (in most cases should return immediately
+	WaitForSingleObject(m_WorkerThread, INFINITE);
 
+	// Close working thread handle
+	CloseHandle(m_WorkerThread);
+
+	// Stop the graph if it's running
 	if(m_BDAFilterGraph.m_fGraphRunning)
 		m_BDAFilterGraph.StopGraph();
+
+	// Destory the graph
 	m_BDAFilterGraph.TearDownGraph();
 }
 
@@ -129,17 +134,47 @@ void Tuner::stopRecording()
 	m_BDAFilterGraph.StopGraph();
 }
 
-VOID NTAPI RunIdleCallback(PVOID vpTuner,
-						   BOOLEAN alwaysTrue)
+DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 {
+	// Sleep for the initial running time
+	Sleep(g_Configuration.getInitialRunningTime() * 1000);
+
+	// Get the tuner
 	Tuner* pTuner = (Tuner*)vpTuner;
-	pTuner->m_BDAFilterGraph.StopGraph();
+
+	// Get the encoder parser
+	DVBParser* const pEncoderParser = pTuner->m_pEncoder->getParser();
+
+	// Get the tuner parser
+	DVBParser* const pTunerParser = pTuner->getParser();
+
+	// If both are valid, copy the info
+	if(pEncoderParser != NULL && pTunerParser != NULL && pTunerParser->getTimeStamp() != 0)
+	{
+		// Lock the encoder and the tuner parsers
+		pEncoderParser->lock();
+		pTunerParser->lock();
+
+		// Copy the contents of the encoders parser from the current tuner's parser
+		pEncoderParser->copy(*pTunerParser);
+
+		// Unlock both parsers
+		pTunerParser->unlock();
+		pEncoderParser->unlock();
+	}
+
+	// Tell the tuner to stop the recording
+	pTuner->stopRecording();
+
+	return 0;
 }
 
 bool Tuner::runIdle()
 {
 	bool result = (m_BDAFilterGraph.RunGraph() == S_OK);
-	// Create idle timer
-	CreateTimerQueueTimer(&m_IdleTimer, m_TimerQueue, RunIdleCallback, this, g_Configuration.getInitialRunningTime() * 1000, 0, WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE);
+
+	// Create the worker thread for idle run
+	m_WorkerThread = CreateThread(NULL, 0, RunIdleCallback, this, 0, NULL);
+
 	return result;
 }

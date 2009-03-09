@@ -9,8 +9,8 @@ class VirtualTuner;
 
 class Recorder
 {
-	friend VOID NTAPI StartRecordingCallback(PVOID vpRecorder, BOOLEAN alwaysTrue);
-	friend VOID NTAPI StopRecordingCallback(PVOID vpRecorder, BOOLEAN alwaysTrue);
+	friend DWORD WINAPI StartRecordingCallback(LPVOID vpRecorder);
+	friend DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder);
 private:
 	// Disallow default and copy constructors
 	Recorder();
@@ -28,7 +28,12 @@ private:
 	USHORT						m_Sid;
 	Encoder* const				m_pEncoder;
 	time_t						m_Time;
-	HANDLE						m_TimerQueue;
+	HANDLE						m_StartRecordingThread;
+	HANDLE						m_StopRecordingThread;
+	DWORD						m_StartRecordingThreadId;
+	DWORD						m_StopRecordingThreadId;
+	bool						m_StartRecordingThreadCanEnd;
+	bool						m_StopRecordingThreadCanEnd;
 	bool						m_IsBrokenPipe;
 	bool						m_UseSid;
 	const USHORT				m_LogicalTuner;

@@ -24,6 +24,7 @@ class DVBFilterToParserProxy;
 class Tuner;
 class Recorder;
 class VirtualTuner;
+class DVBParser;
 
 // This class is exported from the encoder.dll
 class ENCODER_API Encoder
@@ -43,6 +44,7 @@ class ENCODER_API Encoder
 	CCritSec							m_cs;
 	hash_map<SOCKET, Client>			m_Clients;
 	const HWND							m_hWnd;
+	DVBParser*							m_pParser;				// DVBParser - to be copied from one of the tuners
 
 	void socketOperation(SOCKET socket, WORD eventType, WORD error);
 	Tuner* getTuner(int tunerOrdinal, bool useLogicalTuner, int channel, bool useSid);
@@ -69,6 +71,7 @@ public:
 	int getNumberOfTuners() const;
 	LPCTSTR getTunerFriendlyName(int i) const;
 	int getTunerOrdinal(int i) const;
+	DVBParser* getParser()								{ return m_pParser; }
 };
 
 #pragma warning(pop)

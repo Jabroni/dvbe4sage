@@ -2,24 +2,26 @@
 
 #include "graph.h"
 
+class Encoder;
+
 class Tuner
 {
-	friend VOID NTAPI RunIdleCallback(PVOID vpTuner, BOOLEAN alwaysTrue);
+	friend DWORD WINAPI RunIdleCallback(LPVOID vpTuner);
 private:
 	// DirectShow graph
 	CBDAFilterGraph			m_BDAFilterGraph;
 	// True if the card is Twinhan
 	bool					m_isTwinhan;
 	bool					m_AutodiscoverTransponder;
-	HANDLE					m_TimerQueue;
-	HANDLE					m_IdleTimer;
+	HANDLE					m_WorkerThread;
 	bool					m_IsTunerOK;
+	Encoder* const			m_pEncoder;
 
 	// We disable unsafe constructors
 	Tuner();
 	Tuner(Tuner&);
 public:
-	Tuner(int ordinal, ULONG initialFrequency, ULONG initialSymbolRate, Polarisation initialPolarization, ModulationType initialModulation, BinaryConvolutionCodeRate initialFecRate);
+	Tuner(Encoder* const pEncoder, int ordinal, ULONG initialFrequency, ULONG initialSymbolRate, Polarisation initialPolarization, ModulationType initialModulation, BinaryConvolutionCodeRate initialFecRate);
 	virtual ~Tuner(void);
 	bool tune(ULONG frequency, ULONG symbolRate, Polarisation polarization, ModulationType modulation, BinaryConvolutionCodeRate fecRate);
 	bool startRecording(bool bTunerUsed, bool autodiscoverTransponder);

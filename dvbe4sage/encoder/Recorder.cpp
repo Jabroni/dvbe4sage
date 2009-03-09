@@ -7,51 +7,100 @@
 #include "configuration.h"
 #include "virtualtuner.h"
 
-VOID NTAPI StopRecordingCallback(PVOID vpRecorder,
-								 BOOLEAN alwaysTrue)
+DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 {
 	// Get the recorder first
 	Recorder* recorder = (Recorder*)vpRecorder;
 
-	// Let's see if the time has passed
-	// Get the current time
-	time_t now;
-	time(&now);
-
-	// Calculate the differentce
-	if((__int64)difftime(now, recorder->m_Time) > recorder->m_Duration)
+	// Loop infinitely
+	while(!recorder->m_StopRecordingThreadCanEnd)
 	{
-		// Log stop recording message
-		g_Logger.log(0, true, TEXT("Time passed, "));
+		// Sleep for 1 second
+		Sleep(1000);
 
-		// Tell it to stop recording
-		recorder->stopRecording();
+		// Let's see if the time has passed
+		// Get the current time
+		time_t now;
+		time(&now);
 
-		// Delete the recorder object
-		delete recorder;
+		// Calculate the differentce
+		if((__int64)difftime(now, recorder->m_Time) > recorder->m_Duration)
+		{
+			// Log stop recording message
+			g_Logger.log(0, true, TEXT("Time passed, "));
+
+			// Tell it to stop recording
+			recorder->stopRecording();
+
+			// Delete the recorder object
+			delete recorder;
+
+			// Boil out
+			break;
+		}
+		else if(recorder->brokenPipe())
+		{
+			// Log stop recording message
+			g_Logger.log(0, true, TEXT("File operation failed, "));
+
+			// Tell it to stop recording
+			recorder->stopRecording();
+
+			// Delete the recorder object
+			delete recorder;
+
+			// Boil out
+			break;
+		}
+		else
+		{
+			// Here we update the encoder with the latest and greatest PSI parser info
+			// Get the parser from the tuner
+			const DVBParser* const pParser = recorder->m_pTuner->getParser();
+
+			// Let's see if it's valid and can be used
+			if(pParser != NULL && pParser->getTimeStamp() != 0 && 
+				(__int64)difftime(now, pParser->getTimeStamp()) > g_Configuration.getPSIMaturityTime())
+			{
+				// If yes, get the encoder's parser
+				DVBParser* const pEncoderParser = recorder->m_pEncoder->getParser();
+
+				// Lock both parsers
+				pEncoderParser->lock();
+
+				// Copy the contents of the parser from the current tuner's parser
+				pEncoderParser->copy(*pParser);
+
+				// And unlock it
+				pEncoderParser->unlock();
+			}
+		}
 	}
-	else if(recorder->brokenPipe())
-	{
-		// Log stop recording message
-		g_Logger.log(0, true, TEXT("File operation failed, "));
 
-		// Tell it to stop recording
-		recorder->stopRecording();
-
-		// Delete the recorder object
-		delete recorder;
-	}
+	return 0;
 }
 
-VOID NTAPI StartRecordingCallback(PVOID vpRecorder,
-								  BOOLEAN alwaysTrue)
+DWORD WINAPI StartRecordingCallback(LPVOID vpRecorder)
 {
 	// Get the recorder first
 	Recorder* recorder = (Recorder*)vpRecorder;
 
-	// Delete the recorder if necessary
-	if(!recorder->changeState())
-		delete recorder;
+	// Loop while can exit
+	while(!recorder->m_StartRecordingThreadCanEnd)
+	{
+		// Sleep for 100 millisecs
+		Sleep(100);
+
+		// Try to change the recorder state
+		if(!recorder->changeState())
+		{
+			// If something went wrong, delete the recorder and boil out
+			delete recorder;
+			break;
+		}
+	}
+
+	return 0;
 }
 
 Recorder::Recorder(PluginsHandler* const plugins,
@@ -74,17 +123,19 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_Duration(duration),
 	m_pParser(NULL),
 	m_pEncoder(pEncoder),
-	m_TimerQueue(NULL),
 	m_IsBrokenPipe(false),
 	m_UseSid(useSid),
 	m_LogicalTuner(logicalTuner),
 	m_FileName(outFileName),
 	m_Size(size),
-	m_VirtualTuner(NULL)
+	m_VirtualTuner(NULL),
+	m_StartRecordingThreadCanEnd(false),
+	m_StopRecordingThreadCanEnd(false),
+	m_StartRecordingThread(NULL),
+	m_StopRecordingThread(NULL),
+	m_StopRecordingThreadId(0),
+	m_StartRecordingThreadId(0)
 {
-	// Create the timer queue
-	m_TimerQueue = CreateTimerQueue();
-
 	// Open the output file
 	m_fout = _tfsopen(outFileName, TEXT("wb"), _SH_DENYWR);
 
@@ -113,8 +164,12 @@ Recorder::~Recorder(void)
 	if(m_fout != NULL)
 		fclose(m_fout);
 
-	// Delete the timer queue
-	DeleteTimerQueue(m_TimerQueue);
+	// Close orphan thread handles
+	if(m_StartRecordingThread != NULL)
+		CloseHandle(m_StartRecordingThread);
+
+	if(m_StopRecordingThread != NULL)
+		CloseHandle(m_StopRecordingThread);
 }
 
 bool Recorder::startRecording()
@@ -132,14 +187,9 @@ bool Recorder::startRecording()
 		// Get the current time
 		time(&m_Time);
 
-		// Create recording timer
-		CreateTimerQueueTimer(&m_RecordingTimer,
-							  m_TimerQueue,
-							  StartRecordingCallback,
-							  this,
-							  100,
-							  100,
-							  WT_EXECUTEDEFAULT);
+		// Start the recording thread
+		m_StartRecordingThread = CreateThread(NULL, 0, StartRecordingCallback, this, 0, &m_StartRecordingThreadId);
+
 		return true;
 	}
 }
@@ -149,8 +199,19 @@ void Recorder::stopRecording()
 	g_Logger.log(0, false, TEXT("stopping recording of channel %d on tuner=\"%s\", Ordinal=%d\n"),
 		m_ChannelNumber, m_pTuner->getTunerFriendlyName(), m_pTuner->getTunerOrdinal());
 
-	// Delete the timer
-	DeleteTimerQueueTimer(m_TimerQueue, m_RecordingTimer, NULL);
+	// Make sure start recording test is finished
+	m_StartRecordingThreadCanEnd = true;
+
+	// If needed, wait for its end
+	if(m_StartRecordingThread != NULL && GetCurrentThreadId() != m_StartRecordingThreadId)
+		WaitForSingleObject(m_StartRecordingThread, INFINITE);
+
+	// Make sure stop recording test is finished too
+	m_StopRecordingThreadCanEnd = true;
+
+	// If needed, wait for its end
+	if(m_StopRecordingThread != NULL && GetCurrentThreadId() != m_StopRecordingThreadId)
+		WaitForSingleObject(m_StopRecordingThread, INFINITE);
 
 	// Get the main parser
 	DVBParser* const pParser = m_pTuner->getParser();
@@ -252,18 +313,15 @@ bool Recorder::changeState()
 
 							// Idicate the current recorder state as tuned
 							m_CurrentState = TUNED;
-							// Delete the old timer
-							DeleteTimerQueueTimer(m_TimerQueue, m_RecordingTimer, NULL);
+
+							// Indicate start recording thread can end
+							m_StartRecordingThreadCanEnd = true;
+
 							// Save the time of the beginning of recording
 							time(&m_Time);
-							// Create the new timer to stop the recording based on requested duration
-							CreateTimerQueueTimer(&m_RecordingTimer,
-												  m_TimerQueue, 
-												  StopRecordingCallback,
-												  this,
-												  1000,
-												  1000,
-												  WT_EXECUTEDEFAULT);
+
+							// Start the "stop recording" thread
+							m_StopRecordingThread = CreateThread(NULL, 0, StopRecordingCallback, this, 0, &m_StopRecordingThreadId);
 						}
 					}
 				}

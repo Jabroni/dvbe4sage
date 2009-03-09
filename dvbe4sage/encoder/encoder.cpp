@@ -5,6 +5,7 @@
 #include "encoder.h"
 
 #include <share.h>
+#include "DVBParser.h"
 #include "graph.h"
 #include "DVBFilter.h"
 #include "Logger.h"
@@ -16,7 +17,8 @@
 
 Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pPluginsHandler(NULL),
-	m_hWnd(hWnd)
+	m_hWnd(hWnd),
+	m_pParser(new DVBParser)
 {
 	// Set the logger level
 	g_Logger.setLogLevel(g_Configuration.getLogLevel());
@@ -31,7 +33,8 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	for(int i = 0; i < CBDAFilterGraph::getNumberOfTuners(); i++)
 		if(!g_Configuration.excludeTuner(i + 1))
 		{
-			Tuner* tuner = new Tuner(i + 1,
+			Tuner* tuner = new Tuner(this,
+									 i + 1,
 									 g_Configuration.getInitialFrequency(),
 									 g_Configuration.getInitialSymbolRate(),
 									 g_Configuration.getInitialPolarization(),
@@ -89,6 +92,9 @@ Encoder::~Encoder()
 		// And delete it
 		delete tuner;
 	}
+
+	// Delete the parser
+	delete m_pParser;
 
 	// Delete plugins handler
 	delete m_pPluginsHandler;	
@@ -264,21 +270,20 @@ Tuner* Encoder::getTuner(int tunerOrdinal,
 	Tuner* tuner = NULL;
 	if(useLogicalTuner)
 	{
-		// Get the parser from the first tuner
-		DVBParser* pParser = m_Tuners.back()->getParser();
+		// Use internal parser
 		// Lock it
-		pParser->lock();
+		m_pParser->lock();
 		
 		// Get SID
 		USHORT sid = 0;
 		if(useSid)
 			sid = (USHORT)channel;
 
-		if(useSid || pParser->getSidForChannel((USHORT)channel, sid))
+		if(useSid || m_pParser->getSidForChannel((USHORT)channel, sid))
 		{
 			// Get transponder
 			Transponder transponder;
-			if(pParser->getTransponderForSid(sid, transponder))
+			if(m_pParser->getTransponderForSid(sid, transponder))
 			{
 				// Now let's find an appropriate tuner
 				// Let's see if there isn't one already tuned to this TID
@@ -303,7 +308,7 @@ Tuner* Encoder::getTuner(int tunerOrdinal,
 		}
 		
 		// Unlock the parser
-		pParser->unlock();
+		m_pParser->unlock();
 	}
 	else
 		// Here we just pull the right physical tuner
