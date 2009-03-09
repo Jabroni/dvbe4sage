@@ -12,6 +12,7 @@ private:
 
 	DECLARE_DYNAMIC(NewRecording)
 
+	bool			m_bFirstTime;
 public:
 	NewRecording(CWnd* pParent = NULL);   // standard constructor
 	virtual ~NewRecording();

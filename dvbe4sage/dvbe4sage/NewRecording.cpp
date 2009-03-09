@@ -26,6 +26,7 @@ NewRecording::NewRecording(CWnd* pParent /*=NULL*/)
 	, m_TunerName(_T(""))
 	, m_UseSID(FALSE)
 	, m_TransponderAutodiscovery(TRUE)
+	, m_bFirstTime(true)
 {
 }
 
@@ -97,11 +98,16 @@ BOOL NewRecording::OnInitDialog()
 		m_TunerNameBox.AddString(tunerFriendlyName);
 		m_TunerNameBox.SetItemData(i, m_pParentDialog->getTunerOrdinal(i));
 	}
-	m_TunerNameBox.SetCurSel(0);
+	
+	if(m_bFirstTime)
+	{
+		m_bFirstTime = false;
+		m_TunerNameBox.SetCurSel(0);
 
-	TCHAR buffer[2];
-	_itot_s(m_TunerNameBox.GetItemData(0), buffer, sizeof(buffer) / sizeof(buffer[0]), 10);
-	m_RecordingTunerOrdinal = buffer;
+		TCHAR buffer[2];
+		_itot_s(m_TunerNameBox.GetItemData(0), buffer, sizeof(buffer) / sizeof(buffer[0]), 10);
+		m_RecordingTunerOrdinal = buffer;
+	}
 
 	UpdateData(FALSE);
 	return TRUE;
