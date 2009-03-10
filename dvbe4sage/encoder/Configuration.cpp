@@ -26,7 +26,7 @@ Configuration::Configuration() :
 	m_ListeningPort((USHORT)GetPrivateProfileInt(TEXT("Encoder"), TEXT("ListeningPort"), 6969, INI_FILE_NAME)),
 	m_PATDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PATDilutionFactor"), 1, INI_FILE_NAME)),
 	m_PMTDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTDilutionFactor"), 1, INI_FILE_NAME)),
-	m_PMTThreshold((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 2, INI_FILE_NAME)),
+	m_PMTThreshold((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 20, INI_FILE_NAME)),
 	m_PSIMaturityTime((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PSIMaturityTime"), 10, INI_FILE_NAME))
 {	
 	// Buffer

@@ -856,7 +856,10 @@ HRESULT CBDAFilterGraph::RunGraph()
 		hr = m_pIMediaControl->Run();
 		if(SUCCEEDED(hr))
 		{
+			// The graph is running now
 			m_fGraphRunning = true;
+			// But we can't assume yet anything regarding its TID
+			m_Tid = 0;
 		}
 		else
 		{
@@ -891,7 +894,11 @@ HRESULT CBDAFilterGraph::StopGraph()
 	// stop the graph
 	hr = m_pIMediaControl->Stop();
 
+	// Set the tunning flag according to the result of the stop operation
 	m_fGraphRunning = (FAILED (hr))?true:false;
+
+	// Reset the TID
+	m_Tid = 0;
 
 	if(!m_fGraphRunning)
 		g_Logger.log(2, true, TEXT("Graph successfully stopped\n"));
@@ -1203,13 +1210,15 @@ bool CBDAFilterGraph::tuneChannel(int channelNumber,
 				m_SignalPolarisation = transponder.polarization;
 				m_Modulation = transponder.modulation;
 				m_FECRate = transponder.fec;
-				m_Tid = transponder.tid;
 
 				g_Logger.log(0, true, TEXT("Autotuning on tuner=\"%s\", Ordinal=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 					getTunerName(), getTunerOrdinal(), m_ulCarrierFrequency, m_ulSymbolRate, printablePolarization(m_SignalPolarisation),
 					printableModulation(m_Modulation), printableFEC(m_FECRate));
 
 				ChangeSetting();
+
+				// Change the TID only after re-tuning
+				m_Tid = transponder.tid;
 
 				// Get lock status
 				BOOLEAN bLocked = FALSE;

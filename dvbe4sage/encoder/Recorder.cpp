@@ -202,7 +202,15 @@ Recorder::Recorder(PluginsHandler* const plugins,
 			}
 		}
 		else
+		{
 			g_Logger.log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
+			m_HasError = true;
+		}
+	}
+	else
+	{
+		g_Logger.log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
+		m_HasError = true;
 	}
 }
 
@@ -322,7 +330,7 @@ bool Recorder::changeState()
 			{
 				// On initial, we say the graph to tune to the channel
 				if(m_pTuner->tuneChannel(m_ChannelNumber, m_UseSid, m_Sid))
-					m_CurrentState = Recorder::TUNING;
+					m_CurrentState = TUNING;
 				break;
 			}
 			case TUNING:
