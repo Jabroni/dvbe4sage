@@ -192,7 +192,7 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 								   _ttoi(newRecording.m_RecordingChannelNumber),
 								   newRecording.m_UseSID ? true : false,
 								   _ttoi64(newRecording.m_RecordingDuration),
-								   newRecording.m_OutputFileName,
+								   CT2CW(newRecording.m_OutputFileName),
 								   NULL,
 								   (__int64)-1);
 								   
