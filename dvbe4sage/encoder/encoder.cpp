@@ -114,35 +114,65 @@ void Encoder::socketOperation(SOCKET socket,
 	{
 		case FD_READ:
 		{
+			// Buffer for read (this really should be enough)
 			char buffer[20000];
+			// Read the command, we assume it comes as one chunk
 			int received = recv(socket, buffer, sizeof(buffer), 0);
+			// If got something
 			if(received > 0)
 			{
+				// Find the right virtual tuner
 				hash_map<SOCKET, VirtualTuner*>::iterator it = m_VirtualTunersMap.find(socket);
 				if(it != m_VirtualTunersMap.end())
 				{
+					// Obtain it
 					VirtualTuner* virtualTuner = it->second;
-					string fullCommand(buffer, received);
-					g_Logger.log(1, true, TEXT("Received command: \"%.*s\"\n"), fullCommand.length() - 2, fullCommand.c_str());
-					string command(buffer, fullCommand.find_first_of(" \r\n"));
-					if(command == "START")
+					// Get the full command - in UNICODE!
+					WCHAR fullCommandUTF16[4096];				
+					int fullCommandLength = MultiByteToWideChar(CP_UTF8, 0, buffer, received, fullCommandUTF16, sizeof(fullCommandUTF16) / sizeof(fullCommandUTF16[0]));
+					wstring fullCommand(fullCommandUTF16, fullCommandLength);
+
+					// Print the command received
+					g_Logger.log(1, true, TEXT("Received command: \"%.*S\"\n"), fullCommand.length() - 2, fullCommand.c_str());
+
+					// Determine the command itsels
+					wstring command(fullCommandUTF16, fullCommand.find_first_of(L" \r\n"));
+
+					// If the command is START
+					if(command == L"START")
 					{
-						int sourceEndPos = fullCommand.find('|');
-						string source(buffer + 6, sourceEndPos - 6);
-						int channelEndPos = fullCommand.find('|', sourceEndPos + 1);
-						string channel(buffer + sourceEndPos + 1, channelEndPos - sourceEndPos - 1);
-						int channelInt = atoi(channel.c_str());
-						int durationEndPos = fullCommand.find('|', channelEndPos + 1);
-						string duration(buffer + channelEndPos + 1, durationEndPos - channelEndPos - 1);
-						__int64 durationInt = _atoi64(duration.c_str()) / 1000;
-						int fileNameEndPos = fullCommand.find('|', durationEndPos + 1);
-						string fileName(buffer + durationEndPos + 1, fileNameEndPos - durationEndPos - 1);
-						g_Logger.log(0, true, TEXT("Received START command to start recording on source \"%s\", channel=%d, duration=%I64d, file=\"%s\"\n"),
+							// First we've got the source
+						int sourceEndPos = fullCommand.find(L'|');
+						wstring source(fullCommandUTF16 + 6, sourceEndPos - 6);
+
+						// Then a security key (added in version 3.0, we ignore it for now)
+						int keyEndPos = fullCommand.find(L'|', sourceEndPos + 1);
+
+						// Then the channel number
+						int channelEndPos = fullCommand.find(L'|', keyEndPos + 1);
+						wstring channel(fullCommandUTF16 + keyEndPos + 1, channelEndPos - keyEndPos - 1);
+						int channelInt = _wtoi(channel.c_str());
+
+						// Then the duration of the recording (usually meaningless)
+						int durationEndPos = fullCommand.find(L'|', channelEndPos + 1);
+						wstring duration(fullCommandUTF16 + channelEndPos + 1, durationEndPos - channelEndPos - 1);
+						__int64 durationInt = _wtoi64(duration.c_str()) / 1000;
+
+						// Last is the file name for recording (can use UNICODE characters
+						int fileNameEndPos = fullCommand.find(L'|', durationEndPos + 1);
+						wstring fileName(fullCommandUTF16 + durationEndPos + 1, fileNameEndPos - durationEndPos - 1);
+
+						// Log the command with all its parameters
+						g_Logger.log(0, true, TEXT("Received START command to start recording on source \"%S\", channel=%d, duration=%I64d, file=\"%S\"\n"),
 							source.c_str(), channelInt, durationInt, fileName.c_str());
+
+						// Start the recording itself
 						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_Configuration.getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1);
+
+						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
 					}
-					else if(command == "STOP")
+					else if(command == L"STOP")
 					{
 						g_Logger.log(0, true, TEXT("Requested by Sage, "));
 						// Stop ongoing recording
@@ -157,50 +187,67 @@ void Encoder::socketOperation(SOCKET socket,
 							g_Logger.log(0, false, TEXT(" there is no recorder to stop!\n"));
 						send(socket, "OK\r\n", 4, 0);
 					}
-					else if(command == "VERSION")
+					else if(command == L"VERSION")
 					{
-						send(socket, "2.1\r\n", 5, 0);
+						send(socket, "3.0\r\n", 5, 0);
 					}
-					else if(command == "SWITCH")
+					else if(command == L"SWITCH")
 					{
 						send(socket, "OK\r\n", 4, 0);
 					}
-					else if(command == "GET_SIZE")
+					else if(command == L"GET_SIZE")
 					{
 						send(socket, "0\r\n", 3, 0);
 					}
-					else if(command == "NOOP")
+					else if(command == L"NOOP")
 					{
 						send(socket, "OK\r\n", 4, 0);
 					}
-					else if(command == "BUFFER")
+					else if(command == L"BUFFER")
 					{
-						int sourceEndPos = fullCommand.find('|');
-						string source(buffer + 6, sourceEndPos - 6);
-						int channelEndPos = fullCommand.find('|', sourceEndPos + 1);
-						string channel(buffer + sourceEndPos + 1, channelEndPos - sourceEndPos - 1);
-						int channelInt = atoi(channel.c_str());
-						int sizeEndPos = fullCommand.find('|', channelEndPos + 1);
-						string size(buffer + channelEndPos + 1, sizeEndPos - channelEndPos - 1);
-						__int64 sizeInt = _atoi64(size.c_str()) / 1000;
-						int fileNameEndPos = fullCommand.find('|', sizeEndPos + 1);
-						string fileName(buffer + sizeEndPos + 1, fileNameEndPos - sizeEndPos - 1);
-						g_Logger.log(0, true, TEXT("Received BUFFER command to start recording on source \"%s\", channel=%d, size=%I64d, file=\"%s\"\n"),
+						// First we've got the source
+						int sourceEndPos = fullCommand.find(L'|');
+						wstring source(fullCommandUTF16 + 7, sourceEndPos - 7);
+
+						// Then a security key (added in version 3.0, we ignore it for now)
+						int keyEndPos = fullCommand.find(L'|', sourceEndPos + 1);
+
+						// Then the channel number
+						int channelEndPos = fullCommand.find(L'|', keyEndPos + 1);
+						wstring channel(fullCommandUTF16 + keyEndPos + 1, channelEndPos - keyEndPos - 1);
+						int channelInt = _wtoi(channel.c_str());
+
+						// The the cyclic buffer size
+						int sizeEndPos = fullCommand.find(L'|', channelEndPos + 1);
+						wstring size(fullCommandUTF16 + channelEndPos + 1, sizeEndPos - channelEndPos - 1);
+						__int64 sizeInt = _wtoi64(size.c_str());
+
+						// Last one is the file name
+						int fileNameEndPos = fullCommand.find(L'|', sizeEndPos + 1);
+						wstring fileName(fullCommandUTF16 + sizeEndPos + 1, fileNameEndPos - sizeEndPos - 1);
+
+						// Log the command with its parameters
+						g_Logger.log(0, true, TEXT("Received BUFFER command to start recording on source \"%S\", channel=%d, size=%I64d, file=\"%S\"\n"),
 							source.c_str(), channelInt, sizeInt, fileName.c_str());
+
+						// Start the actual recording
 						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_Configuration.getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt);
+
+						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
 					}
-					else if(command == "BUFFER_SWITCH")
+					else if(command == L"BUFFER_SWITCH")
 					{
 						send(socket, "OK\r\n", 4, 0);
 					}
-					else if(command == "GET_FILE_SIZE")
+					else if(command == L"GET_FILE_SIZE")
 					{
 						// Lock the control structures
 						CAutoLock lock(&m_cs);
 						// Get the file name from the command
-						int fileNamePos = fullCommand.find_first_of("\r\n");
-						string fileName(buffer + 14, fileNamePos - 14);
+						int fileNamePos = fullCommand.find_first_of(L"\r\n");
+						wstring fileName(fullCommandUTF16 + 14, fileNamePos - 14);
+
 						// Find the corresponding recorder
 						Recorder* recorder = virtualTuner->getRecorder();
 						if(recorder != NULL && recorder->getFileName() == fileName)
@@ -215,12 +262,13 @@ void Encoder::socketOperation(SOCKET socket,
 							// Send 0
 							send(socket, "0\r\n", 3, 0);
 					}
-					else if(command == "TUNE" || command == "AUTOTUNE")
+					else if(command == L"TUNE" || command == L"AUTOTUNE")
 					{
 						send(socket, "OK\r\n", 4, 0);
 					}
 					else
-						g_Logger.log(0, true, TEXT("Received unknown command \"%s\", ignoring...\n"), fullCommand.c_str());
+						// Log an unknown command and do nithing with it
+						g_Logger.log(0, true, TEXT("Received unknown command \"%S\", ignoring...\n"), fullCommand.c_str());
 				}
 				else
 					g_Logger.log(0, true, TEXT("Received command from client that already left, ignoring...\n"));
@@ -334,7 +382,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 							 int channel,
 							 bool useSid,
 							 __int64 duration,
-							 LPCTSTR outFileName,
+							 LPCWSTR outFileName,
 							 VirtualTuner* virtualTuner,
 							 __int64 size)
 {

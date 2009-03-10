@@ -63,7 +63,7 @@ public:
 						int channel,
 						bool useSid,
 						__int64 duration,
-						LPCTSTR outFileName,
+						LPCWSTR outFileName,
 						VirtualTuner* virtualTuner,
 						__int64 size);
 	bool stopRecording(Recorder* recorder);

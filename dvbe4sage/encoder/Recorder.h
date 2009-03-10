@@ -37,7 +37,7 @@ private:
 	bool						m_IsBrokenPipe;
 	bool						m_UseSid;
 	const USHORT				m_LogicalTuner;
-	const string				m_FileName;
+	const wstring				m_FileName;
 	const __int64				m_Size;
 	VirtualTuner*				m_VirtualTuner;
 
@@ -48,7 +48,7 @@ private:
 	// Tuning timer
 	HANDLE						m_RecordingTimer;
 public:
-	Recorder(PluginsHandler* const plugins, Tuner* const tuner, USHORT logicalTuner, LPCTSTR outFileName, bool useSid, int channel, __int64 duration, Encoder* pEncoder, __int64 size);
+	Recorder(PluginsHandler* const plugins, Tuner* const tuner, USHORT logicalTuner, LPCWSTR outFileName, bool useSid, int channel, __int64 duration, Encoder* pEncoder, __int64 size);
 	virtual ~Recorder(void);
 	bool isRecording() const							{ return m_IsRecording; }
 	bool hasError() const								{ return m_HasError; }
@@ -62,6 +62,6 @@ public:
 	void setBrokenPipe()								{ m_IsBrokenPipe = true; }
 	USHORT getLogicaTuner() const						{ return m_LogicalTuner; }
 	__int64 getFileLength() const						{ return m_pParser != NULL ? m_pParser->getFileLength() : (__int64)0; }
-	const string& getFileName() const					{ return m_FileName; }
+	const wstring& getFileName() const					{ return m_FileName; }
 	void setVirtualTuner(VirtualTuner* virtualTuner)	{ m_VirtualTuner = virtualTuner; }
 };
