@@ -55,14 +55,15 @@ void Logger::log(UINT logLevel,
 		SYSTEMTIME currentTime;
 		GetLocalTime(&currentTime);
 
-		_ftprintf(m_LogFile, TEXT("%hu-%02hu-%02hu %02hu:%02hu:%02hu.%03hu "), 
-								currentTime.wYear,
-								currentTime.wMonth,
-								currentTime.wDay,
-								currentTime.wHour,
-								currentTime.wMinute,
-								currentTime.wSecond,
-								currentTime.wMilliseconds);
+		if(timeStamp)
+			_ftprintf(m_LogFile, TEXT("%hu-%02hu-%02hu %02hu:%02hu:%02hu.%03hu "), 
+									currentTime.wYear,
+									currentTime.wMonth,
+									currentTime.wDay,
+									currentTime.wHour,
+									currentTime.wMinute,
+									currentTime.wSecond,
+									currentTime.wMilliseconds);
 		_vftprintf(m_LogFile, format, argList);
 	}
 	// Leave the critical section
