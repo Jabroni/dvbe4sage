@@ -8,22 +8,18 @@ Logger::Logger(void) :
 	m_LogLevel(0),
 	m_LogFile(NULL)
 {
-	// Get current time in UCT
-    time_t currentUTCTime;
-    time(&currentUTCTime);
-
-    // Convert time to struct tm form 
-    tm currentLocalTime;
-	localtime_s(&currentLocalTime, &currentUTCTime);
+	// Get current time in local
+	SYSTEMTIME currentTime;
+	GetLocalTime(&currentTime);
 
 	// Create filename
-	_stprintf_s(m_LogFileName, TEXT("%d%02d%02d%02d%02d%02d.txt"), 
-							currentLocalTime.tm_year + 1900,
-							currentLocalTime.tm_mon + 1,
-							currentLocalTime.tm_mday,
-							currentLocalTime.tm_hour,
-							currentLocalTime.tm_min,
-							currentLocalTime.tm_sec);
+	_stprintf_s(m_LogFileName, TEXT("%hu%02hu%02hu%02hu%02hu%02hu.txt"), 
+								currentTime.wYear,
+								currentTime.wMonth,
+								currentTime.wDay,
+								currentTime.wHour,
+								currentTime.wMinute,
+								currentTime.wSecond);
 
 	// Open the log file
 	m_LogFile = _tfsopen(m_LogFileName, TEXT("w"),  _SH_DENYWR);
@@ -55,22 +51,18 @@ void Logger::log(UINT logLevel,
 	// Write log only if the level of the message is lower than or equal to the requested level
 	if(logLevel <= m_LogLevel)
 	{
-		// Get current time in UCT
-		time_t currentUTCTime;
-		time(&currentUTCTime);
+		// Get current time in local
+		SYSTEMTIME currentTime;
+		GetLocalTime(&currentTime);
 
-		// Convert time to struct tm form 
-		tm currentLocalTime;
-		localtime_s(&currentLocalTime, &currentUTCTime);
-
-		if(timeStamp)
-			_ftprintf(m_LogFile, TEXT("%d-%02d-%02d %02d:%02d:%02d "), 
-								currentLocalTime.tm_year + 1900,
-								currentLocalTime.tm_mon + 1,
-								currentLocalTime.tm_mday,
-								currentLocalTime.tm_hour,
-								currentLocalTime.tm_min,
-								currentLocalTime.tm_sec);
+		_ftprintf(m_LogFile, TEXT("%hu-%02hu-%02hu %02hu:%02hu:%02hu.%03hu "), 
+								currentTime.wYear,
+								currentTime.wMonth,
+								currentTime.wDay,
+								currentTime.wHour,
+								currentTime.wMinute,
+								currentTime.wSecond,
+								currentTime.wMilliseconds);
 		_vftprintf(m_LogFile, format, argList);
 	}
 	// Leave the critical section
