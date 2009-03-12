@@ -48,7 +48,7 @@ private:
 	// Tuning timer
 	HANDLE						m_RecordingTimer;
 public:
-	Recorder(PluginsHandler* const plugins, Tuner* const tuner, USHORT logicalTuner, LPCWSTR outFileName, bool useSid, int channel, __int64 duration, Encoder* pEncoder, __int64 size);
+	Recorder(PluginsHandler* const plugins, Tuner* const tuner, USHORT logicalTuner, LPCWSTR outFileName, bool useSid, int channel, __int64 duration, Encoder* pEncoder, __int64 size, bool bySage);
 	virtual ~Recorder(void);
 	bool isRecording() const							{ return m_IsRecording; }
 	bool hasError() const								{ return m_HasError; }

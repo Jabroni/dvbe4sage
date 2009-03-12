@@ -167,7 +167,7 @@ void Encoder::socketOperation(SOCKET socket,
 							source.c_str(), channelInt, durationInt, fileName.c_str());
 
 						// Start the recording itself
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_Configuration.getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_Configuration.getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, true);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
@@ -231,7 +231,7 @@ void Encoder::socketOperation(SOCKET socket,
 							source.c_str(), channelInt, sizeInt, fileName.c_str());
 
 						// Start the actual recording
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_Configuration.getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_Configuration.getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt, true);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
@@ -384,7 +384,8 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 							 __int64 duration,
 							 LPCWSTR outFileName,
 							 VirtualTuner* virtualTuner,
-							 __int64 size)
+							 __int64 size,
+							 bool bySage)
 {
 	// Get the right tuner object
 	Tuner* tuner = getTuner(tunerOrdinal, useLogicalTuner, channel, useSid);
@@ -410,7 +411,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	if(tuner != NULL)
 	{
 		// Create the recorder
-		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, (USHORT)tunerOrdinal, outFileName, useSid, channel, duration, this, size);
+		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, (USHORT)tunerOrdinal, outFileName, useSid, channel, duration, this, size, bySage);
 
 		// Let's see if the recorder has an error, just delete it and exit
 		if(recorder->hasError())

@@ -111,7 +111,8 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				   const int channel,
 				   const __int64 duration,
 				   Encoder* pEncoder,
-				   const __int64 size) :
+				   const __int64 size,
+				   bool bySage) :
 	m_pPluginsHandler(plugins),
 	m_pTuner(tuner),
 	m_fout(NULL),
@@ -136,68 +137,93 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_StopRecordingThreadId(0),
 	m_StartRecordingThreadId(0)
 {
-	// Start searching the file
-	WIN32_FIND_DATAW findData;
-	HANDLE search = FindFirstFileW(outFileName, &findData);
-
-	// Go inside only if a valid file was found
-	if(search != INVALID_HANDLE_VALUE)
+	// If this is standalone recording, bypass all this bullshit
+	if(!bySage)
 	{
-		// In the beginning the file is not found
-		bool found = false;
+		// Open the output file
+		m_fout = _wfsopen(outFileName, L"wb", _SH_DENYWR);
 
-		// Do a little time arithmetics excercise
-		__declspec(align(8)) union timeunion
+		// Make it use no buffer if used as cyclic buffer
+		if(g_Configuration.getDisableWriteBuffering() || m_Size != (__int64)-1)
+			setvbuf(m_fout, NULL, _IONBF, 0);
+
+		// Check if opening file succeeded
+		if(m_fout == NULL)
 		{
-			__int64 longlong;
-			FILETIME fileTime;
-		} st, ft;
-
-		// Get the current system time
-		SYSTEMTIME systemTime;
-		GetSystemTime(&systemTime);
-		// And convert it into file time
-		SystemTimeToFileTime(&systemTime, &st.fileTime);
-
-		do
-		{
-			// Check time diff only if the file is 0 size
-			if(findData.nFileSizeHigh == 0 && findData.nFileSizeLow == 0)
-			{
-				// Get a creation time of our file
-				ft.fileTime = findData.ftCreationTime;
-
-				// Now, calculate the diff
-				__int64 diff = st.longlong - ft.longlong;
-
-				// If the diff is less than 10 seconds, this is our file
-				if(diff < 100000000)
-					found = true;
-			}
+			g_Logger.log(0, true, TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), outFileName, GetLastError());
+			m_HasError = true;
 		}
-		// Loop while the file is found or the search is exhausted
-		while(!found && FindNextFileW(search, &findData));
+	}
+	else
+	{
+		// Start searching the file
+		WIN32_FIND_DATAW findData;
+		HANDLE search = FindFirstFileW(outFileName, &findData);
 
-		// Close the search handle
-		CloseHandle(search);
-
-		// If the file is found
-		if(found)
+		// Go inside only if a valid file was found
+		if(search != INVALID_HANDLE_VALUE)
 		{
-			// Construct its full real path
-			wstring outFilePath(outFileName, (int)(wcsrchr(outFileName, L'\\') - outFileName) + 1);
+			// In the beginning the file is not found
+			bool found = false;
 
-			// Open the output file
-			m_fout = _wfsopen((outFilePath + findData.cFileName).c_str(), L"wb", _SH_DENYWR);
-
-			// Make it use no buffer if used as cyclic buffer
-			if(g_Configuration.getDisableWriteBuffering() || m_Size != (__int64)-1)
-				setvbuf(m_fout, NULL, _IONBF, 0);
-
-			// Check if opening file succeeded
-			if(m_fout == NULL)
+			// Do a little time arithmetics excercise
+			__declspec(align(8)) union timeunion
 			{
-				g_Logger.log(0, true, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
+				__int64 longlong;
+				FILETIME fileTime;
+			} st, ft;
+
+			// Get the current system time
+			SYSTEMTIME systemTime;
+			GetSystemTime(&systemTime);
+			// And convert it into file time
+			SystemTimeToFileTime(&systemTime, &st.fileTime);
+
+			do
+			{
+				// Check time diff only if the file is 0 size
+				if(findData.nFileSizeHigh == 0 && findData.nFileSizeLow == 0)
+				{
+					// Get a creation time of our file
+					ft.fileTime = findData.ftCreationTime;
+
+					// Now, calculate the diff
+					__int64 diff = st.longlong - ft.longlong;
+
+					// If the diff is less than 10 seconds, this is our file
+					//if(diff < 100000000)
+						found = true;
+				}
+			}
+			// Loop while the file is found or the search is exhausted
+			while(!found && FindNextFileW(search, &findData));
+
+			// Close the search handle
+			CloseHandle(search);
+
+			// If the file is found
+			if(found)
+			{
+				// Construct its full real path
+				wstring outFilePath(outFileName, (int)(wcsrchr(outFileName, L'\\') - outFileName) + 1);
+
+				// Open the output file
+				m_fout = _wfsopen((outFilePath + findData.cFileName).c_str(), L"wb", _SH_DENYWR);
+
+				// Make it use no buffer if used as cyclic buffer
+				if(g_Configuration.getDisableWriteBuffering() || m_Size != (__int64)-1)
+					setvbuf(m_fout, NULL, _IONBF, 0);
+
+				// Check if opening file succeeded
+				if(m_fout == NULL)
+				{
+					g_Logger.log(0, true, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
+					m_HasError = true;
+				}
+			}
+			else
+			{
+				g_Logger.log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
 				m_HasError = true;
 			}
 		}
@@ -206,11 +232,6 @@ Recorder::Recorder(PluginsHandler* const plugins,
 			g_Logger.log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
 			m_HasError = true;
 		}
-	}
-	else
-	{
-		g_Logger.log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
-		m_HasError = true;
 	}
 }
 

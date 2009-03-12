@@ -65,7 +65,8 @@ public:
 						__int64 duration,
 						LPCWSTR outFileName,
 						VirtualTuner* virtualTuner,
-						__int64 size);
+						__int64 size,
+						bool bySage);
 	bool stopRecording(Recorder* recorder);
 	virtual ~Encoder();
 	int getNumberOfTuners() const;

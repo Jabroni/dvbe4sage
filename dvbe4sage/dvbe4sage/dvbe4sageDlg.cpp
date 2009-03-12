@@ -194,7 +194,8 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 								   _ttoi64(newRecording.m_RecordingDuration),
 								   CT2CW(newRecording.m_OutputFileName),
 								   NULL,
-								   (__int64)-1);
+								   (__int64)-1,
+								   false);
 								   
 	}
 }
