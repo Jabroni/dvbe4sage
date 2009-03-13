@@ -13,6 +13,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 	m_pEncoder(pEncoder),
 	m_BDAFilterGraph(ordinal, initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec),
 	m_isTwinhan(false),
+	m_isMantis(false),
 	m_AutodiscoverTransponder(false),
 	m_WorkerThread(NULL),
 	m_IsTunerOK(true)
@@ -46,6 +47,8 @@ Tuner::Tuner(Encoder* const pEncoder,
 						DrvInfo.Version_Minor);
 		if(_tcsstr(m_BDAFilterGraph.getTunerName(), TEXT("878")) != NULL)
 			m_isTwinhan = true;
+		if(_tcsstr(m_BDAFilterGraph.getTunerName(), TEXT("Mantis")) != NULL)
+			m_isMantis = true;
 	}
 
 	// Set LNB data for Twinhan
@@ -91,6 +94,11 @@ bool Tuner::startRecording(bool bTunerUsed,
 	// Change settings only if tuner unused
 	if(!bTunerUsed)
 	{
+		// Build the graph (only for Mantis)
+		if(m_isMantis)
+			m_BDAFilterGraph.BuildGraph();
+
+		// Perform the tuning
 		m_BDAFilterGraph.ChangeSetting();
 
 		// Get lock status
@@ -132,6 +140,10 @@ void Tuner::stopRecording()
 
 	// The tuner stops the running graph
 	m_BDAFilterGraph.StopGraph();
+
+	// Destory the graph (only for Mantis)
+	if(m_isMantis)
+		m_BDAFilterGraph.TearDownGraph();
 }
 
 DWORD WINAPI RunIdleCallback(LPVOID vpTuner)

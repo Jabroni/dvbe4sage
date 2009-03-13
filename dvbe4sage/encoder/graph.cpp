@@ -694,6 +694,15 @@ HRESULT CBDAFilterGraph::TearDownGraph()
 			m_pTunerDemodDevice = NULL;
 		}
 
+		if(m_pITuner)
+			m_pITuner = NULL;
+
+		if(m_KsTunerPropSet)
+			m_KsTunerPropSet = NULL;
+
+		if(m_KsDemodPropSet)
+			m_KsDemodPropSet = NULL;
+
 		if(m_pCaptureDevice)
 		{
 			m_pFilterGraph->RemoveFilter(m_pCaptureDevice);

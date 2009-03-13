@@ -12,6 +12,8 @@ private:
 	CBDAFilterGraph			m_BDAFilterGraph;
 	// True if the card is Twinhan
 	bool					m_isTwinhan;
+	// True if the card is Mantis
+	bool					m_isMantis;
 	bool					m_AutodiscoverTransponder;
 	HANDLE					m_WorkerThread;
 	bool					m_IsTunerOK;
