@@ -25,6 +25,7 @@ class Tuner;
 class Recorder;
 class VirtualTuner;
 class DVBParser;
+struct Transponder;
 
 // This class is exported from the encoder.dll
 class ENCODER_API Encoder
@@ -47,7 +48,7 @@ class ENCODER_API Encoder
 	DVBParser*							m_pParser;				// DVBParser - to be copied from one of the tuners
 
 	void socketOperation(SOCKET socket, WORD eventType, WORD error);
-	Tuner* getTuner(int tunerOrdinal, bool useLogicalTuner, int channel, bool useSid);
+	Tuner* getTuner(int tunerOrdinal, bool useLogicalTuner, const Transponder* const pTransponder);
 
 public:
 	Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu);

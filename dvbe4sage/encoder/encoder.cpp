@@ -312,51 +312,34 @@ LRESULT Encoder::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 Tuner* Encoder::getTuner(int tunerOrdinal,
 						 bool useLogicalTuner,
-						 int channel,
-						 bool useSid)
+						 const Transponder* const pTransponder)
 {
+	// Intialize with NULL
 	Tuner* tuner = NULL;
-	if(useLogicalTuner)
-	{
-		// Use internal parser
-		// Lock it
-		m_pParser->lock();
-		
-		// Get SID
-		USHORT sid = 0;
-		if(useSid)
-			sid = (USHORT)channel;
 
-		if(useSid || m_pParser->getSidForChannel((USHORT)channel, sid))
-		{
-			// Get transponder
-			Transponder transponder;
-			if(m_pParser->getTransponderForSid(sid, transponder))
+	// If TID == 0 we assume physical tuner
+	if(useLogicalTuner && pTransponder != NULL)
+	{
+		// Now let's find an appropriate tuner
+		// Let's see if there isn't one already tuned to this TID
+		for(UINT i = 0; i < m_Tuners.size(); i++)
+			if(m_Tuners[i]->running() && m_Tuners[i]->getTid() == pTransponder->tid)
 			{
-				// Now let's find an appropriate tuner
-				// Let's see if there isn't one already tuned to this TID
-				for(UINT i = 0; i < m_Tuners.size(); i++)
-					if(m_Tuners[i]->running() && m_Tuners[i]->getTid() == transponder.tid)
+				tuner = m_Tuners[i];
+				break;
+			}
+		// If there is no sutable tuner already in use
+		if(tuner == NULL)
+			for(UINT i = 0; i < m_Tuners.size(); i++)
+				// The tuner we're looking for should be not running and if the program requires DVB-S2
+				// we should pick only a compatible tuner
+				if(!m_Tuners[i]->running() && (pTransponder->modulation == BDA_MOD_QPSK || 
+					g_Configuration.isDVBS2Tuner(m_Tuners[i]->getTunerOrdinal())))
 					{
 						tuner = m_Tuners[i];
 						break;
 					}
-				// If there is no sutable tuner already in use
-				if(tuner == NULL)
-					for(UINT i = 0; i < m_Tuners.size(); i++)
-						// The tuner we're looking for should be not running and if the program requires DVB-S2
-						// we should pick only a compatible tuner
-						if(!m_Tuners[i]->running() && (transponder.modulation == BDA_MOD_QPSK || 
-							g_Configuration.isDVBS2Tuner(m_Tuners[i]->getTunerOrdinal())))
-							{
-								tuner = m_Tuners[i];
-								break;
-							}
-			}
-		}
 		
-		// Unlock the parser
-		m_pParser->unlock();
 	}
 	else
 		// Here we just pull the right physical tuner
@@ -368,6 +351,7 @@ Tuner* Encoder::getTuner(int tunerOrdinal,
 				break;
 			}
 		}
+
 	return tuner;
 }
 
@@ -387,31 +371,103 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 							 __int64 size,
 							 bool bySage)
 {
-	// Get the right tuner object
-	Tuner* tuner = getTuner(tunerOrdinal, useLogicalTuner, channel, useSid);
+	// Use the internal parser
+	// Lock it
+	m_pParser->lock();
+
+	// First, let's obtain the SID for the channel
+	USHORT sid = 0;
+
+	// If provided with a SID, just use it
+	if(useSid)
+		sid = (USHORT)channel;
+	// Otherwise, find it from the mapping
+	else if(!m_pParser->getSidForChannel((USHORT)channel, sid))
+	{
+		// If not found, report an error
+		g_Logger.log(0, true, TEXT("Cannot obtain SID number for the channel \"%d\", no recording done!\n"), channel);
+
+		// Unlock the parser
+		m_pParser->unlock();
+
+		// And fail the recording
+		return false;
+	}
+	else
+		// Make a log entry
+		g_Logger.log(2, true, TEXT("Channel=%d was successfully mapped to SID=%hu\n"), channel, sid);
+
+	// Now search for the tuner
+	Tuner* tuner = NULL;
+
+	// TID of the transponder (will be initialized only if autodiscovery was requested)
+	USHORT tid = 0;
+
+	// Now, let's retrieve the transponder info if required
+	if(autodiscoverTransponder)
+	{
+		// Get the transponder
+		Transponder transponder;
+		if(m_pParser->getTransponderForSid(sid, transponder))
+		{
+			// Override the tuning parameters
+			frequency = transponder.frequency;
+			symbolRate = transponder.symbolRate;
+			polarization = transponder.polarization;
+			modulation = transponder.modulation;
+			fecRate = transponder.fec;
+
+			// Make a log entry
+			g_Logger.log(2, true, TEXT("Autodiscovery results for SID=%hu: TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"), sid,
+				transponder.tid, frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
+
+			// And get the tuner according to these
+			tuner = getTuner(tunerOrdinal, useLogicalTuner, &transponder);
+
+			// Save the TID
+			tid = transponder.tid;
+		}
+		else
+		{
+			// If transponder is not found, report an error
+			g_Logger.log(0, true, TEXT("Autodiscovery requested, but cannot find the transponder for SID \"%hu\", no recording done!\n"), sid);
+
+			// Unlock the parser
+			m_pParser->unlock();
+
+			// And fail the recording
+			return false;
+		}
+	}
+	else
+		// No autodiscovery is requested, tuner can only be physical
+		tuner = getTuner(tunerOrdinal, false, NULL);
+
+	// Unlock the parser
+	m_pParser->unlock();
 
 	// Boil out if an appropriate tuner is not found
 	if(tuner == NULL)
 	{
-		g_Logger.log(0, true, TEXT("Cannot start recording for %s=%d, no sutable tuner found!\n"),
-			useSid ? TEXT("SID") : TEXT("Channel"), channel);
+		g_Logger.log(0, true, TEXT("Cannot start recording for %s=%d, no sutable tuner found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel);
 		return false;
 	}
 	
 	// Make a log entry
-	if(autodiscoverTransponder)
-		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, %s=%d, Transponder Autodiscovery=TRUE, Duration=%I64d\n"),
-			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), useSid ? TEXT("SID") : TEXT("Channel"), channel, duration);
+	if(useSid)
+		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 	else
-		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, %s=%d, Transponder Autodiscovery=FALSE, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), useSid ? TEXT("SID") : TEXT("Channel"), channel, duration,
+		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d, SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), channel, sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
 	// If we found the tuner
 	if(tuner != NULL)
 	{
 		// Create the recorder
-		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, (USHORT)tunerOrdinal, outFileName, useSid, channel, duration, this, size, bySage);
+		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, (USHORT)tunerOrdinal, outFileName, useSid, channel, sid, duration, this, size, bySage);
 
 		// Let's see if the recorder has an error, just delete it and exit
 		if(recorder->hasError())
@@ -444,11 +500,13 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		m_cs.Unlock();
 
 		// Tune the tuner if necessary
-		if(!bTunerUsed && !autodiscoverTransponder)
+		if(!bTunerUsed)
 			tuner->tune(frequency, symbolRate, polarization, modulation, fecRate);
 
 		// Tell tuner it should start recording
-		tuner->startRecording(bTunerUsed, autodiscoverTransponder);
+		if(tuner->startRecording(bTunerUsed))
+			// Set the TID if recording was started successfully
+			tuner->setTid(tid);
 
 		// Same for the recorder
 		return recorder->startRecording();

@@ -14,7 +14,6 @@ Tuner::Tuner(Encoder* const pEncoder,
 	m_BDAFilterGraph(ordinal, initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec),
 	m_isTwinhan(false),
 	m_isMantis(false),
-	m_AutodiscoverTransponder(false),
 	m_WorkerThread(NULL),
 	m_IsTunerOK(true)
 {
@@ -88,8 +87,7 @@ bool Tuner::tune(ULONG frequency,
 	return true;
 }
 
-bool Tuner::startRecording(bool bTunerUsed,
-						   bool autodiscoverTransponder)
+bool Tuner::startRecording(bool bTunerUsed)
 {
 	// Change settings only if tuner unused
 	if(!bTunerUsed)
@@ -119,9 +117,7 @@ bool Tuner::startRecording(bool bTunerUsed,
 				return false;
 			}
 		}
-		// Set autodiscover transponder
-		m_AutodiscoverTransponder = autodiscoverTransponder;
-
+		
 		// Run the graph
 		if(FAILED(m_BDAFilterGraph.RunGraph()))
 		{

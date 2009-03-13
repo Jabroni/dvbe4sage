@@ -78,7 +78,6 @@ public:
 	BOOL ChangeSetting(void);
 
 	DVBParser& getParser() { return m_pDVBFilter->getParser(); }
-	bool tuneChannel(int channelNumber, bool useSid, USHORT& sid, bool autoTune);
 	bool startRecording();
 
 	LPCTSTR getTunerName() const { return m_TunerName; }

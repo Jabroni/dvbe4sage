@@ -109,6 +109,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				   LPCWSTR outFileName,
 				   bool useSid,
 				   const int channel,
+				   const USHORT sid,
 				   const __int64 duration,
 				   Encoder* pEncoder,
 				   const __int64 size,
@@ -126,6 +127,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_pEncoder(pEncoder),
 	m_IsBrokenPipe(false),
 	m_UseSid(useSid),
+	m_Sid(sid),
 	m_LogicalTuner(logicalTuner),
 	m_FileName(outFileName),
 	m_Size(size),
@@ -350,7 +352,7 @@ bool Recorder::changeState()
 			case INITIAL:
 			{
 				// On initial, we say the graph to tune to the channel
-				if(m_pTuner->tuneChannel(m_ChannelNumber, m_UseSid, m_Sid))
+				//if(m_pTuner->tuneChannel(m_ChannelNumber, m_UseSid, m_Sid))
 					m_CurrentState = TUNING;
 				break;
 			}
