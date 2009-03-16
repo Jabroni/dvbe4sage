@@ -60,13 +60,7 @@ public:
     bool m_fGraphRunning;
     bool m_fGraphFailure;
 
-    CBDAFilterGraph(int ordinal,
-					ULONG initialFrequency,
-					ULONG initialSymbolRate,
-					Polarisation initialPolarization,
-					ModulationType initialModulation,
-					BinaryConvolutionCodeRate initialFecRate);
-					//PluginsHandler* const pPluginsHandler);
+    CBDAFilterGraph(int ordinal);
     ~CBDAFilterGraph();
 
 	HRESULT BuildGraph();
@@ -91,6 +85,7 @@ public:
 	ModulationType				m_Modulation;
 	BinaryConvolutionCodeRate	m_FECRate;
 	USHORT						m_Tid;
+	bool						m_IsHauppauge;				// True if the device is Hauppauge
 
 	// Twinhan specific stuff
 	IPin* FindPinOnFilter(IBaseFilter *pBaseFilter, char *pPinName,BOOL bCheckPinName);	

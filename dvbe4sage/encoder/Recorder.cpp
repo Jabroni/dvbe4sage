@@ -193,6 +193,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 					__int64 diff = st.longlong - ft.longlong;
 
 					// If the diff is less than 10 seconds, this is our file
+					// --- removed as not reliable enough
 					//if(diff < 100000000)
 						found = true;
 				}

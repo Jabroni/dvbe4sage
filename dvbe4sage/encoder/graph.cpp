@@ -9,22 +9,13 @@
 
 // Constructor, initializes member variables
 // and calls InitializeGraphBuilder
-CBDAFilterGraph::CBDAFilterGraph(int ordinal,
-								 ULONG initialFrequency,
-								 ULONG initialSymbolRate,
-								 Polarisation initialPolarization,
-								 ModulationType initialModulation,
-								 BinaryConvolutionCodeRate initialFecRate):
+CBDAFilterGraph::CBDAFilterGraph(int ordinal):
 	m_fGraphBuilt(FALSE),
 	m_fGraphRunning(FALSE),
-	m_ulCarrierFrequency(initialFrequency),      
-	m_ulSymbolRate(initialSymbolRate),
-	m_SignalPolarisation(initialPolarization),
-	m_Modulation(initialModulation),
-	m_FECRate(initialFecRate),
 	m_iTunerNumber(ordinal),
 	m_Tid(0),
-	m_pDVBFilter(NULL)
+	m_pDVBFilter(NULL),
+	m_IsHauppauge(false)
 {
 	if(FAILED(InitializeGraphBuilder()))
 		m_fGraphFailure = TRUE;
@@ -168,6 +159,10 @@ HRESULT CBDAFilterGraph::BuildGraph()
 		g_Logger.log(0, true, TEXT("Tuner Filter Info = \"%s\"\n"), CW2CT(filterInfo.achName));
 		CComBSTR name(filterInfo.achName);
 		_tcscpy_s(m_TunerName, sizeof(m_TunerName) / sizeof(TCHAR), CW2CT(filterInfo.achName));
+
+		// Let's see if this is a Hauppauge device
+		if(wcsstr(filterInfo.achName, L"Hauppauge") != NULL)
+			m_IsHauppauge = true;
 	}
 
 	// Step3: load capture device and connect to tuner/demod device

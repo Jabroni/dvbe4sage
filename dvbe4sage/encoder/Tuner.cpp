@@ -11,7 +11,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 			 ModulationType initialModulation,
 			 BinaryConvolutionCodeRate initialFec) :
 	m_pEncoder(pEncoder),
-	m_BDAFilterGraph(ordinal, initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec),
+	m_BDAFilterGraph(ordinal),
 	m_isTwinhan(false),
 	m_isMantis(false),
 	m_WorkerThread(NULL),
@@ -50,9 +50,8 @@ Tuner::Tuner(Encoder* const pEncoder,
 			m_isMantis = true;
 	}
 
-	// Set LNB data for Twinhan
-	/*if(!m_BDAFilterGraph.THBDA_IOCTL_SET_LNB_DATA_Fun())
-		g_Logger.log(2, true, TEXT("THBDA_IOCTL_SET_LNB_DATA_Fun failed\n"));*/
+	// Tune to the initial parameters
+	tune(initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec);
 }
 
 Tuner::~Tuner(void)
@@ -83,6 +82,10 @@ bool Tuner::tune(ULONG frequency,
 	m_BDAFilterGraph.m_SignalPolarisation = polarization;
 	m_BDAFilterGraph.m_Modulation = modulation;
 	m_BDAFilterGraph.m_FECRate = fecRate;
+
+	// Fix the modulation type for S2 tuning of Hauppauge devices
+	if(m_BDAFilterGraph.m_IsHauppauge && modulation == BDA_MOD_8VSB)
+		m_BDAFilterGraph.m_Modulation = BDA_MOD_8PSK;
 
 	return true;
 }
