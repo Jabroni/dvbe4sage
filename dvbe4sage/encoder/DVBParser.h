@@ -3,6 +3,7 @@
 #include "si_tables.h"
 #include "decrypter.h"
 #include "pluginshandler.h"
+#include "configuration.h"
 
 #define MAX_PSI_SECTION_LENGTH	4096
 
@@ -131,6 +132,49 @@ class Recorder;
 // ES and CA packets parser
 class ESCAParser : public TSPacketParser
 {
+	// This structure defines an output buffer to be decrypted together
+	struct OutputBuffer
+	{
+		BYTE* const	buffer;										// The output buffer itself
+		ULONG		numberOfPackets;							// Current number of packets in it
+		BYTE		oddKey[8];									// CSA odd DCW
+		BYTE		evenKey[8];									// CSA even DCW
+		bool		hasKey;										// True if has one of the keys
+
+		// Default constructor
+		OutputBuffer() : 
+			buffer(new BYTE[TS_PACKET_LEN * g_Configuration.getTSPacketsPerOutputBuffer()]),
+			numberOfPackets(0),
+			hasKey(false)
+		{
+			// Set the initial values for keys
+			oddKey[0] = evenKey[0] = 0x14;
+			oddKey[1] = evenKey[1] = 0x89;
+			oddKey[2] = evenKey[2] = 0x5E;
+			oddKey[3] = evenKey[3] = 0xFB;
+			oddKey[4] = evenKey[4] = 0x61;
+			oddKey[5] = evenKey[5] = 0xB5;
+			oddKey[6] = evenKey[6] = 0x31;
+			oddKey[7] = evenKey[7] = 0x47;
+		}
+
+		// Copy constructor
+		OutputBuffer(const OutputBuffer& other) : 
+			buffer(new BYTE[TS_PACKET_LEN * g_Configuration.getTSPacketsPerOutputBuffer()])
+		{
+			numberOfPackets = other.numberOfPackets;
+			hasKey = other.hasKey;
+			memcpy(buffer, other.buffer, TS_PACKET_LEN * g_Configuration.getTSPacketsPerOutputBuffer());
+			memcpy(oddKey, other.oddKey, sizeof(oddKey));
+			memcpy(evenKey, other.evenKey, sizeof(evenKey));
+		}
+
+		virtual ~OutputBuffer()
+		{
+			delete [] buffer;
+		}
+	};
+
 	// This is the worker thread routine
 	friend DWORD WINAPI parserWorkerThreadRoutine(LPVOID param);
 private:
@@ -142,47 +186,41 @@ private:
 	void sendToCam(const BYTE* const currentPacket, USHORT caPid);
 
 	// Data members
-	FILE* const				m_pOutFile;							// Output file stream
-	bool					m_ExitWorkerThread;					// Flag for graceful exitting of worker thread
-	Recorder* const			m_pRecorder;						// The owining recorder
+	FILE* const						m_pOutFile;							// Output file stream
+	bool							m_ExitWorkerThread;					// Flag for graceful exitting of worker thread
+	Recorder* const					m_pRecorder;						// The owining recorder
 	
 	// Decryption stuff
-	BYTE					m_OddKey[8];						// CSA odd DCW
-	BYTE					m_EvenKey[8];						// CSA even DCW
-	bool					m_HasOddKey;						// True if has odd DCW
-	bool					m_HasEvenKey;						// True if has even DCW
-	Decrypter				m_Decrypter;						// Decrypter object
-	PluginsHandler*	const	m_pPluginsHandler;					// Plugins handler object
-	BYTE					m_LastECMPacket[PACKET_SIZE];		// Last new ECM packet
+	Decrypter						m_Decrypter;						// Decrypter object
+	PluginsHandler*	const			m_pPluginsHandler;					// Plugins handler object
+	BYTE							m_LastECMPacket[PACKET_SIZE];		// Last new ECM packet
+	bool							m_FirstECMPacket;					// True for the first ECM packet
 
 	// Output buffer stuff
-	BYTE* const				m_OutputBuffer;						// The output buffer itself
-	ULONG					m_PacketsInOutputBuffer;			// Current number of packets in it
-	CCritSec				m_csOutputBuffer;					// Critical section on output buffer
-	HANDLE					m_WorkerThread;						// The worker thread handling decryption
-	HANDLE					m_SignallingEvent;					// Event for signalling we have new work for the worker thread
-	bool					m_DeferWriting;						// True when there is new ECM packet but no keys have been received yet
-	bool					m_FoundPATPacket;					// Becomes true when the first PAT packet is found
-	bool					m_IsEncrypted;						// True if the ES are encrypted
-	__int64					m_FileLength;						// Contains the output file length so far
-	const __int64			m_MaxFileLength;					// Max file length for cyclic buffer, for regular file -1
-	__int64					m_CurrentPosition;					// Current position in the cyclic buffer, otherwise unused
+	deque<OutputBuffer* const>		m_OutputBuffers;					// Vector of output buffers (one per distinct ECM packet)
+	CCritSec						m_csOutputBuffer;					// Critical section on output buffers structure
+	HANDLE							m_WorkerThread;						// The worker thread handling decryption
+	HANDLE							m_SignallingEvent;					// Event for signalling we have new work for the worker thread
+	bool							m_IsEncrypted;						// True if the ES are encrypted
+	__int64							m_FileLength;						// Contains the output file length so far
+	const __int64					m_MaxFileLength;					// Max file length for cyclic buffer, for regular file -1
+	__int64							m_CurrentPosition;					// Current position in the cyclic buffer, otherwise unused
 
 	// Assigned PID differentiator
-	hash_map<USHORT, bool>	m_IsESPid;							// PID to bool map, true for ES, false for CA
-	const USHORT			m_Sid;								// SID of the program being recorded
-	const USHORT			m_PmtPid;							// PID of PMT of the program being recorded
-	const hash_set<USHORT>	m_CATypes;							// CA type of the program being recorded
-	const USHORT			m_EMMPid;							// EMM PID
+	hash_map<USHORT, bool>			m_IsESPid;							// PID to bool map, true for ES, false for CA
+	const USHORT					m_Sid;								// SID of the program being recorded
+	const USHORT					m_PmtPid;							// PID of PMT of the program being recorded
+	const hash_set<USHORT>			m_CATypes;							// CA type of the program being recorded
+	const USHORT					m_EMMPid;							// EMM PID
 
 	// Different dilution stuff
-	USHORT					m_PATCounter;						// Running PAT packet counter
-	USHORT					m_PATContinuityCounter;				// Current PAT continuity counter
-	USHORT					m_PMTCounter;						// Running PMT packet counter
-	USHORT					m_PMTContinuityCounter;				// Current PMT continuity counter
+	USHORT							m_PATCounter;						// Running PAT packet counter
+	USHORT							m_PATContinuityCounter;				// Current PAT continuity counter
+	USHORT							m_PMTCounter;						// Running PMT packet counter
+	USHORT							m_PMTContinuityCounter;				// Current PMT continuity counter
 
 	// Internal write method to handle cyclic buffers
-	int write(int bytesToWrite);
+	int write(const BYTE* const buffer, int bytesToWrite);
 
 	// Check audio language in ES descriptor
 	static bool matchAudioLanguage(const BYTE* const buffer, const int bufferLength, LPCTSTR language);

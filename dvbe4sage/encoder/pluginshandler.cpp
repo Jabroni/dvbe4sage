@@ -328,7 +328,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 		currentClient.ecmPid = caPid;
 	}
 	else
-		g_Logger.log(3, true, TEXT("A new EMM packet for SID=%hu received and put to the queue\n"), sid);
+		g_Logger.log(4, true, TEXT("A new EMM packet for SID=%hu received and put to the queue\n"), sid);
 	
 	// Make a new request
 	Request request;
@@ -354,7 +354,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 			// Process it
 			m_CurrentEmmCallback(m_CurrentEmmFilterId, PACKET_SIZE, request.packet);
 		else
-			g_Logger.log(3, true, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
+			g_Logger.log(4, true, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
 	}
 }
 

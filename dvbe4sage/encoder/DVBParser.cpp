@@ -17,13 +17,13 @@
 // Lock function with logging
 void DVBParser::lock()
 {
-	g_Logger.log(3, true, TEXT("Locking the parser\n"));
+	g_Logger.log(4, true, TEXT("Locking the parser\n"));
 	m_cs.Lock();
 }
 
 void DVBParser::unlock()
 {
-	g_Logger.log(3, true, TEXT("Unlocking the parser\n"));
+	g_Logger.log(4, true, TEXT("Unlocking the parser\n"));
 	m_cs.Unlock();
 }
 
@@ -849,11 +849,11 @@ void PSIParser::parseNITTable(const nit_t* const table,
 			case 0x40:
 			{
 				networkName = string((const char*)inputBuffer + DESCR_NETWORK_NAME_LEN, networkDescriptor->descriptor_length);
-				g_Logger.log(3, true, TEXT("### Found network with name %s\n"), networkName.c_str());
+				g_Logger.log(4, true, TEXT("### Found network with name %s\n"), networkName.c_str());
 				break;
 			}
 			default:
-				g_Logger.log(3, true, TEXT("!!! Unknown network descriptor, type=%02X\n"), (UINT)networkDescriptor->descriptor_tag);
+				g_Logger.log(4, true, TEXT("!!! Unknown network descriptor, type=%02X\n"), (UINT)networkDescriptor->descriptor_tag);
 				break;
 		}
 		
@@ -1066,6 +1066,7 @@ DWORD WINAPI parserWorkerThreadRoutine(LPVOID param)
 	{
 		// We wait for the signal
 		WaitForSingleObject(parser->m_SignallingEvent, INFINITE);
+
 		// Decrypt and write any pending data
 		parser->decryptAndWritePending(parser->m_ExitWorkerThread);
 	}
@@ -1119,14 +1120,12 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		// Calculate the new CRC and put it there
 		*(long*)((BYTE*)pat + 12) = htonl(_dvb_crc32((BYTE*)pat, 12));
 		// Pat is fixed!
-		// Now indicate we found the first PAT packet
-		m_FoundPATPacket = true;
 	}
 	// Boil out if no PAT packets have been found so far
 	//else if(!m_FoundPATPacket)
 	//	return;
 
-	// Fix PMT
+	// Skip or fix PMT
 	if(pid == m_PmtPid)
 	{
 		// First, determine if we need to skip this packet
@@ -1170,7 +1169,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		// Adjust the output buffer pointer
 		BYTE* outputBuffer = currentPacket + (saveInputBuffer - copyPacket);
 
-		// Loop through the stream infor 4 times
+		// Loop through the stream 4 times
 		for(int i = 0; i < 4; i++)
 		{
 			// Restore the input buffer and the remaining length
@@ -1219,7 +1218,6 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 
 				// If needed, copy the info
 				if(copy)
-				//if(i == 0)
 				{
 					memcpy(outputBuffer, inputBuffer, PMT_INFO_LEN + ESInfoLength);
 					outputBuffer += PMT_INFO_LEN + ESInfoLength;
@@ -1276,10 +1274,35 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 		{
 			// If yes, save it
 			memcpy(m_LastECMPacket, currentPacket + 4, PACKET_SIZE);
-			// Purge the pending packets immediately using the old key
-			decryptAndWritePending(true);
+			
 			// And send to the plugins
 			m_pPluginsHandler->putCAPacket(this, true, m_CATypes, m_Sid, caPid, m_EMMPid, currentPacket + 4);
+
+			// Lock the output buffers queue
+			CAutoLock lock(&m_csOutputBuffer);
+
+			// Get the last packet in the queue
+			OutputBuffer* const lastBuffer = m_OutputBuffers.back();
+
+			// If the last buffer is empty, we don't need a new one
+			if(!m_FirstECMPacket && lastBuffer->numberOfPackets != 0)
+			{
+				// Create a new output buffer
+				OutputBuffer* const newBuffer = new OutputBuffer;
+
+				// Copy both keys from it
+				memcpy(newBuffer->evenKey, lastBuffer->evenKey, sizeof(newBuffer->evenKey));
+				memcpy(newBuffer->oddKey, lastBuffer->oddKey, sizeof(newBuffer->oddKey));
+				
+				// Put the new buffer at the end of the queue
+				m_OutputBuffers.push_back(newBuffer);
+			}
+			else
+				// For an empty buffer, we do need to invalidate the key
+				lastBuffer->hasKey = false;
+
+			// Invalidate the first ECM packet flag
+			m_FirstECMPacket = false;
 		}
 	}
 }
@@ -1287,32 +1310,51 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 void ESCAParser::setKey(bool isOddKey,
 						const BYTE* const key)
 {
-	// We have to do this within critical section so we don't fuck up
-	// the decrypter's internal structures
+	// Output buffer manipulations in the critical section
 	CAutoLock lock(&m_csOutputBuffer);
 
-	// If it's the ODD key
-	if(isOddKey)
+	// Let's find where we need to set the key
+	for(UINT i = 0; i < m_OutputBuffers.size(); i++)
 	{
-		// Copy the key and signal it's available
-		memcpy(m_OddKey, key, sizeof(m_OddKey));
-		m_HasOddKey = true;
-	}
-	else
-	{
-		// Copy the key and signal it's available
-		memcpy(m_EvenKey, key, sizeof(m_EvenKey));
-		m_HasEvenKey = true;
-	}
-	// Set keys for the decrypter only when we have both of them
-	if(m_HasOddKey || m_HasEvenKey)
-	{
-		// Set keys to the decrypter
-		m_Decrypter.setKeys(m_OddKey, m_EvenKey);
-		// Now we can reset the deferred writing key
-		m_DeferWriting = false;
-		// Signal the work thread we've got new key
-		SetEvent(m_SignallingEvent);
+		// Get the buffer from the queue
+		OutputBuffer* const currentBuffer = m_OutputBuffers[i];
+
+		// Let's see if it already has a key
+		if(!currentBuffer->hasKey)
+		{
+			// If no, set it
+			// If it's the odd key
+			if(isOddKey)
+				// Copy it
+				memcpy(currentBuffer->oddKey, key, sizeof(currentBuffer->oddKey));
+			else
+				// Copy it
+				memcpy(currentBuffer->evenKey, key, sizeof(currentBuffer->evenKey));
+
+			// Now this buffer has its key
+			currentBuffer->hasKey = true;
+
+			// Let's see if we need to update a key to its successor
+			if(i + 1 < m_OutputBuffers.size())
+			{
+				// Get the next buffer
+				OutputBuffer* const nextBuffer = m_OutputBuffers[i + 1];
+
+				// If this is odd key
+				if(isOddKey)
+					// Copy it
+					memcpy(nextBuffer->oddKey, key, sizeof(nextBuffer->oddKey));
+				else
+					// Copy it
+					memcpy(nextBuffer->evenKey, key, sizeof(nextBuffer->evenKey));
+			}
+
+			// Signal the work thread we've got a new key
+			SetEvent(m_SignallingEvent);
+
+			// Boil out
+			break;
+		}
 	}
 }
 
@@ -1321,13 +1363,18 @@ void ESCAParser::reset()
 	// We have to do this within critical section
 	CAutoLock lock(&m_csOutputBuffer);
 
-	// Reset everything
-	m_HasOddKey = false;
-	m_HasEvenKey = false;
-	m_PacketsInOutputBuffer = 0;
+	// Delete all remaining output buffers
+	while(!m_OutputBuffers.empty())
+	{
+		delete m_OutputBuffers.front();
+		m_OutputBuffers.pop_front();
+	}
 
-	// Now we want to wait till we've got both keys!
-	m_DeferWriting = true;
+	// Reset first ECM packet flag
+	m_FirstECMPacket = true;
+
+	// Add a single buffer to the end of the output queue
+	m_OutputBuffers.push_back(new OutputBuffer);
 }
 
 // This is the only public constructor
@@ -1339,22 +1386,16 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 					   const hash_set<USHORT>& caTypes,
 					   USHORT emmPid,
 					   __int64 maxFileLength) :
-	m_HasOddKey(false),
-	m_HasEvenKey(false),
-	m_PacketsInOutputBuffer(0),
 	m_WorkerThread(NULL),
 	m_SignallingEvent(NULL),
 	m_pOutFile(pFile),
 	m_pPluginsHandler(pPluginsHandler),
-	m_DeferWriting(true),
 	m_Sid(sid),
 	m_PmtPid(pmtPid),
 	m_CATypes(caTypes),
 	m_EMMPid(emmPid),
-	m_FoundPATPacket(false),
 	m_ExitWorkerThread(false),
 	m_pRecorder(pRecorder),
-	m_OutputBuffer(new BYTE[TS_PACKET_LEN * g_Configuration.getTSPacketsPerOutputBuffer()]),
 	m_IsEncrypted(false),
 	m_FileLength((__int64)0),
 	m_MaxFileLength(maxFileLength),
@@ -1362,26 +1403,20 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_PATCounter(0),
 	m_PATContinuityCounter(0),
 	m_PMTCounter(0),
-	m_PMTContinuityCounter(0)
+	m_PMTContinuityCounter(0),
+	m_FirstECMPacket(true)
 {
 	// Make sure last ECM packet is zeroed out
 	ZeroMemory(m_LastECMPacket, sizeof(m_LastECMPacket));
+
+	// Add a single buffer to the end of the output queue
+	m_OutputBuffers.push_back(new OutputBuffer);
 
 	// Create worker thread
 	m_WorkerThread = CreateThread(NULL, 0, parserWorkerThreadRoutine, this, 0, NULL);
 
 	// Create signalling event
 	m_SignallingEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-	// Set the initial values for keys
-	m_OddKey[0] = m_EvenKey[0] = 0x14;
-	m_OddKey[1] = m_EvenKey[1] = 0x89;
-	m_OddKey[2] = m_EvenKey[2] = 0x5E;
-	m_OddKey[3] = m_EvenKey[3] = 0xFB;
-	m_OddKey[4] = m_EvenKey[4] = 0x61;
-	m_OddKey[5] = m_EvenKey[5] = 0xB5;
-	m_OddKey[6] = m_EvenKey[6] = 0x31;
-	m_OddKey[7] = m_EvenKey[7] = 0x47;
 }
 
 // Destructor of the parser
@@ -1397,14 +1432,18 @@ ESCAParser::~ESCAParser()
 	// Wait for the thread to finish
 	WaitForSingleObject(m_WorkerThread, INFINITE);
 
+	// Delete all remaining output buffers
+	while(!m_OutputBuffers.empty())
+	{
+		delete m_OutputBuffers.front();
+		m_OutputBuffers.pop_front();
+	}
+
 	// Finally, close the worker thread handle
 	CloseHandle(m_WorkerThread);
 
 	// And then close signalling event
 	CloseHandle(m_SignallingEvent);
-
-	// delete the output buffer
-	delete [] m_OutputBuffer;
 }
 
 // This function is called from the main filter thread!
@@ -1413,61 +1452,96 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 	// Do it in the critical section
 	CAutoLock lock(&m_csOutputBuffer);
 
+	// Get the last buffer from the queue
+	OutputBuffer* const currentBuffer = m_OutputBuffers.back();
+
 	// This really shoudn't happen!
-	if(m_PacketsInOutputBuffer >= g_Configuration.getTSPacketsPerOutputBuffer())
+	if(currentBuffer->numberOfPackets >= g_Configuration.getTSPacketsPerOutputBuffer())
 		g_Logger.log(0, true, TEXT("Too many packets for decryption!\n"));
 	else
 	{
 		// Copy the packet to the output buffer
-		memcpy(m_OutputBuffer + m_PacketsInOutputBuffer * TS_PACKET_LEN, packet, TS_PACKET_LEN);
+		memcpy(currentBuffer->buffer + currentBuffer->numberOfPackets * TS_PACKET_LEN, packet, TS_PACKET_LEN);
+
 		// Increment the packet counter
-		m_PacketsInOutputBuffer++;
-		// Signal the work thread it has a new buffer to take care of
+		currentBuffer->numberOfPackets++;
+
+		// Signal the work thread it has a new packet to take care of
 		SetEvent(m_SignallingEvent);
 	}
 }
 
-// This function is called from the work thread!
+// This function is called from the worker thread!
 void ESCAParser::decryptAndWritePending(bool immediately)
 {
 	// Do it within critical section
 	CAutoLock lock(&m_csOutputBuffer);
 
-	// Process packets only if over output threshold
-	if(!(m_IsEncrypted && m_DeferWriting) && (m_PacketsInOutputBuffer >= g_Configuration.getTSPacketsOutputThreshold() || immediately))
+	// For all packets in the output queue
+	while(!m_OutputBuffers.empty())
 	{
-		// Log how many packets are about to be written
-		g_Logger.log(3, true, TEXT("Writing %d pending packets..."), m_PacketsInOutputBuffer);
-		// Decrypt multiple packets
-		m_Decrypter.decrypt(m_OutputBuffer, m_PacketsInOutputBuffer);
-		// And write them to the file
-		int writtenBytes = write(m_PacketsInOutputBuffer * TS_PACKET_LEN);
-		if(writtenBytes > 0)
-			m_FileLength = m_FileLength + writtenBytes;
-		if(writtenBytes != (int)(m_PacketsInOutputBuffer * TS_PACKET_LEN))
-			// Notify recorder about broken pipe if necessary
-			m_pRecorder->setBrokenPipe();
-		// Zero the packet counter
-		m_PacketsInOutputBuffer = 0;
-		// Now all the packets are written
-		g_Logger.log(3, false, TEXT("Done!\n"));
+		// Get the current output buffer
+		OutputBuffer* const currentBuffer = m_OutputBuffers.front();
+
+		// Let's see if we can write its contents
+		if((!m_IsEncrypted || currentBuffer->hasKey) && (m_OutputBuffers.size() > 1 || currentBuffer->numberOfPackets >= g_Configuration.getTSPacketsOutputThreshold() || immediately))
+		{
+			// Set the decrypter keys
+			m_Decrypter.setKeys(currentBuffer->oddKey, currentBuffer->evenKey);
+
+			// Log how many packets are about to be written
+			g_Logger.log(3, true, TEXT("Writing %d pending packets..."), currentBuffer->numberOfPackets);
+			
+			// Decrypt multiple packets
+			m_Decrypter.decrypt(currentBuffer->buffer, currentBuffer->numberOfPackets);
+		
+			// And write them to the file
+			int writtenBytes = write(currentBuffer->buffer, currentBuffer->numberOfPackets * TS_PACKET_LEN);
+			if(writtenBytes > 0)
+				m_FileLength = m_FileLength + writtenBytes;
+			if(writtenBytes != (int)(currentBuffer->numberOfPackets * TS_PACKET_LEN))
+				// Notify recorder about broken pipe if necessary
+				m_pRecorder->setBrokenPipe();
+
+			// Now all the packets are written
+			g_Logger.log(3, false, TEXT("Done!\n"));
+
+			// Let's see if we already have newer buffer
+			if(m_OutputBuffers.size() > 1)
+			{
+				// Remove the output buffer from the head of the queue
+				m_OutputBuffers.pop_front();
+
+				// And delete the buffer object
+				delete currentBuffer;
+			}
+			else
+			{
+				// Make the number of packets back to zero
+				currentBuffer->numberOfPackets = 0;
+
+				// And break out
+				break;
+			}
+		}
+		else
+			// Do nothing and boil out
+			break;
 	}
-	if(immediately)
-		// Set deferred writing flag to TRUE
-		m_DeferWriting = true;
 }
 
-int ESCAParser::write(int bytesToWrite)
+int ESCAParser::write(const BYTE* const buffer,
+					  int bytesToWrite)
 {
 	int writtenBytes = 0;
 	if(m_MaxFileLength == (__int64)-1)
-		writtenBytes = fwrite(m_OutputBuffer, 1, bytesToWrite, m_pOutFile);
+		writtenBytes = fwrite(buffer, 1, bytesToWrite, m_pOutFile);
 	else
 	{
 		while(m_CurrentPosition + bytesToWrite > m_MaxFileLength)
 		{
 			int writeNow = (int)(m_MaxFileLength - m_CurrentPosition);
-			int writtenNow = fwrite(m_OutputBuffer + writtenBytes, 1, writeNow, m_pOutFile);
+			int writtenNow = fwrite(buffer + writtenBytes, 1, writeNow, m_pOutFile);
 			writtenBytes += writtenNow;
 			bytesToWrite -= writtenNow;
 			m_CurrentPosition = 0;
@@ -1475,7 +1549,7 @@ int ESCAParser::write(int bytesToWrite)
 			if(writtenNow != writeNow)
 				return writtenBytes;
 		}
-		int writtenNow = fwrite(m_OutputBuffer + writtenBytes, 1, bytesToWrite, m_pOutFile);
+		int writtenNow = fwrite(buffer + writtenBytes, 1, bytesToWrite, m_pOutFile);
 		m_CurrentPosition += writtenNow;
 		writtenBytes += writtenNow;
 	}
