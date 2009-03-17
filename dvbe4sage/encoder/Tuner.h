@@ -24,14 +24,14 @@ private:
 public:
 	Tuner(Encoder* const pEncoder, int ordinal, ULONG initialFrequency, ULONG initialSymbolRate, Polarisation initialPolarization, ModulationType initialModulation, BinaryConvolutionCodeRate initialFecRate);
 	virtual ~Tuner(void);
-	bool tune(ULONG frequency, ULONG symbolRate, Polarisation polarization, ModulationType modulation, BinaryConvolutionCodeRate fecRate);
-	bool startRecording(bool bTunerUsed);
+	void tune(ULONG frequency, ULONG symbolRate, Polarisation polarization, ModulationType modulation, BinaryConvolutionCodeRate fecRate);
+	bool startRecording();
 	void stopRecording();
 	LPCTSTR getTunerFriendlyName() const	{ return m_BDAFilterGraph.getTunerName(); }
 	int getTunerOrdinal() const				{ return m_BDAFilterGraph.getTunerOrdinal(); }
 	DVBParser* getParser()					{ return &m_BDAFilterGraph.getParser(); }
 	BOOL running()							{ return m_BDAFilterGraph.m_fGraphRunning; }
-	bool runIdle();
+	void runIdle();
 	bool isTunerOK() const					{ return m_IsTunerOK; }
 	USHORT getTid() const					{ return m_BDAFilterGraph.m_Tid; }
 	void setTid(USHORT tid)					{ m_BDAFilterGraph.m_Tid = tid; }

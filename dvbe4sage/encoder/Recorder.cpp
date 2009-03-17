@@ -152,7 +152,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 		// Check if opening file succeeded
 		if(m_fout == NULL)
 		{
-			g_Logger.log(0, true, TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), outFileName, GetLastError());
+			g_Logger.log(0, true, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
 			m_HasError = true;
 		}
 	}

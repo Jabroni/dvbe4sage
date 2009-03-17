@@ -40,11 +40,18 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 									 g_Configuration.getInitialPolarization(),
 									 g_Configuration.getInitialModulation(),
 									 g_Configuration.getInitialFEC());
-			if(tuner->isTunerOK() && tuner->runIdle())
+			// Let's see if we can use this tuner
+			if(tuner->isTunerOK() && tuner->startRecording())
+			{
+				// Let's see if this is a DVB-S2 tuner and put it into the list accordingly
 				if(g_Configuration.isDVBS2Tuner(tuner->getTunerOrdinal()))
 					m_Tuners.push_back(tuner);
 				else
 					m_Tuners.insert(m_Tuners.begin(), tuner);
+
+				// Run the tuner on idle
+				tuner->runIdle();
+			}
 		}
 
 	// Initialize Winsock layer
@@ -496,20 +503,42 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		if(virtualTuner != NULL)
 			virtualTuner->setRecorder(recorder);
 
-		// Unlock access to glbal structure
-		m_cs.Unlock();
+		// Set the flag to succeeded
+		bool succeeded = true;
 
-		// Tune the tuner if necessary
+		// Let's see if we need to do anything on the tuner
 		if(!bTunerUsed)
+		{
+			// Tune to the right parameters
 			tuner->tune(frequency, symbolRate, polarization, modulation, fecRate);
 
-		// Tell tuner it should start recording
-		if(tuner->startRecording(bTunerUsed))
-			// Set the TID if recording was started successfully
-			tuner->setTid(tid);
+			// Now, start the recording
+			if(tuner->startRecording())
+				// Set the TID if recording was started successfully
+				tuner->setTid(tid);
+			else
+				// Unset succeeded flag
+				succeeded = false;
+		}
 
-		// Same for the recorder
-		return recorder->startRecording();
+		// Unlock access to the global structure
+		m_cs.Unlock();
+
+		// If succeded, try to start recording
+		if(succeeded && recorder->startRecording())
+			// All is good
+			return true;
+		else
+		{
+			// make the log entry
+			g_Logger.log(0, true, TEXT("Cannot start recording, ")),
+			// If failed to start recording, stop it
+			recorder->stopRecording();
+			// Delete the recorder
+			delete recorder;
+			// And return false
+			return false;
+		}
 	}
 	else
 		return false;
@@ -519,10 +548,6 @@ bool Encoder::stopRecording(Recorder* recorder)
 {
 	// Lock access to glbal structure
 	CAutoLock lock(&m_cs);
-
-	// Nullify last recorder if necessary
-	/*if(recorder == m_LastRecorder)
-		m_LastRecorder = NULL;*/
 
 	// Get the tuner of the recorder
 	Tuner* tuner = recorder->getTuner();

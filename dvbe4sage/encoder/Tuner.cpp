@@ -70,7 +70,7 @@ Tuner::~Tuner(void)
 	m_BDAFilterGraph.TearDownGraph();
 }
 
-bool Tuner::tune(ULONG frequency,
+void Tuner::tune(ULONG frequency,
 				 ULONG symbolRate,
 				 Polarisation polarization,
 				 ModulationType modulation,
@@ -87,49 +87,46 @@ bool Tuner::tune(ULONG frequency,
 	if(m_BDAFilterGraph.m_IsHauppauge && modulation == BDA_MOD_8VSB)
 		m_BDAFilterGraph.m_Modulation = BDA_MOD_8PSK;
 
-	return true;
+	// Set LNB power
+	m_BDAFilterGraph.THBDA_IOCTL_SET_TUNER_POWER_Fun(TRUE);
 }
 
-bool Tuner::startRecording(bool bTunerUsed)
+bool Tuner::startRecording()
 {
-	// Change settings only if tuner unused
-	if(!bTunerUsed)
+	if(m_isMantis)
+		m_BDAFilterGraph.BuildGraph();
+
+	// Perform the tuning
+	m_BDAFilterGraph.ChangeSetting();
+
+	// Get lock status
+	BOOLEAN bLocked = FALSE;
+	LONG lSignalQuality = 0;		
+	LONG lSignalStrength = 0;
+
+	// Get the tuner status
+	m_BDAFilterGraph.GetTunerStatus(&bLocked, &lSignalQuality, &lSignalStrength);
+	if(bLocked)
+		g_Logger.log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
+	else
 	{
-		// Build the graph (only for Mantis)
-		if(m_isMantis)
-			m_BDAFilterGraph.BuildGraph();
-
-		// Perform the tuning
-		m_BDAFilterGraph.ChangeSetting();
-
-		// Get lock status
-		BOOLEAN bLocked = FALSE;
-		LONG lSignalQuality = 0;		
-		LONG lSignalStrength = 0;
-
-		m_BDAFilterGraph.GetTunerStatus(&bLocked, &lSignalQuality, &lSignalStrength);
-		if(bLocked)
-			g_Logger.log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
+		if(m_isTwinhan)
+			g_Logger.log(0, true, TEXT("Signal not locked, trying anyway...!\n"));
 		else
 		{
-			if(m_isTwinhan)
-				g_Logger.log(0, true, TEXT("Signal not locked, trying anyway...!\n"));
-			else
-			{
-				g_Logger.log(0, true, TEXT("Signal not locked, no recording done...!\n"));
-				return false;
-			}
-		}
-		
-		// Run the graph
-		if(FAILED(m_BDAFilterGraph.RunGraph()))
-		{
-			g_Logger.log(0, true, TEXT("Error: Could not play the filter graph.\n"));
+			g_Logger.log(0, true, TEXT("Signal not locked, no recording done...!\n"));
 			return false;
 		}
 	}
-
-	return true;
+		
+	// Run the graph
+	if(FAILED(m_BDAFilterGraph.RunGraph()))
+	{
+		g_Logger.log(0, true, TEXT("Error: Could not play the filter graph.\n"));
+		return false;
+	}
+	else
+		return true;
 }
 
 void Tuner::stopRecording()
@@ -180,12 +177,8 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 	return 0;
 }
 
-bool Tuner::runIdle()
+void Tuner::runIdle()
 {
-	bool result = (m_BDAFilterGraph.RunGraph() == S_OK);
-
 	// Create the worker thread for idle run
 	m_WorkerThread = CreateThread(NULL, 0, RunIdleCallback, this, 0, NULL);
-
-	return result;
 }

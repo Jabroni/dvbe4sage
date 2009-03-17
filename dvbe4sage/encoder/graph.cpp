@@ -417,6 +417,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	pDVBSTuningSpace->put_LNBSwitch(g_Configuration.getLNBSW());
 	pDVBSTuningSpace->put_LowOscillator(g_Configuration.getLNBLOF1());
 	pDVBSTuningSpace->put_HighOscillator(g_Configuration.getLNBLOF2());
+	pDVBSTuningSpace->put_SpectralInversion(BDA_SPECTRAL_INVERSION_AUTOMATIC);
 
 	//=====================================================================================================
 	//			End of added by Michael
