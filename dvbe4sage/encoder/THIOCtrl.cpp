@@ -1,7 +1,6 @@
-
 #include "stdafx.h"
-#include "graph.h"
 
+#include "graph.h"
 
 BOOL CBDAFilterGraph::BDAIOControl( DWORD  dwIoControlCode,
 									LPVOID lpInBuffer,

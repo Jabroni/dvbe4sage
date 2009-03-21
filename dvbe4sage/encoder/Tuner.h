@@ -17,6 +17,7 @@ private:
 	HANDLE					m_WorkerThread;
 	bool					m_IsTunerOK;
 	Encoder* const			m_pEncoder;
+	HANDLE					m_InitializationEvent;
 
 	// We disable unsafe constructors
 	Tuner();
@@ -35,4 +36,5 @@ public:
 	bool isTunerOK() const					{ return m_IsTunerOK; }
 	USHORT getTid() const					{ return m_BDAFilterGraph.m_Tid; }
 	void setTid(USHORT tid)					{ m_BDAFilterGraph.m_Tid = tid; }
+	HANDLE getInitializationEvent()			{ return m_InitializationEvent; }
 };

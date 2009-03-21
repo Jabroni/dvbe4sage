@@ -1,8 +1,7 @@
 #include "stdafx.h"
+
 #include "graph.h"
 #include "DVBFilter.h"
-#include <stdlib.h>
-#include <tchar.h>
 #include "Logger.h"
 #include "misc.h"
 #include "configuration.h"

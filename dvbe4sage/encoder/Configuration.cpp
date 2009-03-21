@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+
 #include "Configuration.h"
 #include "misc.h"
 

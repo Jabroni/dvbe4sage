@@ -239,6 +239,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\extern.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\graph.cpp"
 				>
 			</File>
@@ -318,6 +322,10 @@
 			</File>
 			<File
 				RelativePath=".\encoder.h"
+				>
+			</File>
+			<File
+				RelativePath=".\extern.h"
 				>
 			</File>
 			<File

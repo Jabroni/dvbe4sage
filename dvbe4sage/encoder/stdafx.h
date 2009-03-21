@@ -55,6 +55,9 @@
 #include <winsock2.h>
 #include <io.h>
 #include <time.h>
+#include <share.h>
+#include <stdlib.h>
+#include <tchar.h>
 
 #include <string>
 #include <hash_map>

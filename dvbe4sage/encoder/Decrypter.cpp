@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+
 #include "Decrypter.h"
 #include "Logger.h"
 #include "configuration.h"

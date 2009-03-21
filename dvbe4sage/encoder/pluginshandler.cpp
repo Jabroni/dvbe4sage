@@ -2,6 +2,7 @@
 //
 
 #include "stdafx.h"
+
 #include "resource.h"
 #include "pluginshandler.h"
 #include "dvbparser.h"

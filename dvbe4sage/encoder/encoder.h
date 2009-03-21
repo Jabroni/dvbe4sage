@@ -74,6 +74,7 @@ public:
 	LPCTSTR getTunerFriendlyName(int i) const;
 	int getTunerOrdinal(int i) const;
 	DVBParser* getParser()								{ return m_pParser; }
+	void waitForFullInitialization();
 };
 
 #pragma warning(pop)

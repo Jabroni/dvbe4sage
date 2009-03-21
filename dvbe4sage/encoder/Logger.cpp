@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+
 #include "Logger.h"
 
 // This is the global logger

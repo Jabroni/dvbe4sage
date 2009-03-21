@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+
 #include "Tuner.h"
 #include "logger.h"
 #include "configuration.h"
@@ -15,7 +16,8 @@ Tuner::Tuner(Encoder* const pEncoder,
 	m_isTwinhan(false),
 	m_isMantis(false),
 	m_WorkerThread(NULL),
-	m_IsTunerOK(true)
+	m_IsTunerOK(true),
+	m_InitializationEvent(NULL)
 {
 	// Build the graph
 	if(FAILED(m_BDAFilterGraph.BuildGraph()))
@@ -174,11 +176,17 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 	// Tell the tuner to stop the recording
 	pTuner->stopRecording();
 
+	// Now we can set the initialization event, as the initialization of the tuner is fully complete
+	SetEvent(pTuner->m_InitializationEvent);
+
 	return 0;
 }
 
 void Tuner::runIdle()
 {
+	// Create the initialization event that need to be waited on to be sure the initialization is complete
+	m_InitializationEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+
 	// Create the worker thread for idle run
 	m_WorkerThread = CreateThread(NULL, 0, RunIdleCallback, this, 0, NULL);
 }

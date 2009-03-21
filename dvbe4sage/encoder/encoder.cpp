@@ -2,9 +2,8 @@
 //
 
 #include "stdafx.h"
-#include "encoder.h"
 
-#include <share.h>
+#include "encoder.h"
 #include "DVBParser.h"
 #include "graph.h"
 #include "DVBFilter.h"
@@ -111,6 +110,9 @@ Encoder::~Encoder()
 
 	// Uninitialize COM
 	CoUninitialize();
+
+	// Log "stop encoder" entry
+	g_Logger.log(0, true, TEXT("Encoder stopped!\n"));
 }
 
 void Encoder::socketOperation(SOCKET socket,
@@ -592,4 +594,25 @@ LPCTSTR Encoder::getTunerFriendlyName(int i) const
 int Encoder::getTunerOrdinal(int i) const
 {
 	return m_Tuners[i]->getTunerOrdinal();
+}
+
+void Encoder::waitForFullInitialization()
+{
+	// Make a log entry that the setup is complete
+	g_Logger.log(0, true, TEXT("Waiting for finishing encoder initialization\n"));
+
+	// Allocate handles array, the maximum size is equal to the size of tuners array
+	HANDLE* handles = new HANDLE[m_Tuners.size()];
+	int count = 0;
+
+	// Collect all the tuners initialization handles into the array
+	for(UINT i = 0; i < m_Tuners.size(); i++)
+		if(m_Tuners[i] != NULL && m_Tuners[i]->getInitializationEvent())
+			handles[count++] = m_Tuners[i]->getInitializationEvent();
+			
+	// Wait on all the handles
+	WaitForMultipleObjects(count, handles, TRUE, INFINITE);
+
+	// Make a log entry that the setup is complete
+	g_Logger.log(0, true, TEXT("Encoder initialization is complete\n"));
 }
