@@ -99,7 +99,7 @@ BOOL NewRecording::OnInitDialog()
 		m_TunerNameBox.SetItemData(i, m_pParentDialog->getTunerOrdinal(i));
 	}
 	
-	if(m_bFirstTime)
+	if(m_bFirstTime && m_pParentDialog->getNumberOfTuners() > 0)
 	{
 		m_bFirstTime = false;
 		m_TunerNameBox.SetCurSel(0);

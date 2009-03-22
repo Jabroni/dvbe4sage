@@ -40,7 +40,7 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 									 g_Configuration.getInitialModulation(),
 									 g_Configuration.getInitialFEC());
 			// Let's see if we can use this tuner
-			if(tuner->isTunerOK() && tuner->startRecording())
+			if(tuner->isTunerOK() && tuner->startRecording(true))
 			{
 				// Let's see if this is a DVB-S2 tuner and put it into the list accordingly
 				if(g_Configuration.isDVBS2Tuner(tuner->getTunerOrdinal()))
@@ -515,7 +515,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			tuner->tune(frequency, symbolRate, polarization, modulation, fecRate);
 
 			// Now, start the recording
-			if(tuner->startRecording())
+			if(tuner->startRecording(false))
 				// Set the TID if recording was started successfully
 				tuner->setTid(tid);
 			else

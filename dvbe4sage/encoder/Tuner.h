@@ -26,7 +26,7 @@ public:
 	Tuner(Encoder* const pEncoder, int ordinal, ULONG initialFrequency, ULONG initialSymbolRate, Polarisation initialPolarization, ModulationType initialModulation, BinaryConvolutionCodeRate initialFecRate);
 	virtual ~Tuner(void);
 	void tune(ULONG frequency, ULONG symbolRate, Polarisation polarization, ModulationType modulation, BinaryConvolutionCodeRate fecRate);
-	bool startRecording();
+	bool startRecording(bool ignoreSignalLock);
 	void stopRecording();
 	LPCTSTR getTunerFriendlyName() const	{ return m_BDAFilterGraph.getTunerName(); }
 	int getTunerOrdinal() const				{ return m_BDAFilterGraph.getTunerOrdinal(); }

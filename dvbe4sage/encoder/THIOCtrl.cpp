@@ -209,17 +209,18 @@ BOOL CBDAFilterGraph::THBDA_IOCTL_GET_TUNER_POWER_Fun(BYTE *pTunerPower)
 //********************* DVB-S (must support)*********************//
 //***************************************************************//
 
-BOOL CBDAFilterGraph::THBDA_IOCTL_SET_LNB_DATA_Fun()
+BOOL CBDAFilterGraph::THBDA_IOCTL_SET_LNB_DATA_Fun(ULONG ulLNBLOFLowBand,        // LOF Low Band, in KHz
+												   ULONG ulLNBLOFHighBand,       // LOF High Band, in KHz
+												   ULONG ulLNBLOFHiLoSW)         // LOF High/Low Band Switch Freq, in KHz)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
 
-	// This is for AMOS
 	m_LNB_Data.DiSEqC_Port = 0;				
-	m_LNB_Data.LNB_POWER = 1;				
-	m_LNB_Data.ulLNBLOFLowBand = 9750;
-	m_LNB_Data.ulLNBLOFHighBand = 10600;
-	m_LNB_Data.ulLNBLOFHiLoSW = 11700;
+	m_LNB_Data.LNB_POWER = 1;													// Make sure LNB power is set!
+	m_LNB_Data.ulLNBLOFLowBand = ulLNBLOFLowBand;
+	m_LNB_Data.ulLNBLOFHighBand = ulLNBLOFHighBand;
+	m_LNB_Data.ulLNBLOFHiLoSW = ulLNBLOFHiLoSW;
 	m_LNB_Data.Tone_Data_Burst = 0;
 	m_LNB_Data.f22K_Output = 0;
 

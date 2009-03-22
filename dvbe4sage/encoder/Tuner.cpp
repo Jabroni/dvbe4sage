@@ -19,6 +19,9 @@ Tuner::Tuner(Encoder* const pEncoder,
 	m_IsTunerOK(true),
 	m_InitializationEvent(NULL)
 {
+	// Tune to the initial parameters
+	tune(initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec);
+
 	// Build the graph
 	if(FAILED(m_BDAFilterGraph.BuildGraph()))
 	{
@@ -50,10 +53,13 @@ Tuner::Tuner(Encoder* const pEncoder,
 			m_isTwinhan = true;
 		if(_tcsstr(m_BDAFilterGraph.getTunerName(), TEXT("Mantis")) != NULL)
 			m_isMantis = true;
-	}
 
-	// Tune to the initial parameters
-	tune(initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec);
+		// Set the LNB data
+		m_BDAFilterGraph.THBDA_IOCTL_SET_LNB_DATA_Fun(g_Configuration.getLNBLOF1(), g_Configuration.getLNBLOF2(), g_Configuration.getLNBSW());
+
+		// Set tuner power
+		//m_BDAFilterGraph.THBDA_IOCTL_SET_TUNER_POWER_Fun(0);
+	}
 }
 
 Tuner::~Tuner(void)
@@ -88,12 +94,9 @@ void Tuner::tune(ULONG frequency,
 	// Fix the modulation type for S2 tuning of Hauppauge devices
 	if(m_BDAFilterGraph.m_IsHauppauge && modulation == BDA_MOD_8VSB)
 		m_BDAFilterGraph.m_Modulation = BDA_MOD_8PSK;
-
-	// Set LNB power
-	m_BDAFilterGraph.THBDA_IOCTL_SET_TUNER_POWER_Fun(TRUE);
 }
 
-bool Tuner::startRecording()
+bool Tuner::startRecording(bool ignoreSignalLock)
 {
 	if(m_isMantis)
 		m_BDAFilterGraph.BuildGraph();
@@ -112,7 +115,7 @@ bool Tuner::startRecording()
 		g_Logger.log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
 	else
 	{
-		if(m_isTwinhan)
+		if(m_isTwinhan || ignoreSignalLock)
 			g_Logger.log(0, true, TEXT("Signal not locked, trying anyway...!\n"));
 		else
 		{
