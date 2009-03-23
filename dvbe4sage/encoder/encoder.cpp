@@ -20,7 +20,7 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pParser(new DVBParser)
 {
 	// Set the logger level
-	g_Logger.setLogLevel(g_Configuration.getLogLevel());
+	m_Logger.setLogLevel(g_Configuration.getLogLevel());
 
 	// Initialize COM stuff
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
@@ -72,7 +72,7 @@ Encoder::~Encoder()
 	// For all recorders
 	while(!m_Recorders.empty())
 	{
-		g_Logger.log(0, true, TEXT("Aborting, "));
+		log(0, true, TEXT("Aborting, "));
 		// Get the recorder pointer
 		Recorder* recorder = m_Recorders.begin()->second;
 		// Stop ongoing recordings
@@ -112,7 +112,7 @@ Encoder::~Encoder()
 	CoUninitialize();
 
 	// Log "stop encoder" entry
-	g_Logger.log(0, true, TEXT("Encoder stopped!\n"));
+	log(0, true, TEXT("Encoder stopped!\n"));
 }
 
 void Encoder::socketOperation(SOCKET socket,
@@ -142,7 +142,7 @@ void Encoder::socketOperation(SOCKET socket,
 					wstring fullCommand(fullCommandUTF16, fullCommandLength);
 
 					// Print the command received
-					g_Logger.log(1, true, TEXT("Received command: \"%.*S\"\n"), fullCommand.length() - 2, fullCommand.c_str());
+					log(1, true, TEXT("Received command: \"%.*S\"\n"), fullCommand.length() - 2, fullCommand.c_str());
 
 					// Determine the command itsels
 					wstring command(fullCommandUTF16, fullCommand.find_first_of(L" \r\n"));
@@ -172,7 +172,7 @@ void Encoder::socketOperation(SOCKET socket,
 						wstring fileName(fullCommandUTF16 + durationEndPos + 1, fileNameEndPos - durationEndPos - 1);
 
 						// Log the command with all its parameters
-						g_Logger.log(0, true, TEXT("Received START command to start recording on source \"%S\", channel=%d, duration=%I64d, file=\"%S\"\n"),
+						log(0, true, TEXT("Received START command to start recording on source \"%S\", channel=%d, duration=%I64d, file=\"%S\"\n"),
 							source.c_str(), channelInt, durationInt, fileName.c_str());
 
 						// Start the recording itself
@@ -183,7 +183,7 @@ void Encoder::socketOperation(SOCKET socket,
 					}
 					else if(command == L"STOP")
 					{
-						g_Logger.log(0, true, TEXT("Requested by Sage, "));
+						log(0, true, TEXT("Requested by Sage, "));
 						// Stop ongoing recording
 						Recorder* recorder = virtualTuner->getRecorder();
 						if(recorder != NULL)
@@ -193,7 +193,7 @@ void Encoder::socketOperation(SOCKET socket,
 							delete recorder;
 						}
 						else
-							g_Logger.log(0, false, TEXT(" there is no recorder to stop!\n"));
+							log(0, false, TEXT(" there is no recorder to stop!\n"));
 						send(socket, "OK\r\n", 4, 0);
 					}
 					else if(command == L"VERSION")
@@ -236,7 +236,7 @@ void Encoder::socketOperation(SOCKET socket,
 						wstring fileName(fullCommandUTF16 + sizeEndPos + 1, fileNameEndPos - sizeEndPos - 1);
 
 						// Log the command with its parameters
-						g_Logger.log(0, true, TEXT("Received BUFFER command to start recording on source \"%S\", channel=%d, size=%I64d, file=\"%S\"\n"),
+						log(0, true, TEXT("Received BUFFER command to start recording on source \"%S\", channel=%d, size=%I64d, file=\"%S\"\n"),
 							source.c_str(), channelInt, sizeInt, fileName.c_str());
 
 						// Start the actual recording
@@ -264,7 +264,7 @@ void Encoder::socketOperation(SOCKET socket,
 							// Send the length as a response
 							char buffer[100];
 							int length = sprintf_s(buffer, sizeof(buffer), "%I64u\r\n", recorder->getFileLength());
-							g_Logger.log(0, true, TEXT("Replied %.*s\n"), length - 2, buffer);
+							log(0, true, TEXT("Replied %.*s\n"), length - 2, buffer);
 							send(socket, buffer, length, 0);
 						}
 						else
@@ -277,10 +277,10 @@ void Encoder::socketOperation(SOCKET socket,
 					}
 					else
 						// Log an unknown command and do nithing with it
-						g_Logger.log(0, true, TEXT("Received unknown command \"%S\", ignoring...\n"), fullCommand.c_str());
+						log(0, true, TEXT("Received unknown command \"%S\", ignoring...\n"), fullCommand.c_str());
 				}
 				else
-					g_Logger.log(0, true, TEXT("Received command from client that already left, ignoring...\n"));
+					log(0, true, TEXT("Received command from client that already left, ignoring...\n"));
 			}
 			break;
 		}
@@ -394,7 +394,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	else if(!m_pParser->getSidForChannel((USHORT)channel, sid))
 	{
 		// If not found, report an error
-		g_Logger.log(0, true, TEXT("Cannot obtain SID number for the channel \"%d\", no recording done!\n"), channel);
+		log(0, true, TEXT("Cannot obtain SID number for the channel \"%d\", no recording done!\n"), channel);
 
 		// Unlock the parser
 		m_pParser->unlock();
@@ -404,7 +404,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	}
 	else
 		// Make a log entry
-		g_Logger.log(2, true, TEXT("Channel=%d was successfully mapped to SID=%hu\n"), channel, sid);
+		log(2, true, TEXT("Channel=%d was successfully mapped to SID=%hu\n"), channel, sid);
 
 	// Now search for the tuner
 	Tuner* tuner = NULL;
@@ -427,7 +427,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			fecRate = transponder.fec;
 
 			// Make a log entry
-			g_Logger.log(2, true, TEXT("Autodiscovery results for SID=%hu: TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"), sid,
+			log(2, true, TEXT("Autodiscovery results for SID=%hu: TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"), sid,
 				transponder.tid, frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
 			// And get the tuner according to these
@@ -439,7 +439,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		else
 		{
 			// If transponder is not found, report an error
-			g_Logger.log(0, true, TEXT("Autodiscovery requested, but cannot find the transponder for SID \"%hu\", no recording done!\n"), sid);
+			log(0, true, TEXT("Autodiscovery requested, but cannot find the transponder for SID \"%hu\", no recording done!\n"), sid);
 
 			// Unlock the parser
 			m_pParser->unlock();
@@ -458,17 +458,17 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// Boil out if an appropriate tuner is not found
 	if(tuner == NULL)
 	{
-		g_Logger.log(0, true, TEXT("Cannot start recording for %s=%d, no sutable tuner found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel);
+		log(0, true, TEXT("Cannot start recording for %s=%d, no sutable tuner found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel);
 		return false;
 	}
 	
 	// Make a log entry
 	if(useSid)
-		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+		log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 	else
-		g_Logger.log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d, SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+		log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d, SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), channel, sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
@@ -481,7 +481,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		// Let's see if the recorder has an error, just delete it and exit
 		if(recorder->hasError())
 		{
-			g_Logger.log(0, true, TEXT("Cannot start recording!\n")),
+			log(0, true, TEXT("Cannot start recording!\n")),
 			delete recorder;
 			return false;
 		}
@@ -533,7 +533,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		else
 		{
 			// make the log entry
-			g_Logger.log(0, true, TEXT("Cannot start recording, ")),
+			log(0, true, TEXT("Cannot start recording, ")),
 			// If failed to start recording, stop it
 			recorder->stopRecording();
 			// Delete the recorder
@@ -599,7 +599,7 @@ int Encoder::getTunerOrdinal(int i) const
 void Encoder::waitForFullInitialization()
 {
 	// Make a log entry that the setup is complete
-	g_Logger.log(0, true, TEXT("Waiting for finishing encoder initialization\n"));
+	log(0, true, TEXT("Waiting for finishing encoder initialization\n"));
 
 	// Allocate handles array, the maximum size is equal to the size of tuners array
 	HANDLE* handles = new HANDLE[m_Tuners.size()];
@@ -614,5 +614,5 @@ void Encoder::waitForFullInitialization()
 	WaitForMultipleObjects(count, handles, TRUE, INFINITE);
 
 	// Make a log entry that the setup is complete
-	g_Logger.log(0, true, TEXT("Encoder initialization is complete\n"));
+	log(0, true, TEXT("Encoder initialization is complete\n"));
 }

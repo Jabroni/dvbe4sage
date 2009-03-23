@@ -3,6 +3,7 @@
 #include "Tuner.h"
 #include "logger.h"
 #include "configuration.h"
+#include "encoder.h"
 
 Tuner::Tuner(Encoder* const pEncoder,
 			 int ordinal,
@@ -25,7 +26,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 	// Build the graph
 	if(FAILED(m_BDAFilterGraph.BuildGraph()))
 	{
-		g_Logger.log(0, true, TEXT("Error: Could not Build the DVB-S BDA filter graph.\n"));
+		log(0, true, TEXT("Error: Could not Build the DVB-S BDA filter graph.\n"));
 		m_IsTunerOK = false;
 	}
 
@@ -36,7 +37,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 	memset(&DrvInfo, 0, sizeof(DriverInfo));
 	if(m_BDAFilterGraph.THBDA_IOCTL_GET_DEVICE_INFO_Fun(&DevInfo) && m_BDAFilterGraph.THBDA_IOCTL_GET_DRIVER_INFO_Fun(&DrvInfo))
 	{
-		g_Logger.log(0, true, TEXT("Device Info: Device_Name=%s, Device_TYPE=%d, MAC=%02X-%02X-%02X-%02X-%02X-%02X\n"),
+		log(0, true, TEXT("Device Info: Device_Name=%s, Device_TYPE=%d, MAC=%02X-%02X-%02X-%02X-%02X-%02X\n"),
 						DevInfo.Device_Name,
 						DevInfo.Device_TYPE, 
 						(UINT)DevInfo.MAC_ADDRESS[0],
@@ -45,7 +46,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 						(UINT)DevInfo.MAC_ADDRESS[3],
 						(UINT)DevInfo.MAC_ADDRESS[4],
 						(UINT)DevInfo.MAC_ADDRESS[5]);
-		g_Logger.log(0, true, TEXT("Driver Info: Company=%s, Version=%d.%d\n"),
+		log(0, true, TEXT("Driver Info: Company=%s, Version=%d.%d\n"),
 						DrvInfo.Company,
 						DrvInfo.Version_Major,
 						DrvInfo.Version_Minor);
@@ -112,14 +113,14 @@ bool Tuner::startRecording(bool ignoreSignalLock)
 	// Get the tuner status
 	m_BDAFilterGraph.GetTunerStatus(&bLocked, &lSignalQuality, &lSignalStrength);
 	if(bLocked)
-		g_Logger.log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
+		log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
 	else
 	{
 		if(m_isTwinhan || ignoreSignalLock)
-			g_Logger.log(0, true, TEXT("Signal not locked, trying anyway...!\n"));
+			log(0, true, TEXT("Signal not locked, trying anyway...!\n"));
 		else
 		{
-			g_Logger.log(0, true, TEXT("Signal not locked, no recording done...!\n"));
+			log(0, true, TEXT("Signal not locked, no recording done...!\n"));
 			return false;
 		}
 	}
@@ -127,7 +128,7 @@ bool Tuner::startRecording(bool ignoreSignalLock)
 	// Run the graph
 	if(FAILED(m_BDAFilterGraph.RunGraph()))
 	{
-		g_Logger.log(0, true, TEXT("Error: Could not play the filter graph.\n"));
+		log(0, true, TEXT("Error: Could not play the filter graph.\n"));
 		return false;
 	}
 	else

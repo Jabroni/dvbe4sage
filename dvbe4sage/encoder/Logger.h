@@ -1,7 +1,5 @@
 #pragma once
 
-#include "encoder.h"
-
 // This is the logger classs
 class Logger
 {
@@ -14,8 +12,9 @@ public:
 	virtual ~Logger(void);
 	void setLogLevel(UINT level);
 	void log(UINT logLevel, bool timeStamp, LPCTSTR format, ...);
-	LPCTSTR getLogFileName() { return m_LogFileName; }
+	void valog(UINT logLevel, bool timeStamp, LPCTSTR format, va_list argList);
+
+	LPCTSTR getLogFileName() const	{ return m_LogFileName; }
 };
 
-// This is a reference to the global logger
-extern ENCODER_API Logger g_Logger;
+void log(UINT logLevel, bool timeStamp, LPCTSTR format, ...);

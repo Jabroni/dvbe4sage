@@ -17,13 +17,13 @@
 // Lock function with logging
 void DVBParser::lock()
 {
-	g_Logger.log(4, true, TEXT("Locking the parser\n"));
+	log(4, true, TEXT("Locking the parser\n"));
 	m_cs.Lock();
 }
 
 void DVBParser::unlock()
 {
-	g_Logger.log(4, true, TEXT("Unlocking the parser\n"));
+	log(4, true, TEXT("Unlocking the parser\n"));
 	m_cs.Unlock();
 }
 
@@ -77,13 +77,13 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 		// Sanity check - the sync byte!
 		if(header->sync_byte != '\x47')
 		{	
-			g_Logger.log(0, true, TEXT("Catastrophic error - TS packet has wrong sync_byte!\n"));
+			log(0, true, TEXT("Catastrophic error - TS packet has wrong sync_byte!\n"));
 			break;
 		}
 
 		// Handle the packet only if it doesn't have an error
 		if(header->transport_error_indicator)
-			g_Logger.log(2, true, TEXT("Got an erroneous packet, skipping!\n"));
+			log(2, true, TEXT("Got an erroneous packet, skipping!\n"));
 		else
 		{
 			// Get the pid of the current packet
@@ -189,7 +189,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 
 	// Make sure we don't miss the adaptation field!
 	if(packet->adaptation_field_control != 1)
-		g_Logger.log(2, true, TEXT("Strange adaptation field control encountered\n"));
+		log(2, true, TEXT("Strange adaptation field control encountered\n"));
 
 	// If this is the first time we encountered this PID, create a new entry for it
 	if(m_BufferForPid.find(pid) == m_BufferForPid.end())
@@ -204,7 +204,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 	// If duplicate buffer, skip it
 	if(sectionBuffer.lastContinuityCounter == packet->continuity_counter)
 	{
-		g_Logger.log(2, true, TEXT("Got duplicate packet...\n"));
+		log(2, true, TEXT("Got duplicate packet...\n"));
 		return;
 	}
 
@@ -234,7 +234,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 			if(sectionBuffer.expectedLength > pointer)
 			{
 				// If no, discard the previously saved buffer
-				g_Logger.log(2, true, TEXT("TS packet messed up, fixing...\n"));
+				log(2, true, TEXT("TS packet messed up, fixing...\n"));
 				sectionBuffer.offset = 0;
 				sectionBuffer.expectedLength = 0;
 			}
@@ -309,7 +309,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 				// Make sure the remainder is just stuffing '\xFF' bytes
 				for(int i = lengthToCopy; i < remainingLength; i++)
 					if(inputBuffer[i] != (BYTE)'\xFF' && inputBuffer[i] != (BYTE)'\0')
-						g_Logger.log(3, true, TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
+						log(3, true, TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
 			}
 		}
 }
@@ -360,7 +360,7 @@ void PSIParser::parseTable(const pat_t* const table,
 				parseUnknownTable(table, tableLength);					// Parse the unknown table
 		}
 		else
-			g_Logger.log(2, true, TEXT("!!! CRC error!\n"));
+			log(2, true, TEXT("!!! CRC error!\n"));
 
 		// Amend input buffer pointer
 		inputBuffer += tableLength;
@@ -400,7 +400,7 @@ void PSIParser::parseCATTable(const cat_t* const table,
 		inputBuffer += descriptor->descriptor_length + DESCR_GEN_LEN;
 	}
 	// Print the log entry
-	g_Logger.log(2, true, TEXT("Found EMM PID=0x%hX\n"), m_EMMPid);
+	log(2, true, TEXT("Found EMM PID=0x%hX\n"), m_EMMPid);
 }
 
 void PSIParser::parsePMTTable(const pmt_t* const table,
@@ -426,7 +426,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 
 	// Log warning message if EMMPid is still 0
 	if(m_EMMPid == 0)
-		g_Logger.log(2, true, TEXT("!!! Warning: EMM PID has not been discovered after %hu PMT packets, assuming FTA!!!\n"), g_Configuration.getPMTThreshold());
+		log(2, true, TEXT("!!! Warning: EMM PID has not been discovered after %hu PMT packets, assuming FTA!!!\n"), g_Configuration.getPMTThreshold());
 
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + PMT_LEN;
@@ -647,7 +647,7 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 						break;
 					}
 					default:
-						g_Logger.log(3, true, TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
+						log(3, true, TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
 										(UINT)genericDescriptor->descriptor_tag); 
 						break;
 				}
@@ -706,11 +706,11 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			case 0x47:
 			{
 				bouquetName = string((const char*)inputBuffer + DESCR_BOUQUET_NAME_LEN, bouquetDescriptor->descriptor_length);
-				g_Logger.log(3, true, TEXT("### Found bouquet with name %s\n"), bouquetName.c_str());
+				log(3, true, TEXT("### Found bouquet with name %s\n"), bouquetName.c_str());
 				break;
 			}
 			default:
-				g_Logger.log(3, true, TEXT("!!! Unknown bouquet descriptor, type=%02X\n"), (UINT)bouquetDescriptor->descriptor_tag); 
+				log(3, true, TEXT("!!! Unknown bouquet descriptor, type=%02X\n"), (UINT)bouquetDescriptor->descriptor_tag); 
 				break;
 		}
 		// Adjust input buffer pointer
@@ -798,7 +798,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						// Do nothing
 						break;
 					default:
-						g_Logger.log(3, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+						log(3, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
 									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
 						break;
 				}
@@ -832,7 +832,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 	if(m_CurrentNid == 0)
 	{
 		m_CurrentNid = HILO(table->network_id);
-		g_Logger.log(2, true, TEXT("Current network NID is %hu\n"), m_CurrentNid);
+		log(2, true, TEXT("Current network NID is %hu\n"), m_CurrentNid);
 	}
 
 	// In the beginning we don't know which bouquet this is
@@ -849,11 +849,11 @@ void PSIParser::parseNITTable(const nit_t* const table,
 			case 0x40:
 			{
 				networkName = string((const char*)inputBuffer + DESCR_NETWORK_NAME_LEN, networkDescriptor->descriptor_length);
-				g_Logger.log(4, true, TEXT("### Found network with name %s\n"), networkName.c_str());
+				log(4, true, TEXT("### Found network with name %s\n"), networkName.c_str());
 				break;
 			}
 			default:
-				g_Logger.log(4, true, TEXT("!!! Unknown network descriptor, type=%02X\n"), (UINT)networkDescriptor->descriptor_tag);
+				log(4, true, TEXT("!!! Unknown network descriptor, type=%02X\n"), (UINT)networkDescriptor->descriptor_tag);
 				break;
 		}
 		
@@ -933,7 +933,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 
 						// Prime transponder data
 						m_Transponders[tid] = transponder;
-						g_Logger.log(2, true, TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+						log(2, true, TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 							tid, transponder.frequency, transponder.symbolRate, printablePolarization(transponder.polarization),
 							printableModulation(transponder.modulation), printableFEC(transponder.fec));
 					}
@@ -943,7 +943,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					// Do nothing
 					break;
 				default:
-					g_Logger.log(3, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+					log(3, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
 									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
 					break;
 			}
@@ -964,7 +964,7 @@ void PSIParser::parseUnknownTable(const pat_t* const table,
 								  const int remainingLength) const
 {
 	// Print diagnostics message
-	g_Logger.log(3, true, TEXT("$$$ Unknown table detected with TID=%02X, length=%u\n"), (UINT)table->table_id, remainingLength);
+	log(3, true, TEXT("$$$ Unknown table detected with TID=%02X, length=%u\n"), (UINT)table->table_id, remainingLength);
 }
 
 // Query methods
@@ -1457,7 +1457,7 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 
 	// This really shoudn't happen!
 	if(currentBuffer->numberOfPackets >= g_Configuration.getTSPacketsPerOutputBuffer())
-		g_Logger.log(0, true, TEXT("Too many packets for decryption!\n"));
+		log(0, true, TEXT("Too many packets for decryption!\n"));
 	else
 	{
 		// Copy the packet to the output buffer
@@ -1490,7 +1490,7 @@ void ESCAParser::decryptAndWritePending(bool immediately)
 			m_Decrypter.setKeys(currentBuffer->oddKey, currentBuffer->evenKey);
 
 			// Log how many packets are about to be written
-			g_Logger.log(3, true, TEXT("Writing %d pending packets..."), currentBuffer->numberOfPackets);
+			log(3, true, TEXT("Writing %d pending packets..."), currentBuffer->numberOfPackets);
 			
 			// Decrypt multiple packets
 			m_Decrypter.decrypt(currentBuffer->buffer, currentBuffer->numberOfPackets);
@@ -1504,7 +1504,7 @@ void ESCAParser::decryptAndWritePending(bool immediately)
 				m_pRecorder->setBrokenPipe();
 
 			// Now all the packets are written
-			g_Logger.log(3, false, TEXT("Done!\n"));
+			log(3, false, TEXT("Done!\n"));
 
 			// Let's see if we already have newer buffer
 			if(m_OutputBuffers.size() > 1)

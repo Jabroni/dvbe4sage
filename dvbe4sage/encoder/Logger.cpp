@@ -1,9 +1,10 @@
 #include "StdAfx.h"
 
 #include "Logger.h"
+#include "encoder.h"
 
-// This is the global logger
-ENCODER_API Logger g_Logger;
+// This is the global encoder
+extern Encoder* g_pEncoder;
 
 Logger::Logger(void) : 
 	m_LogLevel(0),
@@ -71,6 +72,36 @@ void Logger::log(UINT logLevel,
 	LeaveCriticalSection(&m_cs);
 }
 
+void Logger::valog(UINT logLevel,
+				   bool timeStamp,
+				   LPCTSTR format,
+				   va_list argList)
+{
+	// Do this in critical section
+	EnterCriticalSection(&m_cs);
+
+	// Write log only if the level of the message is lower than or equal to the requested level
+	if(logLevel <= m_LogLevel)
+	{
+		// Get current time in local
+		SYSTEMTIME currentTime;
+		GetLocalTime(&currentTime);
+
+		if(timeStamp)
+			_ftprintf(m_LogFile, TEXT("%hu-%02hu-%02hu %02hu:%02hu:%02hu.%03hu "), 
+									currentTime.wYear,
+									currentTime.wMonth,
+									currentTime.wDay,
+									currentTime.wHour,
+									currentTime.wMinute,
+									currentTime.wSecond,
+									currentTime.wMilliseconds);
+		_vftprintf(m_LogFile, format, argList);
+	}
+	// Leave the critical section
+	LeaveCriticalSection(&m_cs);
+}
+
 void Logger::setLogLevel(UINT level)
 {
 	// Do this in critical section
@@ -81,4 +112,20 @@ void Logger::setLogLevel(UINT level)
 
 	// Leave the critical section
 	LeaveCriticalSection(&m_cs);
+}
+
+void log(UINT logLevel,
+		 bool timeStamp,
+		 LPCTSTR format, ...)
+{
+	// Do this only if the global encoder object is initialized
+	if(g_pEncoder != NULL)
+	{
+		// Create the variable argument list
+		va_list argList;
+		va_start(argList, format);
+
+		// And call the log function on the encoder
+		g_pEncoder->valog(logLevel, timeStamp, format, argList);
+	}
 }

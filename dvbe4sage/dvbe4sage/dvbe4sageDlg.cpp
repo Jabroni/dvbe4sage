@@ -5,7 +5,7 @@
 #include "stdafx.h"
 #include "dvbe4sage.h"
 #include "dvbe4sageDlg.h"
-#include "logger.h"
+#include "extern.h"
 #include "NewRecording.h"
 #include "misc.h"
 
@@ -49,7 +49,6 @@ DWORD WINAPI logTabWorkerThreadRoutine(LPVOID param)
 
 CDVBE4SageDlg::CDVBE4SageDlg(CWnd* pParent /*=NULL*/)
 	: CTrayDialog(CDVBE4SageDlg::IDD, pParent),
-	m_pEncoder(NULL),
 	m_LogFile(NULL),
 	m_WorkerThread(NULL),
 	m_ContinueToRun(true)
@@ -60,7 +59,8 @@ CDVBE4SageDlg::CDVBE4SageDlg(CWnd* pParent /*=NULL*/)
 
 CDVBE4SageDlg::~CDVBE4SageDlg()
 {
-	delete m_pEncoder;
+	deleteEncoder();
+
 	if(m_WorkerThread != NULL)
 	{
 		m_ContinueToRun = false;
@@ -102,10 +102,10 @@ BOOL CDVBE4SageDlg::OnInitDialog()
 
 	m_MainMenu.LoadMenu(IDR_MAIN_MENU);
 	SetMenu(&m_MainMenu);
-	m_pEncoder = new Encoder(AfxGetInstanceHandle(), m_hWnd, m_MainMenu);
+	createEncoder(AfxGetInstanceHandle(), m_hWnd, m_MainMenu);
 	
 	// Open the log file
-	m_LogFile = _tfsopen(g_Logger.getLogFileName(), TEXT("rb"),  _SH_DENYNO);
+	m_LogFile = _tfsopen(getLogFileName(), TEXT("rb"),  _SH_DENYNO);
 
 	// Create worker thread
 	m_WorkerThread = CreateThread(NULL, 0, logTabWorkerThreadRoutine, this, 0, NULL);
@@ -164,8 +164,8 @@ HCURSOR CDVBE4SageDlg::OnQueryDragIcon()
 LRESULT CDVBE4SageDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	// Pass messages to plugins handler first
-	if(m_pEncoder != NULL)
-		m_pEncoder->WindowProc(message, wParam, lParam);
+	WindowProc(message, wParam, lParam);
+
 	if(message == WM_READY)
 	{
 		CDVBE4SageDlg* const dialog = (CDVBE4SageDlg* const)wParam;
@@ -181,38 +181,20 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 	static NewRecording newRecording(this);
 	if(newRecording.DoModal() == IDOK)
 	{
-		m_pEncoder->startRecording(newRecording.m_TransponderAutodiscovery ? true : false,
-								   _ttol(newRecording.m_TunerFrequency),
-								   _ttol(newRecording.m_TunerSymbolRate),
-								   getPolarizationFromString(newRecording.m_TunerPolarization.Left(1)),
-								   getModulationFromString(newRecording.m_TunerModulation),
-								   getFECFromString(newRecording.m_TunerFEC),
-								   _ttoi(newRecording.m_RecordingTunerOrdinal),
-								   false,
-								   _ttoi(newRecording.m_RecordingChannelNumber),
-								   newRecording.m_UseSID ? true : false,
-								   _ttoi64(newRecording.m_RecordingDuration),
-								   CT2CW(newRecording.m_OutputFileName),
-								   NULL,
-								   (__int64)-1,
-								   false);
+		startRecording(newRecording.m_TransponderAutodiscovery ? true : false,
+					   _ttol(newRecording.m_TunerFrequency),
+					   _ttol(newRecording.m_TunerSymbolRate),
+					   getPolarizationFromString(newRecording.m_TunerPolarization.Left(1)),
+					   getModulationFromString(newRecording.m_TunerModulation),
+					   getFECFromString(newRecording.m_TunerFEC),
+					   _ttoi(newRecording.m_RecordingTunerOrdinal),
+					   _ttoi(newRecording.m_RecordingChannelNumber),
+					   newRecording.m_UseSID ? true : false,
+					   _ttoi64(newRecording.m_RecordingDuration),
+					   CT2CW(newRecording.m_OutputFileName),
+					   (__int64)-1);
 								   
 	}
-}
-
-int CDVBE4SageDlg::getNumberOfTuners() const
-{
-	return m_pEncoder->getNumberOfTuners();
-}
-
-LPCTSTR CDVBE4SageDlg::getTunerFriendlyName(int i) const
-{
-	return m_pEncoder->getTunerFriendlyName(i);
-}
-
-int CDVBE4SageDlg::getTunerOrdinal(int i) const
-{
-	return m_pEncoder->getTunerOrdinal(i);
 }
 
 void CDVBE4SageDlg::OnOperationsExit()

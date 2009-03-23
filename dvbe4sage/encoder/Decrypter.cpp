@@ -29,7 +29,7 @@ Decrypter::Decrypter(void) :
 			m_KeySet = m_pf_get_key_struct();
 			// Get parallelism
 			m_Parallelism = m_pf_get_internal_parallelism();
-			g_Logger.log(1, true, TEXT("DECSA DLL=\"%s\", parallelism = %d\n"), g_Configuration.getDECSADllName(), m_Parallelism);	
+			log(1, true, TEXT("DECSA DLL=\"%s\", parallelism = %d\n"), g_Configuration.getDECSADllName(), m_Parallelism);	
 		}
 		BYTE key[8];
 		key[0] = 0x14; key[1] = 0x89; key[2] = 0x5E; key[3] = 0xFB;

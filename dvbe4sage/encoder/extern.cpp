@@ -33,3 +33,55 @@ extern "C" ENCODER_API void waitForFullInitialization()
 	if(g_pEncoder != NULL)
 		g_pEncoder->waitForFullInitialization();
 }
+
+extern "C" ENCODER_API LPCTSTR getLogFileName()
+{
+	if(g_pEncoder != NULL)
+		return g_pEncoder->getLogFileName();
+	else
+		return NULL;
+}
+
+extern "C" ENCODER_API int getNumberOfTuners()
+{
+	if(g_pEncoder != NULL)
+		return g_pEncoder->getNumberOfTuners();
+	else
+		return 0;
+}
+
+extern "C" ENCODER_API LPCTSTR getTunerFriendlyName(int i)
+{
+	if(g_pEncoder != NULL)
+		return g_pEncoder->getTunerFriendlyName(i);
+	else
+		return NULL;
+}
+
+extern "C" ENCODER_API int getTunerOrdinal(int i)
+{
+	if(g_pEncoder != NULL)
+		return g_pEncoder->getTunerOrdinal(i);
+	else
+		return -1;
+}
+
+extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
+										   ULONG frequency,
+										   ULONG symbolRate,
+										   Polarisation polarization,
+										   ModulationType modulation,
+										   BinaryConvolutionCodeRate fecRate,
+										   int tunerOrdinal,
+										   int channel,
+										   bool useSid,
+										   __int64 duration,
+										   LPCWSTR outFileName,
+										   __int64 size)
+{
+	if(g_pEncoder != NULL)
+		return g_pEncoder->startRecording(autodiscoverTransponder, frequency, symbolRate, polarization, modulation, fecRate,
+											tunerOrdinal, false, channel, useSid, duration, outFileName, NULL, size, false);
+	else
+		return false;
+}

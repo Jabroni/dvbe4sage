@@ -1,19 +1,6 @@
-// The following ifdef block is the standard way of creating macros which make exporting 
-// from a DLL simpler. All files within this DLL are compiled with the ENCODER_EXPORTS
-// symbol defined on the command line. this symbol should not be defined on any project
-// that uses this DLL. This way any other project whose source files include this file see 
-// ENCODER_API functions as being imported from a DLL, whereas this DLL sees symbols
-// defined with this macro as being exported.
 #pragma once
 
-#ifdef ENCODER_EXPORTS
-#define ENCODER_API __declspec(dllexport)
-#else
-#define ENCODER_API __declspec(dllimport)
-#endif
-
-#pragma warning(push)
-#pragma warning(disable:4251)
+#include "logger.h"
 
 using namespace std;
 using namespace stdext;
@@ -27,8 +14,7 @@ class VirtualTuner;
 class DVBParser;
 struct Transponder;
 
-// This class is exported from the encoder.dll
-class ENCODER_API Encoder
+class Encoder
 {
 	struct Client
 	{
@@ -46,6 +32,7 @@ class ENCODER_API Encoder
 	hash_map<SOCKET, Client>			m_Clients;
 	const HWND							m_hWnd;
 	DVBParser*							m_pParser;				// DVBParser - to be copied from one of the tuners
+	Logger								m_Logger;
 
 	void socketOperation(SOCKET socket, WORD eventType, WORD error);
 	Tuner* getTuner(int tunerOrdinal, bool useLogicalTuner, const Transponder* const pTransponder);
@@ -75,6 +62,9 @@ public:
 	int getTunerOrdinal(int i) const;
 	DVBParser* getParser()								{ return m_pParser; }
 	void waitForFullInitialization();
+	void valog(UINT logLevel, bool timeStamp, LPCTSTR format, va_list argList)
+	{
+		m_Logger.valog(logLevel, timeStamp, format, argList);
+	}
+	LPCTSTR getLogFileName() const						{ return m_Logger.getLogFileName(); }
 };
-
-#pragma warning(pop)

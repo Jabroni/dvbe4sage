@@ -223,19 +223,19 @@ void PluginsHandler::startFilter(LPARAM lParam)
 		{
 			m_CurrentEcmCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
 			m_CurrentEcmFilterId = startFilter->Filter_ID;
-			g_Logger.log(2, true, TEXT("Start ECM filter for SID=%hu received\n"), m_CurrentSid);
+			log(2, true, TEXT("Start ECM filter for SID=%hu received\n"), m_CurrentSid);
 		}
 		else if(m_pCurrentClient->emmPid == startFilter->Pid)
 		{
 			m_CurrentEmmCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
 			m_CurrentEmmFilterId = startFilter->Filter_ID;
-			g_Logger.log(2, true, TEXT("Start EMM filter for SID=%hu received\n"), m_CurrentSid);
+			log(2, true, TEXT("Start EMM filter for SID=%hu received\n"), m_CurrentSid);
 		}
 		// Put the callback address into filter's running ID
 		startFilter->Running_ID = (UINT)(startFilter->Irq_Call_Adresse);
 	}
 	else
-		g_Logger.log(0, true, TEXT("Catastrophic error, no current client for a filter!\n"));
+		log(0, true, TEXT("Catastrophic error, no current client for a filter!\n"));
 }
 
 // This is the callback called for each filter about to be stopped
@@ -250,13 +250,13 @@ void PluginsHandler::stopFilter(LPARAM lParam)
 	{
 		m_CurrentEcmFilterId = 0;
 		m_CurrentEcmCallback = NULL;
-		g_Logger.log(2, true, TEXT("Stop ECM filter received\n"));
+		log(2, true, TEXT("Stop ECM filter received\n"));
 	}
 	else if(runningId == (UINT)m_CurrentEmmCallback)
 	{
 		m_CurrentEmmCallback = NULL;
 		m_CurrentEmmFilterId = 0;
-		g_Logger.log(2, true, TEXT("Stop EMM filter received\n"));
+		log(2, true, TEXT("Stop EMM filter received\n"));
 	}
 }
 
@@ -286,7 +286,7 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 		// Cancel deferred tuning
 		m_DeferTuning = false;
 
-		g_Logger.log(2, true, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
+		log(2, true, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
 
 		// Indicate we're no longer waiting for response
 		m_WaitingForResponse = false;
@@ -295,7 +295,7 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 		m_TimerInitialized = false;
 	}
 	else
-		g_Logger.log(0, true, TEXT("Key received but the client has already left\n"));
+		log(0, true, TEXT("Key received but the client has already left\n"));
 
 }
 
@@ -325,11 +325,11 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	currentClient.emmPid = emmPid;
 	if(isEcmPacket)
 	{
-		g_Logger.log(2, true, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
+		log(2, true, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
 		currentClient.ecmPid = caPid;
 	}
 	else
-		g_Logger.log(4, true, TEXT("A new EMM packet for SID=%hu received and put to the queue\n"), sid);
+		log(4, true, TEXT("A new EMM packet for SID=%hu received and put to the queue\n"), sid);
 	
 	// Make a new request
 	Request request;
@@ -355,7 +355,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 			// Process it
 			m_CurrentEmmCallback(m_CurrentEmmFilterId, PACKET_SIZE, request.packet);
 		else
-			g_Logger.log(4, true, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
+			log(4, true, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
 	}
 }
 
@@ -373,7 +373,7 @@ void PluginsHandler::processECMPacketQueue()
 		// Calculate the differentce
 		if(difftime(now, m_Time) > g_Configuration.getDCWTimeout())
 		{
-			g_Logger.log(2, true, TEXT("Timeout for SID=%hu, resetting plugins...Do you have subscription for this channel?\n"), m_CurrentSid);
+			log(2, true, TEXT("Timeout for SID=%hu, resetting plugins...Do you have subscription for this channel?\n"), m_CurrentSid);
 			// Reset the parser for this client
 			if(m_pCurrentClient != NULL && m_pCurrentClient->caller != NULL)
 				m_pCurrentClient->caller->reset();
@@ -409,7 +409,7 @@ void PluginsHandler::processECMPacketQueue()
 		{
 			if(!m_WaitingForResponse)
 			{
-				g_Logger.log(2, true, TEXT("A new ECM packet for SID=%hu received and sent to processing\n"), m_CurrentSid);
+				log(2, true, TEXT("A new ECM packet for SID=%hu received and sent to processing\n"), m_CurrentSid);
 				// Defer further tuning
 				m_DeferTuning = true;
 				// Process it
@@ -426,14 +426,14 @@ void PluginsHandler::processECMPacketQueue()
 				m_IsTuningTimeout = false;
 			}
 			else
-				g_Logger.log(2, true, TEXT("A new ECM packet for SID=%hu received while the previous packet for the same SID was being processed, waiting...\n"), m_CurrentSid);
+				log(2, true, TEXT("A new ECM packet for SID=%hu received while the previous packet for the same SID was being processed, waiting...\n"), m_CurrentSid);
 		}
 		else
-			g_Logger.log(2, true, TEXT("ECM callback hasn't been established yet for SID=%hu, waiting...\n"), m_CurrentSid);
+			log(2, true, TEXT("ECM callback hasn't been established yet for SID=%hu, waiting...\n"), m_CurrentSid);
 	}
 	else
 	{
-		g_Logger.log(2, true, TEXT("A tuning request came in for SID=%hu\n"), request.client->sid);
+		log(2, true, TEXT("A tuning request came in for SID=%hu\n"), request.client->sid);
 		if(!m_DeferTuning)
 		{
 			// Invalidate current ECM callback
@@ -475,7 +475,7 @@ void PluginsHandler::processECMPacketQueue()
 				}
 		}
 		else
-			g_Logger.log(2, true, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
+			log(2, true, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
 	}
 }
 

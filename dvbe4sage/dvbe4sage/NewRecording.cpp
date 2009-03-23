@@ -5,7 +5,7 @@
 #include "dvbe4sage.h"
 #include "NewRecording.h"
 #include "dvbe4sagedlg.h"
-
+#include "extern.h"
 
 // NewRecording dialog
 
@@ -92,14 +92,14 @@ BOOL NewRecording::OnInitDialog()
 	m_ModulationCombo.EnableWindow(!m_TransponderAutodiscovery);
 	m_FECCombo.EnableWindow(!m_TransponderAutodiscovery);
 
-	for(int i = 0; i < m_pParentDialog->getNumberOfTuners(); i++)
+	for(int i = 0; i < getNumberOfTuners(); i++)
 	{
-		LPCTSTR tunerFriendlyName = m_pParentDialog->getTunerFriendlyName(i);
+		LPCTSTR tunerFriendlyName = getTunerFriendlyName(i);
 		m_TunerNameBox.AddString(tunerFriendlyName);
-		m_TunerNameBox.SetItemData(i, m_pParentDialog->getTunerOrdinal(i));
+		m_TunerNameBox.SetItemData(i, getTunerOrdinal(i));
 	}
 	
-	if(m_bFirstTime && m_pParentDialog->getNumberOfTuners() > 0)
+	if(m_bFirstTime && getNumberOfTuners() > 0)
 	{
 		m_bFirstTime = false;
 		m_TunerNameBox.SetCurSel(0);

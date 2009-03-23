@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "configuration.h"
 #include "virtualtuner.h"
+#include "encoder.h"
 
 DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 {
@@ -28,7 +29,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 		if((__int64)difftime(now, recorder->m_Time) > recorder->m_Duration)
 		{
 			// Log stop recording message
-			g_Logger.log(0, true, TEXT("Time passed, "));
+			log(0, true, TEXT("Time passed, "));
 
 			// Tell it to stop recording
 			recorder->stopRecording();
@@ -42,7 +43,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 		else if(recorder->brokenPipe())
 		{
 			// Log stop recording message
-			g_Logger.log(0, true, TEXT("File operation failed, "));
+			log(0, true, TEXT("File operation failed, "));
 
 			// Tell it to stop recording
 			recorder->stopRecording();
@@ -153,7 +154,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 		// Check if opening file succeeded
 		if(m_fout == NULL)
 		{
-			g_Logger.log(0, true, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
+			log(0, true, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
 			m_HasError = true;
 		}
 	}
@@ -221,19 +222,19 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				// Check if opening file succeeded
 				if(m_fout == NULL)
 				{
-					g_Logger.log(0, true, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
+					log(0, true, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
 					m_HasError = true;
 				}
 			}
 			else
 			{
-				g_Logger.log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
+				log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
 				m_HasError = true;
 			}
 		}
 		else
 		{
-			g_Logger.log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
+			log(0, true, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
 			m_HasError = true;
 		}
 	}
@@ -264,7 +265,7 @@ bool Recorder::startRecording()
 {
 	if(m_HasError)
 	{
-		g_Logger.log(0, true, TEXT("Cannot start recording!\n"));
+		log(0, true, TEXT("Cannot start recording!\n"));
 		return false;
 	}
 	else
@@ -284,7 +285,7 @@ bool Recorder::startRecording()
 
 void Recorder::stopRecording()
 {
-	g_Logger.log(0, false, TEXT("stopping recording of channel %d on tuner=\"%s\", Ordinal=%d\n"),
+	log(0, false, TEXT("stopping recording of channel %d on tuner=\"%s\", Ordinal=%d\n"),
 		m_ChannelNumber, m_pTuner->getTunerFriendlyName(), m_pTuner->getTunerOrdinal());
 
 	// Make sure start recording test is finished
@@ -336,7 +337,7 @@ bool Recorder::changeState()
 		if(difftime(now, m_Time) > g_Configuration.getTuningTimeout())
 		{
 			// Log stop recording message
-			g_Logger.log(0, true, TEXT("Timeout, "));
+			log(0, true, TEXT("Timeout, "));
 
 			// Unlock the parser
 			pParser->unlock();

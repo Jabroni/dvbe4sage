@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "encoder.h"
 #include "afxcmn.h"
 #include "afxwin.h"
 #include "TrayDialog.h"
@@ -29,7 +28,6 @@ public:
 protected:
 	HICON				m_hIcon;
 	CMenu				m_MainMenu;
-	Encoder*			m_pEncoder;
 	FILE*				m_LogFile;
 	HANDLE				m_WorkerThread;
 	bool				m_ContinueToRun;
@@ -50,8 +48,5 @@ public:
 	afx_msg void OnOperationsExit();
 	afx_msg void OnClose();
 
-	int getNumberOfTuners() const;
-	LPCTSTR getTunerFriendlyName(int i) const;
-	int getTunerOrdinal(int i) const;
 	bool continueToRun() const { return m_ContinueToRun; }
 };
