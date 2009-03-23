@@ -9,7 +9,7 @@
 // Main control points
 extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu);
 extern "C" ENCODER_API void deleteEncoder();
-extern "C" ENCODER_API LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
+extern "C" ENCODER_API LRESULT encoderWindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 extern "C" ENCODER_API void waitForFullInitialization();
 
 // External getters

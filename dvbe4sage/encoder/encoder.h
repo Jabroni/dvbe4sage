@@ -1,7 +1,5 @@
 #pragma once
 
-#include "logger.h"
-
 using namespace std;
 using namespace stdext;
 
@@ -32,7 +30,6 @@ class Encoder
 	hash_map<SOCKET, Client>			m_Clients;
 	const HWND							m_hWnd;
 	DVBParser*							m_pParser;				// DVBParser - to be copied from one of the tuners
-	Logger								m_Logger;
 
 	void socketOperation(SOCKET socket, WORD eventType, WORD error);
 	Tuner* getTuner(int tunerOrdinal, bool useLogicalTuner, const Transponder* const pTransponder);
@@ -62,9 +59,4 @@ public:
 	int getTunerOrdinal(int i) const;
 	DVBParser* getParser()								{ return m_pParser; }
 	void waitForFullInitialization();
-	void valog(UINT logLevel, bool timeStamp, LPCTSTR format, va_list argList)
-	{
-		m_Logger.valog(logLevel, timeStamp, format, argList);
-	}
-	LPCTSTR getLogFileName() const						{ return m_Logger.getLogFileName(); }
 };

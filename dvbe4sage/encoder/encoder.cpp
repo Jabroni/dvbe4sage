@@ -20,7 +20,8 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pParser(new DVBParser)
 {
 	// Set the logger level
-	m_Logger.setLogLevel(g_Configuration.getLogLevel());
+	if(g_pLogger != NULL)
+		g_pLogger->setLogLevel(g_Configuration.getLogLevel());
 
 	// Initialize COM stuff
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);

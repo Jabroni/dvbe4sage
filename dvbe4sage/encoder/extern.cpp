@@ -1,26 +1,29 @@
 #include "stdafx.h"
 
 #include "encoder.h"
+#include "logger.h"
 #include "extern.h"
 
 // This it the global encoder object
-Encoder* g_pEncoder = NULL;
+Encoder*	g_pEncoder = NULL;
 
 extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance,
 										  HWND hWnd,
 										  HMENU hParentMenu)
 {
+	g_pLogger = new Logger;
 	g_pEncoder = new Encoder(hInstance, hWnd, hParentMenu);
 }
 
 extern "C" ENCODER_API void deleteEncoder()
 {
 	delete g_pEncoder;
+	delete g_pLogger;
 }
 
-extern "C" ENCODER_API LRESULT WindowProc(UINT message,
-										  WPARAM wParam,
-										  LPARAM lParam)
+extern "C" ENCODER_API LRESULT encoderWindowProc(UINT message,
+												 WPARAM wParam,
+												 LPARAM lParam)
 {
 	if(g_pEncoder != NULL)
 		return g_pEncoder->WindowProc(message, wParam, lParam);
@@ -36,8 +39,8 @@ extern "C" ENCODER_API void waitForFullInitialization()
 
 extern "C" ENCODER_API LPCTSTR getLogFileName()
 {
-	if(g_pEncoder != NULL)
-		return g_pEncoder->getLogFileName();
+	if(g_pLogger != NULL)
+		return g_pLogger->getLogFileName();
 	else
 		return NULL;
 }

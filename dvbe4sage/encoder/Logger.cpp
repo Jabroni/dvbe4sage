@@ -1,10 +1,9 @@
 #include "StdAfx.h"
 
 #include "Logger.h"
-#include "encoder.h"
 
-// This is the global encoder
-extern Encoder* g_pEncoder;
+// This is the global logger
+Logger*		g_pLogger = NULL;
 
 Logger::Logger(void) : 
 	m_LogLevel(0),
@@ -119,13 +118,13 @@ void log(UINT logLevel,
 		 LPCTSTR format, ...)
 {
 	// Do this only if the global encoder object is initialized
-	if(g_pEncoder != NULL)
+	if(g_pLogger != NULL)
 	{
 		// Create the variable argument list
 		va_list argList;
 		va_start(argList, format);
 
 		// And call the log function on the encoder
-		g_pEncoder->valog(logLevel, timeStamp, format, argList);
+		g_pLogger->valog(logLevel, timeStamp, format, argList);
 	}
 }

@@ -18,3 +18,4 @@ public:
 };
 
 void log(UINT logLevel, bool timeStamp, LPCTSTR format, ...);
+extern Logger* g_pLogger;

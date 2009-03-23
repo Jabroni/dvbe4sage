@@ -163,7 +163,7 @@ HCURSOR CDVBE4SageDlg::OnQueryDragIcon()
 LRESULT CDVBE4SageDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	// Pass messages to plugins handler first
-	WindowProc(message, wParam, lParam);
+	encoderWindowProc(message, wParam, lParam);
 
 	if(message == WM_READY)
 	{

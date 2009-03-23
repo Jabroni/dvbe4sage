@@ -7,7 +7,7 @@ namespace dvbe4sagesvc
     public partial class HiddenForm : Form
     {
         [DllImport("encoder")]
-        static extern IntPtr WindowProc(int message, IntPtr wParam, IntPtr lParam);
+        static extern IntPtr encoderWindowProc(int message, IntPtr wParam, IntPtr lParam);
 
         public HiddenForm()
         {
@@ -15,7 +15,7 @@ namespace dvbe4sagesvc
         }
         protected override void WndProc(ref Message m)
         {
-            IntPtr res = WindowProc(m.Msg, m.WParam, m.LParam);
+            IntPtr res = encoderWindowProc(m.Msg, m.WParam, m.LParam);
             m.Result = res;
             base.WndProc(ref m);
         }
