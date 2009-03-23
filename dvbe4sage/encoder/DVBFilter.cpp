@@ -11,7 +11,6 @@ DVBFilter::DVBFilter() :
 	HRESULT hr = S_OK;
     m_pPin1 = new DVBFilterInputPin(this, &m_Lock, &hr);
 	m_pPin2 = new DVBFilterOutputPin(this, &m_Lock, &hr);
-	ASSERT(hr == S_OK);
 }
 
 CBasePin* DVBFilter::GetPin(int n)
@@ -188,7 +187,6 @@ DummyNetworkProvider::DummyNetworkProvider() :
 {
 	HRESULT hr = S_OK;
     m_pPin = new DummyNetworkProviderOutputPin(this, &m_Lock, &hr);
-	ASSERT(hr == S_OK);
 }
 
 DummyNetworkProvider::~DummyNetworkProvider()

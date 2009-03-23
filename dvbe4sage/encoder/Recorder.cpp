@@ -121,8 +121,6 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_fout(NULL),
 	m_IsRecording(false),
 	m_HasError(false),
-	m_CurrentState(INITIAL),
-	m_RecordingTimer(NULL),
 	m_ChannelNumber(channel),
 	m_Duration(duration),
 	m_pParser(NULL),
@@ -270,9 +268,6 @@ bool Recorder::startRecording()
 	}
 	else
 	{
-		// Mark the state as initial
-		m_CurrentState = INITIAL;
-
 		// Get the current time
 		time(&m_Time);
 
@@ -327,7 +322,7 @@ bool Recorder::changeState()
 	pParser->lock();
 
 	// We make progress on this tuner only if its graph is running
-	if(m_pTuner->running() && m_CurrentState != TUNED)
+	if(m_pTuner->running())
 	{
 		// Get the current time
 		time_t now;
@@ -349,77 +344,60 @@ bool Recorder::changeState()
 			return false;
 		}
 		
-		// Depending on the current state
-		switch(m_CurrentState)
+		// Allow it to start the actual recording
+		// Get the PMT PID for the recorder SID
+		USHORT pmtPid = 0;
+		if(pParser->getPMTPidForSid(m_Sid, pmtPid))
 		{
-			case INITIAL:
+			// Get the ES PIDs for the recorder SID
+			hash_set<USHORT> esPids;
+			if(pParser->getESPidsForSid(m_Sid, esPids))
 			{
-				// On initial, we say the graph to tune to the channel
-				//if(m_pTuner->tuneChannel(m_ChannelNumber, m_UseSid, m_Sid))
-					m_CurrentState = TUNING;
-				break;
-			}
-			case TUNING:
-			{
-				// Then we allow it to start the actual recording
-				// Get the PMT PID for the recorder SID
-				USHORT pmtPid = 0;
-				if(pParser->getPMTPidForSid(m_Sid, pmtPid))
+				// Get the CA PIDs for the recorder SID
+				hash_set<USHORT> caPids;
+				if(pParser->getCAPidsForSid(m_Sid, caPids))
 				{
-					// Get the ES PIDs for the recorder SID
-					hash_set<USHORT> esPids;
-					if(pParser->getESPidsForSid(m_Sid, esPids))
+					// Get CA Types (might be empty)
+					hash_set<USHORT> caTypes;
+					pParser->getCATypesForSid(m_Sid, caTypes);
+					// Create the parser
+					m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, caTypes, pParser->getEMMPid(), m_Size);
+					// Assign recorder's parser to PAT PID
+					pParser->assignParserToPid(0, m_pParser);
+					m_pParser->setESPid(0, true);
+					// Assign recorder's parser to PMT PID
+					pParser->assignParserToPid(pmtPid, m_pParser);
+					m_pParser->setESPid(pmtPid, true);
+					// Assign recorder's parser to every relevant ES PID
+					for(hash_set<USHORT>::const_iterator it = esPids.begin(); it != esPids.end(); it++)
 					{
-						// Get the CA PIDs for the recorder SID
-						hash_set<USHORT> caPids;
-						if(pParser->getCAPidsForSid(m_Sid, caPids))
-						{
-							// Get CA Types (might be empty)
-							hash_set<USHORT> caTypes;
-							pParser->getCATypesForSid(m_Sid, caTypes);
-							// Create the parser
-							m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, caTypes, pParser->getEMMPid(), m_Size);
-							// Assign recorder's parser to PAT PID
-							pParser->assignParserToPid(0, m_pParser);
-							m_pParser->setESPid(0, true);
-							// Assign recorder's parser to PMT PID
-							pParser->assignParserToPid(pmtPid, m_pParser);
-							m_pParser->setESPid(pmtPid, true);
-							// Assign recorder's parser to every relevant ES PID
-							for(hash_set<USHORT>::const_iterator it = esPids.begin(); it != esPids.end(); it++)
-							{
-								pParser->assignParserToPid(*it, m_pParser);
-								m_pParser->setESPid(*it, true);
-							}
-							// Assign recorder's parser to every relevant CA PID
-							for(hash_set<USHORT>::const_iterator it = caPids.begin(); it != caPids.end(); it++)
-							{
-								pParser->assignParserToPid(*it, m_pParser);
-								m_pParser->setESPid(*it, false);
-							}
-							// Finally, tell the parser it has connected clients
-							pParser->setHasConnectedClients();
-
-							// Idicate the current recorder state as tuned
-							m_CurrentState = TUNED;
-
-							// Indicate start recording thread can end
-							m_StartRecordingThreadCanEnd = true;
-
-							// Save the time of the beginning of recording
-							time(&m_Time);
-
-							// Start the "stop recording" thread
-							m_StopRecordingThread = CreateThread(NULL, 0, StopRecordingCallback, this, 0, &m_StopRecordingThreadId);
-						}
+						pParser->assignParserToPid(*it, m_pParser);
+						m_pParser->setESPid(*it, true);
 					}
+					// Assign recorder's parser to every relevant CA PID
+					for(hash_set<USHORT>::const_iterator it = caPids.begin(); it != caPids.end(); it++)
+					{
+						pParser->assignParserToPid(*it, m_pParser);
+						m_pParser->setESPid(*it, false);
+					}
+					// Finally, tell the parser it has connected clients
+					pParser->setHasConnectedClients();
+
+					// Indicate start recording thread can end
+					m_StartRecordingThreadCanEnd = true;
+
+					// Save the time of the beginning of recording
+					time(&m_Time);
+
+					// Start the "stop recording" thread
+					m_StopRecordingThread = CreateThread(NULL, 0, StopRecordingCallback, this, 0, &m_StopRecordingThreadId);
 				}
-				break;
 			}
-			default:
-				break;
 		}
 	}
+	else
+		// The tuner's graph is not running, so we can indicate that the start recording thread can end
+		m_StartRecordingThreadCanEnd = true;
 
 	// Unlock the parser
 	pParser->unlock();

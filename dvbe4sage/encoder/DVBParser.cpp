@@ -421,9 +421,6 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 	if(m_ESPidsForSid.find(programNumber) != m_ESPidsForSid.end())
 		return;
 
-	// Make sure both ES and CA maps don't have an entry for this SID
-	ASSERT(m_CAPidsForSid.find(programNumber) == m_CAPidsForSid.end());
-
 	// Log warning message if EMMPid is still 0
 	if(m_EMMPid == 0)
 		log(2, true, TEXT("!!! Warning: EMM PID has not been discovered after %hu PMT packets, assuming FTA!!!\n"), g_Configuration.getPMTThreshold());

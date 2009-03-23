@@ -41,12 +41,6 @@ private:
 	const __int64				m_Size;
 	VirtualTuner*				m_VirtualTuner;
 
-	// Internal states
-	enum states { INITIAL, TUNING, TUNED };
-	states						m_CurrentState;
-
-	// Tuning timer
-	HANDLE						m_RecordingTimer;
 public:
 	Recorder(PluginsHandler* const plugins, Tuner* const tuner, USHORT logicalTuner, LPCWSTR outFileName, bool useSid, int channel, USHORT sid, __int64 duration, Encoder* pEncoder, __int64 size, bool bySage);
 	virtual ~Recorder(void);
