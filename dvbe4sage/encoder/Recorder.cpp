@@ -58,10 +58,10 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 		{
 			// Here we update the encoder with the latest and greatest PSI parser info
 			// Get the parser from the tuner
-			const DVBParser* const pParser = recorder->m_pTuner->getParser();
+			DVBParser* const pParser = recorder->m_pTuner->getParser();
 
 			// Let's see if it's valid and can be used
-			if(pParser != NULL && pParser->getTimeStamp() != 0 && 
+			if(pParser != NULL && !pParser->hasBeenCopied() && pParser->getTimeStamp() != 0 && 
 				(__int64)difftime(now, pParser->getTimeStamp()) > g_Configuration.getPSIMaturityTime())
 			{
 				// If yes, get the encoder's parser
@@ -75,6 +75,9 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 
 				// And unlock it
 				pEncoderParser->unlock();
+
+				// Set "HasBeenCopied" flag to prevent multiple copy
+				pParser->setHasBeenCopied();
 			}
 		}
 	}

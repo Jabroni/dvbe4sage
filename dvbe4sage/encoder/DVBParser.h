@@ -84,6 +84,7 @@ private:
 	DVBParser* const					m_pParent;			// Parent stream parser objects
 	bool								m_AllowParsing;		// Becomes false before stopping the graph
 	time_t								m_TimeStamp;		// Last update time stamp
+	bool								m_HasBeenCopied;	// True if the tables have been copied to the encoder
 
 	// Disallow default and copy constructors
 	PSIParser();
@@ -97,7 +98,8 @@ public:
 		m_AllowParsing(true),
 		m_EMMPid(0),
 		m_PMTCounter(0),
-		m_TimeStamp(0)
+		m_TimeStamp(0),
+		m_HasBeenCopied(false)
 	{
 	}
 
@@ -111,6 +113,10 @@ public:
 	time_t getTimeStamp() const		{ return m_TimeStamp; }
 	USHORT getEMMPid() const		{ return m_EMMPid; }
 	USHORT getNid() const			{ return m_CurrentNid; }
+	bool hasBeenCopied() const		{ return m_HasBeenCopied; }
+
+	// Setter for "Has been copied" flag
+	void setHasBeenCopied()			{ m_HasBeenCopied = true; }
 
 	// Copy all the internal data
 	void copy(const PSIParser& other);
@@ -303,6 +309,10 @@ public:
 	bool getCATypesForSid(USHORT sid, hash_set<USHORT>& caTypes) const		{ return m_PSIParser.getCATypesForSid(sid, caTypes); }
 	time_t getTimeStamp() const												{ return m_PSIParser.getTimeStamp(); }
 	USHORT getEMMPid() const												{ return m_PSIParser.getEMMPid(); }
+	bool hasBeenCopied() const												{ return m_PSIParser.hasBeenCopied(); }
+
+	// Setter for the internal parser "HasBeenCopied" flag
+	void setHasBeenCopied()													{ m_PSIParser.setHasBeenCopied(); }
 
 	// Lock and unlock
 	void lock();
