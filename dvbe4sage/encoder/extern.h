@@ -6,10 +6,13 @@
 #define ENCODER_API __declspec(dllimport)
 #endif
 
+// Main control points
 extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu);
 extern "C" ENCODER_API void deleteEncoder();
 extern "C" ENCODER_API LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 extern "C" ENCODER_API void waitForFullInitialization();
+
+// External getters
 extern "C" ENCODER_API LPCTSTR getLogFileName();
 extern "C" ENCODER_API int getNumberOfTuners();
 extern "C" ENCODER_API LPCTSTR getTunerFriendlyName(int i);
@@ -26,3 +29,14 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 										   __int64 duration,
 										   LPCWSTR outFileName,
 										   __int64 size);
+
+// DVB translation functions
+extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromDescriptor(USHORT descriptor);
+extern "C" ENCODER_API LPCTSTR printableFEC(BinaryConvolutionCodeRate fec);
+extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromString(LPCTSTR str);
+extern "C" ENCODER_API Polarisation getPolarizationFromDescriptor(USHORT descriptor);
+extern "C" ENCODER_API LPCTSTR printablePolarization(Polarisation polarization);
+extern "C" ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str);
+extern "C" ENCODER_API ModulationType getModulationFromDescriptor(USHORT descriptor);
+extern "C" ENCODER_API LPCTSTR printableModulation(ModulationType modulation);
+extern "C" ENCODER_API ModulationType getModulationFromString(LPCTSTR str);

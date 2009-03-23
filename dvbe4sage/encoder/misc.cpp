@@ -1,11 +1,11 @@
 #include "stdafx.h"
 
-#include "misc.h"
+#include "extern.h"
 
 using namespace std;
 
 // FEC translation functions
-ENCODER_API BinaryConvolutionCodeRate getFECFromDescriptor(USHORT descriptor)
+extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromDescriptor(USHORT descriptor)
 {
 	switch(descriptor)
 	{
@@ -36,7 +36,7 @@ ENCODER_API BinaryConvolutionCodeRate getFECFromDescriptor(USHORT descriptor)
 	}
 }
 
-ENCODER_API LPCTSTR printableFEC(BinaryConvolutionCodeRate fec)
+extern "C" ENCODER_API LPCTSTR printableFEC(BinaryConvolutionCodeRate fec)
 {
 	switch(fec)
 	{
@@ -77,7 +77,7 @@ ENCODER_API LPCTSTR printableFEC(BinaryConvolutionCodeRate fec)
 	}
 }
 
-ENCODER_API BinaryConvolutionCodeRate getFECFromString(LPCTSTR str)
+extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromString(LPCTSTR str)
 {
 	if(_tcsicmp(str, TEXT("Not set")) == 0)
 		return BDA_BCC_RATE_NOT_SET;	
@@ -114,7 +114,7 @@ ENCODER_API BinaryConvolutionCodeRate getFECFromString(LPCTSTR str)
 	return BDA_BCC_RATE_NOT_DEFINED;
 }
 
-ENCODER_API Polarisation getPolarizationFromDescriptor(USHORT descriptor)
+extern "C" ENCODER_API Polarisation getPolarizationFromDescriptor(USHORT descriptor)
 {
 	switch(descriptor)
 	{
@@ -131,7 +131,7 @@ ENCODER_API Polarisation getPolarizationFromDescriptor(USHORT descriptor)
 	}
 }
 
-ENCODER_API LPCTSTR printablePolarization(Polarisation polarization)
+extern "C" ENCODER_API LPCTSTR printablePolarization(Polarisation polarization)
 {
 	switch(polarization)
 	{
@@ -148,7 +148,7 @@ ENCODER_API LPCTSTR printablePolarization(Polarisation polarization)
 	}
 }
 
-ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str)
+extern "C" ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str)
 {
 	if(_tcsicmp(str, TEXT("Not set")) == 0)
 		return BDA_POLARISATION_NOT_SET;	
@@ -165,7 +165,7 @@ ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str)
 	return BDA_POLARISATION_NOT_DEFINED;
 }
 
-ENCODER_API ModulationType getModulationFromDescriptor(USHORT descriptor)
+extern "C" ENCODER_API ModulationType getModulationFromDescriptor(USHORT descriptor)
 {
 	switch(descriptor)
 	{
@@ -178,7 +178,7 @@ ENCODER_API ModulationType getModulationFromDescriptor(USHORT descriptor)
 	}
 }
 
-ENCODER_API LPCTSTR printableModulation(ModulationType modulation)
+extern "C" ENCODER_API LPCTSTR printableModulation(ModulationType modulation)
 {
 	switch(modulation)
 	{
@@ -191,7 +191,7 @@ ENCODER_API LPCTSTR printableModulation(ModulationType modulation)
 	}
 }
 
-ENCODER_API ModulationType getModulationFromString(LPCTSTR str)
+extern "C" ENCODER_API ModulationType getModulationFromString(LPCTSTR str)
 {
 	if(_tcsicmp(str, TEXT("Not set")) == 0)
 		return BDA_MOD_NOT_SET;	

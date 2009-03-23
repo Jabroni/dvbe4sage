@@ -12,7 +12,7 @@
 #include "recorder.h"
 #include "configuration.h"
 #include "virtualtuner.h"
-#include "misc.h"
+#include "extern.h"
 
 Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pPluginsHandler(NULL),

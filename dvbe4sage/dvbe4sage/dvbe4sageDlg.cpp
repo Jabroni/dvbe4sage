@@ -7,7 +7,6 @@
 #include "dvbe4sageDlg.h"
 #include "extern.h"
 #include "NewRecording.h"
-#include "misc.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

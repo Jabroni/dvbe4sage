@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 
 #include "Configuration.h"
-#include "misc.h"
+#include "extern.h"
 
 Configuration g_Configuration;
 

@@ -5,7 +5,7 @@
 #include "Logger.h"
 #include "Recorder.h"
 #include "configuration.h"
-#include "misc.h"
+#include "extern.h"
 
 // Define constants
 #define	CRC_LENGTH			4

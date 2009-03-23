@@ -341,10 +341,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\misc.h"
-				>
-			</File>
-			<File
 				RelativePath=".\pluginshandler.h"
 				>
 			</File>

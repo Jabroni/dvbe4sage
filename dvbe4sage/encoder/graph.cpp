@@ -3,8 +3,8 @@
 #include "graph.h"
 #include "DVBFilter.h"
 #include "Logger.h"
-#include "misc.h"
 #include "configuration.h"
+#include "extern.h"
 
 // Constructor, initializes member variables
 // and calls InitializeGraphBuilder
