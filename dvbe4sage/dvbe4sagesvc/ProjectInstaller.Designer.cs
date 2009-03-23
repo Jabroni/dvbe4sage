@@ -39,6 +39,7 @@
             // serviceInstaller
             // 
             this.serviceInstaller.ServiceName = "DVB Enhancer for SageTV";
+            this.serviceInstaller.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 
             // ProjectInstaller
             // 
