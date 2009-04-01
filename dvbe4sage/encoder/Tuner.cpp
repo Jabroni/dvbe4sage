@@ -116,7 +116,7 @@ bool Tuner::startRecording(bool ignoreSignalLock)
 		log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
 	else
 	{
-		if(m_isTwinhan || ignoreSignalLock)
+		if(m_isTwinhan || ignoreSignalLock || m_BDAFilterGraph.m_IsHauppauge)
 			log(0, true, TEXT("Signal not locked, trying anyway...!\n"));
 		else
 		{
