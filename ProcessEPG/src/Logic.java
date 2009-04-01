@@ -190,7 +190,7 @@ public class Logic
 					if(updateProgramme(programme, "he", hebrewTitle, true, true, "\\s*(.+?)\\s*[:-]?\\s*פ(?:רק|')?\\s+ס(?:יום|')\\s+ה?עונה\\s*", -1, -1, -1, false))
 					{
 						hebrewTitle = programme.getTitles().get("he");
-						programme.setSeasonNumber(-2);
+						//programme.setEpisodeNumber(-2);
 					}
 					
 					// Get rid of "end of the season" first and overwrite the title
