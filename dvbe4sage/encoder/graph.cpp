@@ -156,11 +156,10 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	if(SUCCEEDED(hr = m_pTunerDemodDevice->QueryFilterInfo(&filterInfo)))
 	{
 		log(0, true, TEXT("Tuner Filter Info = \"%s\"\n"), CW2CT(filterInfo.achName));
-		CComBSTR name(filterInfo.achName);
 		_tcscpy_s(m_TunerName, sizeof(m_TunerName) / sizeof(TCHAR), CW2CT(filterInfo.achName));
 
 		// Let's see if this is a Hauppauge device
-		if(wcsstr(filterInfo.achName, L"Hauppauge") != NULL)
+		if(_tcsstr(m_TunerName, TEXT("Hauppauge")) != NULL)
 			m_IsHauppauge = true;
 	}
 
