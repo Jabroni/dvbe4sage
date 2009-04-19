@@ -10,14 +10,11 @@ class Tuner
 private:
 	// DirectShow graph
 	CBDAFilterGraph			m_BDAFilterGraph;
-	// True if the card is Twinhan
-	bool					m_isTwinhan;
-	// True if the card is Mantis
-	bool					m_isMantis;
 	HANDLE					m_WorkerThread;
 	bool					m_IsTunerOK;
 	Encoder* const			m_pEncoder;
 	HANDLE					m_InitializationEvent;
+	bool					m_LockStatus;
 
 	// We disable unsafe constructors
 	Tuner();
@@ -37,4 +34,5 @@ public:
 	USHORT getTid() const					{ return m_BDAFilterGraph.m_Tid; }
 	void setTid(USHORT tid)					{ m_BDAFilterGraph.m_Tid = tid; }
 	HANDLE getInitializationEvent()			{ return m_InitializationEvent; }
+	bool getLockStatus();
 };

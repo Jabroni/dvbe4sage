@@ -7,6 +7,34 @@ using namespace stdext;
 
 #define PACKET_SIZE	184
 
+// CAID/PROVID structure
+struct CAScheme
+{
+	USHORT								pid;
+	DWORD								provId;
+	WORD								caId;
+	/*bool operator ==(const CAScheme& other) const
+	{
+		return pid == other.pid && provId == other.provId && caId == other.caId;
+	}
+
+	bool operator <(const CAScheme& other) const
+	{
+		return caId < other.caId;
+	}*/
+
+	operator size_t() const
+	{
+		return (size_t)caId;
+	}
+};
+
+class EMMInfo : public hash_set<CAScheme>
+{
+public:
+	bool hasPid(USHORT pid) const;
+};
+
 class Plugin
 {
 	friend class PluginsHandler;
@@ -22,7 +50,7 @@ class Plugin
 	Plugin_Filter_Close_Proc			m_fpFilterClose;
 	Plugin_Extern_RecPlay_Proc			m_fpExternRecPlay;
 public:
-	virtual bool acceptsCAid(const hash_set<USHORT>& caid) { return true; }
+	virtual bool acceptsCAid(const hash_set<CAScheme>& caid) { return true; }
 };
 
 class ESCAParser;
@@ -33,12 +61,13 @@ class PluginsHandler
 private:
 	struct Client
 	{
-		ESCAParser*				caller;
-		USHORT					sid;
-		USHORT					ecmPid;
-		USHORT					emmPid;
-		hash_set<USHORT>		caids;
-		Client() : caller(NULL), sid(0), ecmPid(0xFFFF), emmPid(0xFFFF) {}
+		ESCAParser*						caller;
+		USHORT							sid;
+		USHORT							ecmPid;
+		USHORT							pmtPid;
+		hash_set<CAScheme>				ecmCaids;
+		EMMInfo							emmCaids;
+		Client() : caller(NULL), sid(0), ecmPid(0xFFFF) {}
 	};
 
 	struct Request
@@ -67,6 +96,10 @@ private:
 	bool									m_TimerInitialized;
 	time_t									m_Time;
 	bool									m_ExitWorkerThread;
+	bool									m_OddLastPacket;
+
+	// Fill the TP structure function
+	void fillTPStructure(LPTPROGRAM82 tp) const;
 
 	// Callbacks
 	void startFilter(LPARAM lParam);
@@ -81,7 +114,14 @@ public:
 	// Window procedure for handling messages
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 	// CA packets handler
-	void putCAPacket(ESCAParser* caller, bool isEcmPacket, const hash_set<USHORT>& caids, USHORT sid, USHORT caPid, USHORT emmPid, const BYTE* const currentPacket);
+	void putCAPacket(ESCAParser* caller,
+					 bool isEcmPacket,
+					 const hash_set<CAScheme>& ecmCaids,
+					 const EMMInfo& emmCaids,
+					 USHORT sid,
+					 USHORT caPid,
+					 USHORT pmtPid,
+					 const BYTE* const currentPacket);
 	// Routine processing packet queue
 	void processECMPacketQueue();
 	// Remove obsolete caller

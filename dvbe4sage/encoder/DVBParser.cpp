@@ -170,11 +170,11 @@ void PSIParser::clear()
 	m_PMTPids.clear();
 	m_ESPidsForSid.clear();
 	m_CAPidsForSid.clear();
+	m_EMMPids.clear();
 	m_BufferForPid.clear();
 	m_CurrentNid = 0;
 	m_CurrentTid = 0;
 	m_AllowParsing = true;
-	m_EMMPid = 0;
 	m_PMTCounter = 0;
 }
 
@@ -374,7 +374,7 @@ void PSIParser::parseCATTable(const cat_t* const table,
 							  int remainingLength)
 {
 	// Boil out if EMM PID already known
-	if(m_EMMPid != 0)
+	if(!m_EMMPids.empty())
 		return;
 
 	// Adjust input buffer pointer
@@ -383,6 +383,9 @@ void PSIParser::parseCATTable(const cat_t* const table,
 	// Remove CRC and prefix
 	remainingLength -= CRC_LENGTH + CAT_LEN;
 
+	// Flag to indicate if we had any CA descriptors
+	bool hasCADescriptors = false;
+
 	// For each CA descriptor do
 	while(remainingLength != 0)
 	{
@@ -390,28 +393,50 @@ void PSIParser::parseCATTable(const cat_t* const table,
 		const descr_gen_t* const descriptor = CastGenericDescriptor(inputBuffer);
 		if(descriptor->descriptor_tag == '\x09')
 		{
+			// Set the flag
+			hasCADescriptors = true;
 			// Get CA descriptor
 			const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
-			// And get the EMM PID
-			m_EMMPid =  HILO(caDescriptor->CA_PID);
+			// Fill the CAScheme structure with data
+			CAScheme caScheme;
+			// Figure out the EMM PID
+			caScheme.pid = HILO(caDescriptor->CA_PID);
+			// Figure out the CAID
+			caScheme.caId = HILO(caDescriptor->CA_type);
+			// And the provider ID
+			caScheme.provId = 0;
+			// Let's see if this CAID is served
+			if(g_Configuration.isCAIDServed(caScheme.caId))
+			{
+				// Make the log entry
+				log(2, true, TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"), 
+						caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+				// And add to the EMM PIDS map
+				m_EMMPids.insert(caScheme);
+			}
+			else
+				// Make the log entry
+				log(2, true, TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"), 
+						caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 		}
 		// Adjust length and pointer
 		remainingLength -= descriptor->descriptor_length + DESCR_GEN_LEN;
 		inputBuffer += descriptor->descriptor_length + DESCR_GEN_LEN;
 	}
-	// Print the log entry
-	log(2, true, TEXT("Found EMM PID=0x%hX\n"), m_EMMPid);
+	// Let's see if we had CA descriptors but none was actually used
+	if(m_EMMPids.empty() && hasCADescriptors)
+		log(0, true, TEXT("None of the existing CA descriptors are used, have you forgotten to specify \"ServedCAIDs\"?\n"));
 }
 
 void PSIParser::parsePMTTable(const pmt_t* const table,
 							  int remainingLength)
 {
-	// Get the for this PMT SID
+	// Get SID the for this PMT
 	USHORT programNumber = HILO(table->program_number);
 
 	// Let's see if we already discovered EMM PID or passed PMT packets counter threshold
 	// If no, boil out
-	if(m_EMMPid == 0 && m_PMTCounter < g_Configuration.getPMTThreshold())
+	if(m_EMMPids.empty() && m_PMTCounter < g_Configuration.getPMTThreshold())
 	{
 		m_PMTCounter++;
 		return;
@@ -422,7 +447,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		return;
 
 	// Log warning message if EMMPid is still 0
-	if(m_EMMPid == 0)
+	if(m_EMMPids.empty())
 		log(2, true, TEXT("!!! Warning: EMM PID has not been discovered after %hu PMT packets, assuming FTA!!!\n"), g_Configuration.getPMTThreshold());
 
 	// Adjust input buffer pointer
@@ -460,8 +485,11 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		inputBuffer += PMT_INFO_LEN;
 		remainingLength -= PMT_INFO_LEN;
 
-		// Experimental: taking only the first CA PID into account (otherwise things break)
-		bool firstTime = true;
+		// Create a map from ECM PID to CA Scheme structure
+		hash_set<CAScheme> caMap;
+
+		// Flag to indicate if we had any CA descriptors
+		bool hasCADescriptors = false;
 
 		// Loop through the ES info records (we look for the CA descriptors)
 		while(ESInfoLength != 0)
@@ -469,21 +497,33 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			const descr_gen_t* const descriptor = CastGenericDescriptor(inputBuffer);
 			if(descriptor->descriptor_tag == '\x09')
 			{
-				// Do it only if not done before
-				if(firstTime)
+				// Set the flag
+				hasCADescriptors = true;
+				// Get the descriptor pointer
+				const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
+				// Fill the CAScheme structure with data
+				CAScheme caScheme;
+				// Figure out the ECM PID
+				caScheme.pid = HILO(caDescriptor->CA_PID);
+				// Get the CAID
+				caScheme.caId = HILO(caDescriptor->CA_type);
+				// And the PROVID
+				caScheme.provId = 0;
+				// Let's see if this CAID is served
+				if(g_Configuration.isCAIDServed(caScheme.caId))
 				{
-					// Clear the first time indicator
-					firstTime = false;
-
-					// Get the descriptor pointer
-					const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
-					// Add the CA type into the map
-					m_CATypesForSid[programNumber].insert(HILO(caDescriptor->CA_type));
-					// Add the ECM pid
-					m_CAPidsForSid[programNumber].insert(HILO(caDescriptor->CA_PID));
-					// Add the EMM PID discovered earlier
-					m_CAPidsForSid[programNumber].insert(m_EMMPid);
+					// Add the CA Scheme to the set
+					caMap.insert(caScheme);
+					// Add the ECM pid to the map of PIDs we need to listen to
+					m_CAPidsForSid[programNumber].insert(caScheme.pid);
+					// Log the descriptor data
+					log(2, true, TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"),
+								ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 				}
+				else
+					// Log the descriptor data
+					log(2, true, TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"),
+								ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 			}
 
 			// Go to the next record
@@ -491,6 +531,16 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			remainingLength -= descriptor->descriptor_length + DESCR_GEN_LEN;
 			inputBuffer += descriptor->descriptor_length + DESCR_GEN_LEN;
 		}
+		// Let's see if we had CA descriptors but none was actually used for this ES PID
+		if(caMap.empty() && hasCADescriptors)
+			log(0, true, TEXT("None of the existing CA descriptors are for used PID=%hu, SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), ESPid, programNumber);
+
+		// Add the CA type into the map only if there were CA descriptors
+		if(hasCADescriptors)
+			m_CATypesForSid[programNumber] = caMap;
+		// Add the EMM PIDs discovered earlier
+		for(EMMInfo::const_iterator it = m_EMMPids.begin(); it != m_EMMPids.end(); it++)
+			m_CAPidsForSid[programNumber].insert(it->pid);
 	}
 }
 
@@ -1037,13 +1087,13 @@ bool PSIParser::getTransponderForSid(USHORT sid,
 		return false;
 }
 
-bool PSIParser::getCATypesForSid(USHORT sid,
-								 hash_set<USHORT>& caTypes) const
+bool PSIParser::getECMCATypesForSid(USHORT sid,
+									hash_set<CAScheme>& ecmCATypes) const
 {
-	hash_map<USHORT, hash_set<USHORT>>::const_iterator it = m_CATypesForSid.find(sid);
+	hash_map<USHORT, hash_set<CAScheme>>::const_iterator it = m_CATypesForSid.find(sid);
 	if(it != m_CATypesForSid.end())
 	{
-		caTypes = it->second;
+		ecmCATypes = it->second;
 		return true;
 	}
 	else
@@ -1245,7 +1295,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 	if(m_pPluginsHandler != NULL)
 	{
 		// EMM packets go directly to the plugins
-		if(caPid == m_EMMPid)
+		if(m_EMMCATypes.hasPid(caPid))
 		{
 //#define _FOR_JOKER
 #ifdef _FOR_JOKER
@@ -1264,7 +1314,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 //				emmFile = NULL;
 //			}
 #endif //_FOR_JOKER
-			m_pPluginsHandler->putCAPacket(this, false, m_CATypes, m_Sid, caPid, m_EMMPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, false, m_ECMCATypes, m_EMMCATypes, m_Sid, caPid, m_PmtPid, currentPacket + 4);
 		}
 		// For ECM packets, see if the content is new
 		else if(memcmp(m_LastECMPacket, currentPacket + 4, PACKET_SIZE) != 0)
@@ -1273,7 +1323,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			memcpy(m_LastECMPacket, currentPacket + 4, PACKET_SIZE);
 			
 			// And send to the plugins
-			m_pPluginsHandler->putCAPacket(this, true, m_CATypes, m_Sid, caPid, m_EMMPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, true, m_ECMCATypes, m_EMMCATypes, m_Sid, caPid, m_PmtPid, currentPacket + 4);
 
 			// Lock the output buffers queue
 			CAutoLock lock(&m_csOutputBuffer);
@@ -1380,8 +1430,8 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 					   PluginsHandler* const pPluginsHandler,
 					   USHORT sid,
 					   USHORT pmtPid,
-					   const hash_set<USHORT>& caTypes,
-					   USHORT emmPid,
+					   const hash_set<CAScheme>& ecmCATypes,
+					   const EMMInfo& emmCATypes,
 					   __int64 maxFileLength) :
 	m_WorkerThread(NULL),
 	m_SignallingEvent(NULL),
@@ -1389,8 +1439,8 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_pPluginsHandler(pPluginsHandler),
 	m_Sid(sid),
 	m_PmtPid(pmtPid),
-	m_CATypes(caTypes),
-	m_EMMPid(emmPid),
+	m_ECMCATypes(ecmCATypes),
+	m_EMMCATypes(emmCATypes),
 	m_ExitWorkerThread(false),
 	m_pRecorder(pRecorder),
 	m_IsEncrypted(false),
@@ -1565,7 +1615,7 @@ void ESCAParser::setESPid(USHORT pid,
 
 bool ESCAParser::matchAudioLanguage(const BYTE* const buffer,
 									const int bufferLength,
-									LPCTSTR language)
+									const char* language)
 {
 	int langLen = strlen(language);
 	for(int i = 0; i <= bufferLength - langLen; i++)
@@ -1591,5 +1641,5 @@ void PSIParser::copy(const PSIParser& other)
 	m_CAPidsForSid = other.m_CAPidsForSid;
 	m_CurrentNid = other.m_CurrentNid;
 	m_CurrentTid = other.m_CurrentTid;
-	m_EMMPid = other.m_EMMPid;	
+	m_EMMPids = other.m_EMMPids;	
 }

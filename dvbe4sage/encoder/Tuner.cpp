@@ -14,11 +14,10 @@ Tuner::Tuner(Encoder* const pEncoder,
 			 BinaryConvolutionCodeRate initialFec) :
 	m_pEncoder(pEncoder),
 	m_BDAFilterGraph(ordinal),
-	m_isTwinhan(false),
-	m_isMantis(false),
 	m_WorkerThread(NULL),
 	m_IsTunerOK(true),
-	m_InitializationEvent(NULL)
+	m_InitializationEvent(NULL),
+	m_LockStatus(false)
 {
 	// Tune to the initial parameters
 	tune(initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec);
@@ -26,7 +25,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 	// Build the graph
 	if(FAILED(m_BDAFilterGraph.BuildGraph()))
 	{
-		log(0, true, TEXT("Error: Could not Build the DVB-S BDA filter graph.\n"));
+		log(0, true, TEXT("Error: Could not Build the DVB-S BDA filter graph\n"));
 		m_IsTunerOK = false;
 	}
 
@@ -50,16 +49,9 @@ Tuner::Tuner(Encoder* const pEncoder,
 						DrvInfo.Company,
 						DrvInfo.Version_Major,
 						DrvInfo.Version_Minor);
-		if(_tcsstr(m_BDAFilterGraph.getTunerName(), TEXT("878")) != NULL)
-			m_isTwinhan = true;
-		if(_tcsstr(m_BDAFilterGraph.getTunerName(), TEXT("Mantis")) != NULL)
-			m_isMantis = true;
 
 		// Set the LNB data
 		m_BDAFilterGraph.THBDA_IOCTL_SET_LNB_DATA_Fun(g_Configuration.getLNBLOF1(), g_Configuration.getLNBLOF2(), g_Configuration.getLNBSW());
-
-		// Set tuner power
-		//m_BDAFilterGraph.THBDA_IOCTL_SET_TUNER_POWER_Fun(0);
 	}
 }
 
@@ -95,36 +87,21 @@ void Tuner::tune(ULONG frequency,
 	// Fix the modulation type for S2 tuning of Hauppauge devices
 	if(m_BDAFilterGraph.m_IsHauppauge && modulation == BDA_MOD_8VSB)
 		m_BDAFilterGraph.m_Modulation = BDA_MOD_8PSK;
+
+	m_LockStatus = false;
 }
 
 bool Tuner::startRecording(bool ignoreSignalLock)
 {
-	if(m_isMantis)
-		m_BDAFilterGraph.BuildGraph();
+	// Build the graph
+	m_BDAFilterGraph.BuildGraph();
 
 	// Perform the tuning
 	m_BDAFilterGraph.ChangeSetting();
 
-	// Get lock status
-	BOOLEAN bLocked = FALSE;
-	LONG lSignalQuality = 0;		
-	LONG lSignalStrength = 0;
+	// Get lock status for the first time
+	//getLockStatus();
 
-	// Get the tuner status
-	m_BDAFilterGraph.GetTunerStatus(&bLocked, &lSignalQuality, &lSignalStrength);
-	if(bLocked)
-		log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
-	else
-	{
-		if(m_isTwinhan || ignoreSignalLock || m_BDAFilterGraph.m_IsHauppauge)
-			log(0, true, TEXT("Signal not locked, trying anyway...!\n"));
-		else
-		{
-			log(0, true, TEXT("Signal not locked, no recording done...!\n"));
-			return false;
-		}
-	}
-		
 	// Run the graph
 	if(FAILED(m_BDAFilterGraph.RunGraph()))
 	{
@@ -135,6 +112,30 @@ bool Tuner::startRecording(bool ignoreSignalLock)
 		return true;
 }
 
+bool Tuner::getLockStatus()
+{
+	// Get the lock status from the tuner only if not locked yet
+	if(!m_LockStatus)
+	{
+		// Get lock status
+		BOOLEAN bLocked = FALSE;
+		LONG lSignalQuality = 0;		
+		LONG lSignalStrength = 0;
+
+		// Get the tuner status
+		m_BDAFilterGraph.GetTunerStatus(&bLocked, &lSignalQuality, &lSignalStrength);
+
+		// If lock succeeded, print the log message and set the flag
+		if(bLocked)
+		{
+			log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
+			m_LockStatus = true;
+		}
+	}
+
+	return m_LockStatus;
+}
+
 void Tuner::stopRecording()
 {
 	// Tell the parser to stop processing PSI packets
@@ -143,9 +144,8 @@ void Tuner::stopRecording()
 	// The tuner stops the running graph
 	m_BDAFilterGraph.StopGraph();
 
-	// Destory the graph (only for Mantis)
-	if(m_isMantis)
-		m_BDAFilterGraph.TearDownGraph();
+	// Destory the graph
+	m_BDAFilterGraph.TearDownGraph();
 }
 
 DWORD WINAPI RunIdleCallback(LPVOID vpTuner)

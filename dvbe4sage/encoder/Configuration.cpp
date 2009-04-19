@@ -19,6 +19,7 @@ Configuration::Configuration() :
 	m_TSPacketsPerBuffer(GetPrivateProfileInt(TEXT("Tuning"), TEXT("TSPacketsPerBuffer"), 1024, INI_FILE_NAME)),
 	m_NumberOfBuffers(GetPrivateProfileInt(TEXT("Tuning"), TEXT("NumberOfBuffers"), 400, INI_FILE_NAME)),
 	m_TuningTimeout(GetPrivateProfileInt(TEXT("Tuning"), TEXT("TuningTimeout"), 20, INI_FILE_NAME)),
+	m_TuningLockTimeout(GetPrivateProfileInt(TEXT("Tuning"), TEXT("TuningLockTimeout"), 5, INI_FILE_NAME)),
 	m_InitialRunningTime(GetPrivateProfileInt(TEXT("Tuning"), TEXT("InitialRunningTime"), 20, INI_FILE_NAME)),
 	m_UseSidForTuning(GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseSidForTuning"), 0, INI_FILE_NAME) == 0 ? false : true),
 	m_TSPacketsPerOutputBuffer(GetPrivateProfileInt(TEXT("Output"), TEXT("TSPacketsPerOutputBuffer"), 160000, INI_FILE_NAME)),
@@ -28,14 +29,16 @@ Configuration::Configuration() :
 	m_PATDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PATDilutionFactor"), 1, INI_FILE_NAME)),
 	m_PMTDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTDilutionFactor"), 1, INI_FILE_NAME)),
 	m_PMTThreshold((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 20, INI_FILE_NAME)),
-	m_PSIMaturityTime((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PSIMaturityTime"), 10, INI_FILE_NAME))
+	m_PSIMaturityTime((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PSIMaturityTime"), 10, INI_FILE_NAME)),
+	m_UseNewTuningMethod(GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseNewTuningMethod"), 0, INI_FILE_NAME) == 0 ? false : true)
 {	
 	// Buffer
 	TCHAR buffer[1024];
+	// Context for parsing
+	LPTSTR context;
 
 	// Get the list of tuners to exclude
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("ExcludeTuners"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
-	LPTSTR context;
 	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
 		m_ExcludeTuners.insert(_ttoi(token));
 
@@ -43,6 +46,19 @@ Configuration::Configuration() :
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("DVBS2Tuners"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
 	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
 		m_DVBS2Tuners.insert(_ttoi(token));
+
+	// Get the list of served CAIDs
+	GetPrivateProfileString(TEXT("Plugins"), TEXT("ServedCAIDs"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
+	if(buffer[0] != TCHAR(0))
+		for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		{
+			USHORT caid;
+			_stscanf_s(token, TEXT("%hx"), &caid);
+			m_ServedCAIDs.insert(caid);
+		}
+	else
+		// Default is YES
+		m_ServedCAIDs.insert(0x90D);
 
 	// Get the initial polarization setting
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialPolarization"), TEXT("V"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);

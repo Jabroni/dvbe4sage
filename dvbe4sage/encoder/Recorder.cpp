@@ -335,7 +335,23 @@ bool Recorder::changeState()
 		if(difftime(now, m_Time) > g_Configuration.getTuningTimeout())
 		{
 			// Log stop recording message
-			log(0, true, TEXT("Timeout, "));
+			log(0, true, TEXT("Could not start recording after %u seconds, "), g_Configuration.getTuningTimeout());
+
+			// Unlock the parser
+			pParser->unlock();
+
+			// Stop recording without locking the parser
+			stopRecording();
+						
+			// The recording is not OK, delete the recorder
+			return false;
+		}
+
+		// Check for tuner lock timeout
+		if(!m_pTuner->getLockStatus() && difftime(now, m_Time) > g_Configuration.getTuningLockTimeout())
+		{
+			// Log stop recording message
+			log(0, true, TEXT("Could not lock signal after %u seconds, "), g_Configuration.getTuningLockTimeout());
 
 			// Unlock the parser
 			pParser->unlock();
@@ -360,11 +376,14 @@ bool Recorder::changeState()
 				hash_set<USHORT> caPids;
 				if(pParser->getCAPidsForSid(m_Sid, caPids))
 				{
-					// Get CA Types (might be empty)
-					hash_set<USHORT> caTypes;
-					pParser->getCATypesForSid(m_Sid, caTypes);
+					// Get ECM CA Types (might be empty)
+					hash_set<CAScheme> ecmCATypes;
+					pParser->getECMCATypesForSid(m_Sid, ecmCATypes);
+					// Get EMM CA Types (might be empty)
+					EMMInfo emmCATypes;
+					pParser->getEMMCATypes(emmCATypes);
 					// Create the parser
-					m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, caTypes, pParser->getEMMPid(), m_Size);
+					m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, ecmCATypes, emmCATypes, m_Size);
 					// Assign recorder's parser to PAT PID
 					pParser->assignParserToPid(0, m_pParser);
 					m_pParser->setESPid(0, true);

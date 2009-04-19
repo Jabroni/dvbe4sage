@@ -914,28 +914,21 @@ HRESULT CBDAFilterGraph::StopGraph()
 bool CBDAFilterGraph::GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pStrength)
 {
 	bool bRet = false;
-	HRESULT hr;
 	BOOLEAN locked=false;
 	LONG quality=0;
 	LONG strength=0;
 
 	CComQIPtr<IBDA_Topology> pBDATopology(m_pTunerDemodDevice);
-
 	if (pBDATopology)
 	{
-		CComPtr <IUnknown> pControlNode;
-
-		if (SUCCEEDED(hr=pBDATopology->GetControlNode(0,1,0,&pControlNode)))
+		CComPtr<IUnknown> pControlNode;
+		if (SUCCEEDED(pBDATopology->GetControlNode(0,1,0,&pControlNode)))
 		{
 			CComQIPtr <IBDA_SignalStatistics> pSignalStats (pControlNode);
-
-			if (pSignalStats)
-			{
-				if (SUCCEEDED(hr=pSignalStats->get_SignalLocked(&locked)) &&
-					SUCCEEDED(hr=pSignalStats->get_SignalQuality(&quality)) &&
-					SUCCEEDED(hr=pSignalStats->get_SignalStrength(&strength)))
-					bRet=true;
-			}
+			if (pSignalStats && SUCCEEDED(pSignalStats->get_SignalLocked(&locked)) &&
+								SUCCEEDED(pSignalStats->get_SignalQuality(&quality)) &&
+								SUCCEEDED(pSignalStats->get_SignalStrength(&strength)))
+				bRet = true;
 		}
 	}
 
@@ -950,60 +943,183 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 {
 	HRESULT hr = S_OK;
 
-	// create a tune request to initialize the network provider
-	// before connecting other filters
-	CComPtr <IDVBTuneRequest> pDVBSTuneRequest;
-	if (FAILED(hr = CreateDVBSTuneRequest(&pDVBSTuneRequest)))
+	if(!g_Configuration.getUseNewTuningMethod())
 	{
-		log(0, true, TEXT("Cannot create tune request\n"));
-		BuildGraphError();
-		return hr;
-	}
+		log(2, true, TEXT("Using tuning request-based tuning method...\n"));
 
-	//submit the tune request to the network provider
-	hr = m_pITuner->put_TuneRequest(pDVBSTuneRequest);
-	if (FAILED(hr)) {
-		log(0, true, TEXT("Cannot submit the tune request\n"));
-		BuildGraphError();
-		return hr;
-	}
-
-/*
-	CComQIPtr<IBDA_DeviceControl> pDeviceControl(m_pTunerDemodDevice);
-	if(pDeviceControl != NULL)
-	{
-		hr = pDeviceControl->StartChanges();
-		CComQIPtr<IBDA_Topology> pBDATopology(m_pTunerDemodDevice);
-		if(pBDATopology)
+		// create a tune request to initialize the network provider
+		// before connecting other filters
+		CComPtr <IDVBTuneRequest> pDVBSTuneRequest;
+		if (FAILED(hr = CreateDVBSTuneRequest(&pDVBSTuneRequest)))
 		{
-			CComPtr <IUnknown> pControlNode;
-			if(SUCCEEDED(hr = pBDATopology->GetControlNode(0, 1, 0, &pControlNode)))
-			{
-				CComQIPtr<IBDA_FrequencyFilter> pFreqControl(pControlNode);
-				hr = pFreqControl->put_Frequency(m_ulCarrierFrequency);
-				hr = pFreqControl->put_FrequencyMultiplier(1000);
-				hr = pFreqControl->put_Polarity(m_SignalPolarisation);
-				//hr = pFreqControl->put_Bandwidth(-1);
-				CComQIPtr<IBDA_LNBInfo> pLNB(pControlNode);
-				hr = pLNB->put_HighLowSwitchFrequency(11700*1000);
-				hr = pLNB->put_LocalOscilatorFrequencyLowBand(9750*1000);
-				hr = pLNB->put_LocalOscilatorFrequencyHighBand(10600*1000);
-			}
-			pControlNode = NULL;
-			if(SUCCEEDED(hr = pBDATopology->GetControlNode(0, 1, 1, &pControlNode)))
-			{
-				CComQIPtr<IBDA_DigitalDemodulator> pDemod(pControlNode);
-				FECMethod fecMethod = BDA_FEC_VITERBI;
-				hr = pDemod->put_InnerFECMethod(&fecMethod);
-				hr = pDemod->put_InnerFECRate(&m_FECRate);
-				hr = pDemod->put_ModulationType(&m_Modulation);
-				hr = pDemod->put_SymbolRate(&m_ulSymbolRate);
-				hr = pDeviceControl->CommitChanges();
-			}
+			log(0, true, TEXT("Cannot create tune request\n"));
+			BuildGraphError();
+			return FALSE;
+		}
+
+		//submit the tune request to the network provider
+		hr = m_pITuner->put_TuneRequest(pDVBSTuneRequest);
+		if (FAILED(hr))
+		{
+			log(0, true, TEXT("Cannot submit the tune request\n"));
+			BuildGraphError();
+			return FALSE;
 		}
 	}
-*/
-	return hr;
+	else
+	{
+		log(2, true, TEXT("Using device control-based tuning method...\n"));
+
+		CComQIPtr<IBDA_DeviceControl> pDeviceControl(m_pTunerDemodDevice);
+		if(pDeviceControl == NULL)
+		{
+			log(0, true, TEXT("Failed to QI IBDA_DeviceControl on tuner demod device, tuning failed\n"));
+			BuildGraphError();
+			return FALSE;
+		}
+
+		CComQIPtr<IBDA_Topology> pBDATopology(m_pTunerDemodDevice);
+		if(pBDATopology == NULL)
+		{
+			log(0, true, TEXT("Failed to QI IBDA_Topology on tuner demod device, tuning failed\n"));
+			BuildGraphError();
+			return FALSE;
+		}
+
+		// Get 0 control node from the tuner demod device (tuner)
+		CComPtr <IUnknown> pControlNode;
+		hr = pBDATopology->GetControlNode(0, 1, 0, &pControlNode);
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Can't obtain the tuner control node, error=0x%.08X, tuning failed\n"), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		CComQIPtr<IBDA_FrequencyFilter> pFreqControl(pControlNode);
+		if(pFreqControl == NULL)
+		{
+			log(0, true, TEXT("Failed to QI IBDA_FrequencyFilter on the tuner node, tuning failed\n"));
+			BuildGraphError();
+			return FALSE;
+		}
+
+		hr = pDeviceControl->StartChanges();
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Start changes failed on the device control, error=0x%.08X, tuning failed\n"), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+				
+		hr = pFreqControl->put_Frequency(m_ulCarrierFrequency);
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set frequency \"%lu\" on the frequency control, error=0x%.08X, tuning failed\n"), m_ulCarrierFrequency, hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		hr = pFreqControl->put_Polarity(m_SignalPolarisation);
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set polarization \"%s\" on the frequency control, error=0x%.08X, tuning failed\n"), printablePolarization(m_SignalPolarisation), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+				
+		CComQIPtr<IBDA_LNBInfo> pLNB(pControlNode);
+		if(pLNB == NULL)
+		{
+			log(0, true, TEXT("Failed to QI IBDA_LNBInfo on the tuner node, tuning failed\n"));
+			BuildGraphError();
+			return FALSE;
+		}
+		
+		hr = pLNB->put_HighLowSwitchFrequency(g_Configuration.getLNBSW());
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set LNB switch frequency to \"%lu\" on the LNB control, error=0x%.08X, tuning failed\n"), g_Configuration.getLNBSW(), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		hr = pLNB->put_LocalOscilatorFrequencyLowBand(g_Configuration.getLNBLOF1());
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set LNB low band to \"%lu\" on the LNB control, error=0x%.08X, tuning failed\n"), g_Configuration.getLNBLOF1(), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		hr = pLNB->put_LocalOscilatorFrequencyHighBand(g_Configuration.getLNBLOF2());
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set LNB high band to \"%lu\" on the LNB control, error=0x%.08X, tuning failed\n"), g_Configuration.getLNBLOF2(), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		pControlNode = NULL;
+		hr = pBDATopology->GetControlNode(0, 1, 1, &pControlNode);
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Can't obtain the demod control node, error=0x%.08X, tuning failed\n"), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		CComQIPtr<IBDA_DigitalDemodulator> pDemod(pControlNode);
+		if(pDemod == NULL)
+		{
+			log(0, true, TEXT("Failed to QI IBDA_DigitalDemodulator on the demod node, tuning failed\n"));
+			BuildGraphError();
+			return FALSE;
+		}
+
+		FECMethod fecMethod = BDA_FEC_VITERBI;
+		hr = pDemod->put_InnerFECMethod(&fecMethod);
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set Inner FEC method to \"BDA_FEC_VITERBI\" on the demod, error=0x%.08X, tuning failed\n"), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		hr = pDemod->put_InnerFECRate(&m_FECRate);
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set Inner FEC rate to \"%s\" on the demod, error=0x%.08X, tuning failed\n"), printableFEC(m_FECRate), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		hr = pDemod->put_ModulationType(&m_Modulation);
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set Modulation to \"%s\" on the demod, error=0x%.08X, tuning failed\n"), printableModulation(m_Modulation), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		hr = pDemod->put_SymbolRate(&m_ulSymbolRate);
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Failed to set Symbol Rate to \"%lu\" on the demod, error=0x%.08X, tuning failed\n"), m_ulSymbolRate, hr);
+			BuildGraphError();
+			return FALSE;
+		}
+
+		hr = pDeviceControl->CommitChanges();
+		if(FAILED(hr))
+		{
+			log(0, true, TEXT("Start changes failed on the device control, error=0x%.08X, tuning failed\n"), hr);
+			BuildGraphError();
+			return FALSE;
+		}
+	}
+
+	return TRUE;
 }
 
 int CBDAFilterGraph::getNumberOfTuners()

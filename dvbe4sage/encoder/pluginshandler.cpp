@@ -189,6 +189,29 @@ LRESULT PluginsHandler::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			// Handle callbacks from the plugins
 			switch(wParam)
 			{
+				case MDAPI_GET_VERSION:
+					log(2, true, TEXT("MDAPI_GET_VERSION has been called\n"));
+					break;
+				case MDAPI_CHANNELCHANGE:
+					log(2, true, TEXT("MDAPI_CHANNELCHANGE has been called\n"));
+					break;
+				case MDAPI_GET_PROGRAMM:
+				{
+					LPTPROGRAM82 tp = (LPTPROGRAM82)lParam;
+					if(tp != NULL)
+						fillTPStructure(tp);
+					break;
+				}
+				case MDAPI_GET_PROGRAMM_NUMMER:
+				{
+					LPTPROGRAMNUMBER pn = (LPTPROGRAMNUMBER)lParam;
+					if(pn != NULL)
+					{
+						pn->RealNumber = 1;
+						pn->VirtNumber = 1;
+					}
+					break;
+				}
 				case MDAPI_START_FILTER:
 					startFilter(lParam);
 					break;
@@ -225,7 +248,7 @@ void PluginsHandler::startFilter(LPARAM lParam)
 			m_CurrentEcmFilterId = startFilter->Filter_ID;
 			log(2, true, TEXT("Start ECM filter for SID=%hu received\n"), m_CurrentSid);
 		}
-		else if(m_pCurrentClient->emmPid == startFilter->Pid)
+		else if(m_pCurrentClient->emmCaids.hasPid(startFilter->Pid))
 		{
 			m_CurrentEmmCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
 			m_CurrentEmmFilterId = startFilter->Filter_ID;
@@ -270,6 +293,10 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 	TDVB_COMMAND dvbCommand = *(TDVB_COMMAND*)lParam;
 	bool isOddKey = dvbCommand.buffer[4] ? true : false;
 
+	// Boil out if the key is not matching the last ECM packet
+	if(m_OddLastPacket != isOddKey)
+		return;
+
 	// Let's check the state of the current client
 	if(m_pCurrentClient != NULL)
 	{
@@ -302,10 +329,11 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 // CA packets handler
 void PluginsHandler::putCAPacket(ESCAParser* caller,
 								 bool isEcmPacket,
-								 const hash_set<USHORT>& caids,
+								 const hash_set<CAScheme>& ecmCaids,
+								 const EMMInfo& emmCaids,
 								 USHORT sid,
 								 USHORT caPid,
-								 USHORT emmPid,
+								 USHORT pmtPid,
 								 const BYTE* const currentPacket)
 {
 	// Do this in critical section
@@ -319,10 +347,11 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 		
 	// Initialize the client fields
 	Client& currentClient = m_Clients[caller];
-	currentClient.caids = caids;
+	currentClient.ecmCaids = ecmCaids;
+	currentClient.emmCaids = emmCaids;
 	currentClient.caller = caller;
 	currentClient.sid = sid;
-	currentClient.emmPid = emmPid;
+	currentClient.pmtPid = pmtPid;
 	if(isEcmPacket)
 	{
 		log(2, true, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
@@ -414,6 +443,8 @@ void PluginsHandler::processECMPacketQueue()
 				m_DeferTuning = true;
 				// Process it
 				m_CurrentEcmCallback(m_CurrentEcmFilterId, PACKET_SIZE, request.packet);
+				// Remeber if the last packet was odd
+				m_OddLastPacket = (request.packet[1] == (BYTE)'\x81');
 				// Remove request from the queue
 				m_RequestQueue.pop_front();
 				// Indicate we're waiting for response
@@ -450,21 +481,12 @@ void PluginsHandler::processECMPacketQueue()
 			// This client doesn't have any keys yet
 			// For each plugin, check if it handles this particular CA
 			for(list<Plugin>::iterator pit = m_Plugins.begin(); pit != m_Plugins.end(); pit++)
-				if(pit->acceptsCAid(m_pCurrentClient->caids))
+				if(pit->acceptsCAid(m_pCurrentClient->ecmCaids))
 				{
-					// And then finally tune to the program
+					// Fill the structure
 					TPROGRAM82 tp;
-					memset(&tp, 0, sizeof(tp));
-					int i = 0;
-					for(hash_set<USHORT>::const_iterator it = m_pCurrentClient->caids.begin(); it != m_pCurrentClient->caids.end(); it++, i++)
-					{
-						tp.CA[i].dwProviderId = *it;
-						tp.CA[i].wCA_Type = *it;
-						tp.CA[i].wECM = m_pCurrentClient->ecmPid;
-						tp.CA[i].wEMM = m_pCurrentClient->emmPid;
-					}
-					tp.wCACount = (WORD)i;
-					tp.wSID = m_pCurrentClient->sid;
+					fillTPStructure(&tp);
+					// And then finally tune to the program
 					pit->m_fpChannelChange(tp);
 					// Get the current time to handle timeouts
 					time(&m_Time);
@@ -501,4 +523,43 @@ void PluginsHandler::removeCaller(ESCAParser* caller)
 
 	// Finally, erase the client from the map
 	m_Clients.erase(caller);
+}
+
+void PluginsHandler::fillTPStructure(LPTPROGRAM82 tp) const
+{
+	// Zero memory
+	memset(tp, 0, sizeof(TPROGRAM82));
+
+	// Loop through all CAIDs
+	int i = 0;
+	int index = 0;
+	for(hash_set<CAScheme>::const_iterator it = m_pCurrentClient->ecmCaids.begin(); it != m_pCurrentClient->ecmCaids.end(); it++, i++)
+	{
+		tp->CA[i].dwProviderId = it->provId;
+		tp->CA[i].wCA_Type = it->caId;
+		tp->CA[i].wECM = (WORD)it->pid;
+		for(EMMInfo::const_iterator it1 = m_pCurrentClient->emmCaids.begin(); it1 != m_pCurrentClient->emmCaids.end(); it1++)
+			if(it1->caId == tp->CA[i].wCA_Type)
+			{
+				tp->CA[i].wEMM = it1->pid;
+				break;
+			}
+		log(2, true, TEXT("Initialized plugin with ProviderID=%.08X, CAID=%.04hX, ECM=%.04hX, EMM=%.04hX\n"), tp->CA[i].dwProviderId, tp->CA[i].wCA_Type, tp->CA[i].wECM, tp->CA[i].wEMM);
+		if(tp->CA[i].wECM == m_pCurrentClient->ecmPid)
+			index = i;
+	}
+	log(2, true, TEXT("Number of CAIDs is %d\n"), i);
+	tp->byCA = (BYTE)index;
+	tp->wCACount = (WORD)i;
+	tp->wECM = m_pCurrentClient->ecmPid;
+	tp->wSID = m_pCurrentClient->sid;
+	tp->wPMT = m_pCurrentClient->pmtPid;
+}
+
+bool EMMInfo::hasPid(USHORT pid) const
+{
+	for(hash_set<CAScheme>::const_iterator it = begin(); it != end(); it++)
+		if(it->pid == pid)
+			return true;
+	return false;
 }

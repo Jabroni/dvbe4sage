@@ -12,6 +12,7 @@ class Configuration
 	const UINT					m_TSPacketsPerOutputBuffer;
 	const UINT					m_TSPacketsOutputThreshold;
 	const UINT					m_TuningTimeout;
+	const UINT					m_TuningLockTimeout;
 	const USHORT				m_ListeningPort;
 	const ULONG					m_InitialFrequency;
 	const ULONG					m_InitialSymbolRate;
@@ -29,6 +30,8 @@ class Configuration
 	const ULONG					m_LNBSW;
 	const ULONG					m_LNBLOF1;
 	const ULONG					m_LNBLOF2;
+	const bool					m_UseNewTuningMethod;
+	hash_set<USHORT>			m_ServedCAIDs;
 
 	// All advanced stuff goes here
 	const USHORT				m_PATDilutionFactor;
@@ -40,6 +43,7 @@ public:
 	
 	bool excludeTuner(int tunerOrdinal) const		{ return m_ExcludeTuners.count(tunerOrdinal) > 0; }
 	bool isDVBS2Tuner(int tunerOrdinal) const		{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
+	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.count(caid) > 0; }
 	UINT getLogLevel() const						{ return m_LogLevel; }
 	UINT getDCWTimeout() const						{ return m_DCWTimeout; }
 	UINT getTSPacketsPerBuffer() const				{ return m_TSPacketsPerBuffer; }
@@ -47,6 +51,7 @@ public:
 	UINT getTSPacketsPerOutputBuffer() const		{ return m_TSPacketsPerOutputBuffer; }
 	UINT getTSPacketsOutputThreshold() const		{ return m_TSPacketsOutputThreshold; }
 	UINT getTuningTimeout() const					{ return m_TuningTimeout; }
+	UINT getTuningLockTimeout() const				{ return m_TuningLockTimeout; }
 	USHORT getListeningPort() const					{ return m_ListeningPort; }
 	ULONG getInitialFrequency() const				{ return m_InitialFrequency; }
 	ULONG getInitialSymbolRate() const				{ return m_InitialSymbolRate; }
@@ -62,6 +67,7 @@ public:
 	ULONG getLNBSW() const							{ return m_LNBSW; }
 	ULONG getLNBLOF1() const						{ return m_LNBLOF1; }
 	ULONG getLNBLOF2() const						{ return m_LNBLOF2; }
+	bool getUseNewTuningMethod() const				{ return m_UseNewTuningMethod; }
 
 	// All advanced stuff goes here
 	USHORT getPATDilutionFactor() const				{ return m_PATDilutionFactor; }

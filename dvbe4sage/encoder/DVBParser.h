@@ -69,22 +69,22 @@ private:
 	void parseUnknownTable(const pat_t* const table, const int remainingLength) const;
 
 	// Other important data
-	hash_map<USHORT, Transponder>		m_Transponders;		// TID to Transponder map
-	hash_map<USHORT, Service>			m_Services;			// SID to Service descriptor map
-	hash_map<USHORT, USHORT>			m_Channels;			// Channel number to SID map
-	hash_map<USHORT, USHORT>			m_PMTPids;			// SID to PMT PID map
-	hash_map<USHORT, hash_set<USHORT>>	m_CATypesForSid;	// SID to CA types map
-	hash_map<USHORT, hash_set<USHORT>>	m_ESPidsForSid;		// SID to ES PIDs map
-	hash_map<USHORT, hash_set<USHORT>>	m_CAPidsForSid;		// SID to CA PIDs map
-	hash_map<USHORT, SectionBuffer>		m_BufferForPid;		// PID to Table map
-	USHORT								m_CurrentNid;		// Current network ID
-	USHORT								m_CurrentTid;		// Current transponder ID
-	USHORT								m_PMTCounter;		// Number of PMT packets encountered before any CAT packet
-	USHORT								m_EMMPid;			// EMM PID
-	DVBParser* const					m_pParent;			// Parent stream parser objects
-	bool								m_AllowParsing;		// Becomes false before stopping the graph
-	time_t								m_TimeStamp;		// Last update time stamp
-	bool								m_HasBeenCopied;	// True if the tables have been copied to the encoder
+	hash_map<USHORT, Transponder>					m_Transponders;		// TID to Transponder map
+	hash_map<USHORT, Service>						m_Services;			// SID to Service descriptor map
+	hash_map<USHORT, USHORT>						m_Channels;			// Channel number to SID map
+	hash_map<USHORT, USHORT>						m_PMTPids;			// SID to PMT PID map
+	hash_map<USHORT, hash_set<CAScheme>>			m_CATypesForSid;	// SID to CA types map
+	hash_map<USHORT, hash_set<USHORT>>				m_ESPidsForSid;		// SID to ES PIDs map
+	hash_map<USHORT, hash_set<USHORT>>				m_CAPidsForSid;		// SID to CA PIDs map
+	hash_map<USHORT, SectionBuffer>					m_BufferForPid;		// PID to Table map
+	USHORT											m_CurrentNid;		// Current network ID
+	USHORT											m_CurrentTid;		// Current transponder ID
+	USHORT											m_PMTCounter;		// Number of PMT packets encountered before any CAT packet
+	EMMInfo											m_EMMPids;			// EMM PID to EMM CA types map
+	DVBParser* const								m_pParent;			// Parent stream parser objects
+	bool											m_AllowParsing;		// Becomes false before stopping the graph
+	time_t											m_TimeStamp;		// Last update time stamp
+	bool											m_HasBeenCopied;	// True if the tables have been copied to the encoder
 
 	// Disallow default and copy constructors
 	PSIParser();
@@ -96,7 +96,6 @@ public:
 		m_CurrentTid(0),
 		m_pParent(pParent),
 		m_AllowParsing(true),
-		m_EMMPid(0),
 		m_PMTCounter(0),
 		m_TimeStamp(0),
 		m_HasBeenCopied(false)
@@ -109,14 +108,14 @@ public:
 	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const;
 	bool getSidForChannel(USHORT channel, USHORT& sid) const;
 	bool getTransponderForSid(USHORT sid, Transponder& transponder) const;
-	bool getCATypesForSid(USHORT sid, hash_set<USHORT>& caTypes) const;
-	time_t getTimeStamp() const		{ return m_TimeStamp; }
-	USHORT getEMMPid() const		{ return m_EMMPid; }
-	USHORT getNid() const			{ return m_CurrentNid; }
-	bool hasBeenCopied() const		{ return m_HasBeenCopied; }
+	bool getECMCATypesForSid(USHORT sid, hash_set<CAScheme>& ecmCATypes) const;
+	void getEMMCATypes(EMMInfo& emmCATypes) const						{ emmCATypes = m_EMMPids; }
+	time_t getTimeStamp() const											{ return m_TimeStamp; }
+	USHORT getNid() const												{ return m_CurrentNid; }
+	bool hasBeenCopied() const											{ return m_HasBeenCopied; }
 
 	// Setter for "Has been copied" flag
-	void setHasBeenCopied()			{ m_HasBeenCopied = true; }
+	void setHasBeenCopied()												{ m_HasBeenCopied = true; }
 
 	// Copy all the internal data
 	void copy(const PSIParser& other);
@@ -216,8 +215,8 @@ private:
 	hash_map<USHORT, bool>			m_IsESPid;							// PID to bool map, true for ES, false for CA
 	const USHORT					m_Sid;								// SID of the program being recorded
 	const USHORT					m_PmtPid;							// PID of PMT of the program being recorded
-	const hash_set<USHORT>			m_CATypes;							// CA type of the program being recorded
-	const USHORT					m_EMMPid;							// EMM PID
+	const hash_set<CAScheme>		m_ECMCATypes;						// ECM CA types of the program being recorded
+	const EMMInfo					m_EMMCATypes;						// EMM PIDs to EMM CA types map
 
 	// Different dilution stuff
 	USHORT							m_PATCounter;						// Running PAT packet counter
@@ -237,7 +236,14 @@ private:
 
 public:
 	// The only valid constructor
-	ESCAParser(Recorder* const pRecorder, FILE* const pFile, PluginsHandler* const pPluginsHandler, USHORT sid, USHORT pmtPid, const hash_set<USHORT>& caTypes, USHORT emmPid, __int64 maxFileLength);
+	ESCAParser(Recorder* const pRecorder,
+			   FILE* const pFile,
+			   PluginsHandler* const pPluginsHandler,
+			   USHORT sid,
+			   USHORT pmtPid,
+			   const hash_set<CAScheme>& ecmCATypes,
+			   const EMMInfo& emmCATypes,
+			   __int64 maxFileLength);
 
 	// Destructor
 	virtual ~ESCAParser();
@@ -286,7 +292,7 @@ public:
 	DVBParser() : m_PSIParser(this), m_HasConnectedClients(false), m_LeftoverLength(0) {}
 
 	// Copy the PSI parser data
-	void copy(const DVBParser& other)										{ m_PSIParser.copy(other.m_PSIParser); }
+	void copy(const DVBParser& other)												{ m_PSIParser.copy(other.m_PSIParser); }
 
 	// Reset the parser map
 	void resetParser(bool clearPSIParser);
@@ -301,31 +307,31 @@ public:
 	void parseTSStream(const BYTE* inputBuffer, int inputBufferLength);	
 
 	// Query methods - delegated to the internal PSI parser
-	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const					{ return m_PSIParser.getPMTPidForSid(sid, pmtPid); }
-	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids) const		{ return m_PSIParser.getESPidsForSid(sid, esPids); }
-	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const		{ return m_PSIParser.getCAPidsForSid(sid, caPids); }
-	bool getSidForChannel(USHORT channel, USHORT& sid) const				{ return m_PSIParser.getSidForChannel(channel, sid); }
-	bool getTransponderForSid(USHORT sid, Transponder& transponder) const	{ return m_PSIParser.getTransponderForSid(sid, transponder); }
-	bool getCATypesForSid(USHORT sid, hash_set<USHORT>& caTypes) const		{ return m_PSIParser.getCATypesForSid(sid, caTypes); }
-	time_t getTimeStamp() const												{ return m_PSIParser.getTimeStamp(); }
-	USHORT getEMMPid() const												{ return m_PSIParser.getEMMPid(); }
-	bool hasBeenCopied() const												{ return m_PSIParser.hasBeenCopied(); }
+	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const							{ return m_PSIParser.getPMTPidForSid(sid, pmtPid); }
+	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids) const				{ return m_PSIParser.getESPidsForSid(sid, esPids); }
+	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const				{ return m_PSIParser.getCAPidsForSid(sid, caPids); }
+	bool getSidForChannel(USHORT channel, USHORT& sid) const						{ return m_PSIParser.getSidForChannel(channel, sid); }
+	bool getTransponderForSid(USHORT sid, Transponder& transponder) const			{ return m_PSIParser.getTransponderForSid(sid, transponder); }
+	bool getECMCATypesForSid(USHORT sid, hash_set<CAScheme>& ecmCATypes) const		{ return m_PSIParser.getECMCATypesForSid(sid, ecmCATypes); }
+	void getEMMCATypes(EMMInfo& emmCATypes) const									{ m_PSIParser.getEMMCATypes(emmCATypes); }
+	time_t getTimeStamp() const														{ return m_PSIParser.getTimeStamp(); }
+	bool hasBeenCopied() const														{ return m_PSIParser.hasBeenCopied(); }
 
 	// Setter for the internal parser "HasBeenCopied" flag
-	void setHasBeenCopied()													{ m_PSIParser.setHasBeenCopied(); }
+	void setHasBeenCopied()															{ m_PSIParser.setHasBeenCopied(); }
 
 	// Lock and unlock
 	void lock();
 	void unlock();
 
 	// This method stop PSI packets parsing just before stopping the graph to avoid corruption
-	void stopPSIPackets()											{ m_PSIParser.disallowParsing(); }
+	void stopPSIPackets()															{ m_PSIParser.disallowParsing(); }
 	// This method resumes PSI packets parsing just before stopping the graph to avoid corruption
-	void resumePSIPackets()											{ m_PSIParser.allowParsing(); }
+	void resumePSIPackets()															{ m_PSIParser.allowParsing(); }
 
 	// Get HasConnectedClients flag
-	bool getHasConnectedClients() const								{ return m_HasConnectedClients; }
+	bool getHasConnectedClients() const												{ return m_HasConnectedClients; }
 
 	// Set m_HasConnectedClients flag
-	void setHasConnectedClients()									{ m_HasConnectedClients = true; }
+	void setHasConnectedClients()													{ m_HasConnectedClients = true; }
 };

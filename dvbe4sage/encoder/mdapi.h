@@ -107,6 +107,12 @@ typedef struct _TPROGRAM82
 	char szBuffer[16];
 } TPROGRAM82, *LPTPROGRAM82;
 
+typedef struct _TPROGRAMNUMBER 
+{
+	int RealNumber;
+	int VirtNumber;
+} TPROGRAMNUMBER, *LPTPROGRAMNUMBER;
+
 typedef void (_cdecl *TMDAPIFilterProc)(ULONG hFilter,  ULONG Len,  BYTE* buf);
 
 typedef void (_cdecl *Plugin_Init_Proc)(HINSTANCE, HWND, BOOL, int, char* hotKey, char* vers, int* returnValue);	
