@@ -96,7 +96,6 @@ private:
 	bool									m_TimerInitialized;
 	time_t									m_Time;
 	bool									m_ExitWorkerThread;
-	bool									m_OddLastPacket;
 
 	// Fill the TP structure function
 	void fillTPStructure(LPTPROGRAM82 tp) const;

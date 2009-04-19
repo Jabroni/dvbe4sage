@@ -293,22 +293,28 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 	TDVB_COMMAND dvbCommand = *(TDVB_COMMAND*)lParam;
 	bool isOddKey = dvbCommand.buffer[4] ? true : false;
 
-	// Boil out if the key is not matching the last ECM packet
-	if(m_OddLastPacket != isOddKey)
-		return;
-
 	// Let's check the state of the current client
 	if(m_pCurrentClient != NULL)
 	{
+		// Here we put the key
+		union
+		{
+			BYTE key[8];
+			__int64 number;
+		} dcw;
+
 		// If OK, copy the key from the DVB command buffer
-		BYTE key[8];
 		for(int i = 0; i < 4; i++)
 		{
-			key[i * 2] = dvbCommand.buffer[6 + i * 2 + 1];
-			key[i * 2 + 1] = dvbCommand.buffer[6 + i * 2];
+			dcw.key[i * 2] = dvbCommand.buffer[6 + i * 2 + 1];
+			dcw.key[i * 2 + 1] = dvbCommand.buffer[6 + i * 2];
 		}
+		// Log the key
+		log(3, true, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+				(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7]);
 		// And set the key to the parser which called us
-		m_pCurrentClient->caller->setKey(isOddKey, key);
+		if(dcw.number == 0 || !m_pCurrentClient->caller->setKey(isOddKey, dcw.key))
+			return;
 
 		// Cancel deferred tuning
 		m_DeferTuning = false;
@@ -443,8 +449,6 @@ void PluginsHandler::processECMPacketQueue()
 				m_DeferTuning = true;
 				// Process it
 				m_CurrentEcmCallback(m_CurrentEcmFilterId, PACKET_SIZE, request.packet);
-				// Remeber if the last packet was odd
-				m_OddLastPacket = (request.packet[1] == (BYTE)'\x81');
 				// Remove request from the queue
 				m_RequestQueue.pop_front();
 				// Indicate we're waiting for response

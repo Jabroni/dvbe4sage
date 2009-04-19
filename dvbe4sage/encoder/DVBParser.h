@@ -252,7 +252,7 @@ public:
 	virtual void parseTSPacket(const ts_t* const packet, USHORT pid, bool& abandonPacket);
 
 	// This routine is called by the plugins handler
-	void setKey(bool isOddKey, const BYTE* const key);
+	bool setKey(bool isOddKey, const BYTE* const key);
 
 	// Tell PID meaning
 	void setESPid(USHORT pid, bool isESPid);

@@ -456,15 +456,72 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 	// Remove CRC and prefix
 	remainingLength -= CRC_LENGTH + PMT_LEN;
 
-	// Skip program info, if present
+	// Go through the program info, if present
 	USHORT programInfoLength = HILO(table->program_info_length);
-	inputBuffer += programInfoLength;
-	remainingLength -= programInfoLength;
 
 	// Initialize PID vectors
 	hash_set<USHORT> pids;
 	m_ESPidsForSid[programNumber] = pids;
 	m_CAPidsForSid[programNumber] = pids;
+
+	// Create a map from ECM PID to CA Scheme structure
+	hash_set<CAScheme> caMap;
+
+	// Flag to indicate if we had any CA descriptors
+	bool hasCADescriptors = false;
+
+	// Loop through the program info descriptors (we look for the CA descriptors)
+	while(programInfoLength != 0)
+	{
+		const descr_gen_t* const descriptor = CastGenericDescriptor(inputBuffer);
+		if(descriptor->descriptor_tag == '\x09')
+		{
+			// Set the flag
+			hasCADescriptors = true;
+			// Get the descriptor pointer
+			const descr_ca_t* const caDescriptor = CastCaDescriptor(inputBuffer);
+			// Fill the CAScheme structure with data
+			CAScheme caScheme;
+			// Figure out the ECM PID
+			caScheme.pid = HILO(caDescriptor->CA_PID);
+			// Get the CAID
+			caScheme.caId = HILO(caDescriptor->CA_type);
+			// And the PROVID
+			caScheme.provId = 0;
+			// Let's see if this CAID is served
+			if(g_Configuration.isCAIDServed(caScheme.caId))
+			{
+				// Add the CA Scheme to the set
+				caMap.insert(caScheme);
+				// Add the ECM pid to the map of PIDs we need to listen to
+				m_CAPidsForSid[programNumber].insert(caScheme.pid);
+				// Log the descriptor data
+				log(2, true, TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"),
+							programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+			}
+			else
+				// Log the descriptor data
+				log(2, true, TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"),
+							programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+		}
+
+		// Go to the next record
+		programInfoLength -= descriptor->descriptor_length + DESCR_GEN_LEN;
+		remainingLength -= descriptor->descriptor_length + DESCR_GEN_LEN;
+		inputBuffer += descriptor->descriptor_length + DESCR_GEN_LEN;
+	}
+	
+	// Let's see if we had CA descriptors but none was actually used for this ES PID
+	if(caMap.empty() && hasCADescriptors)
+		log(0, true, TEXT("None of the existing CA descriptors are used for the entire SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), programNumber);
+
+	// Add the CA type into the map only if there were CA descriptors
+	if(hasCADescriptors)
+		m_CATypesForSid[programNumber] = caMap;
+	
+	// Add the EMM PIDs discovered earlier
+	for(EMMInfo::const_iterator it = m_EMMPids.begin(); it != m_EMMPids.end(); it++)
+		m_CAPidsForSid[programNumber].insert(it->pid);
 
 	// For each stream descriptor do
 	while(remainingLength != 0)
@@ -533,14 +590,11 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		}
 		// Let's see if we had CA descriptors but none was actually used for this ES PID
 		if(caMap.empty() && hasCADescriptors)
-			log(0, true, TEXT("None of the existing CA descriptors are for used PID=%hu, SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), ESPid, programNumber);
+			log(0, true, TEXT("None of the existing CA descriptors are used for PID=%hu, SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), ESPid, programNumber);
 
 		// Add the CA type into the map only if there were CA descriptors
 		if(hasCADescriptors)
 			m_CATypesForSid[programNumber] = caMap;
-		// Add the EMM PIDs discovered earlier
-		for(EMMInfo::const_iterator it = m_EMMPids.begin(); it != m_EMMPids.end(); it++)
-			m_CAPidsForSid[programNumber].insert(it->pid);
 	}
 }
 
@@ -1354,7 +1408,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 	}
 }
 
-void ESCAParser::setKey(bool isOddKey,
+bool ESCAParser::setKey(bool isOddKey,
 						const BYTE* const key)
 {
 	// Output buffer manipulations in the critical section
@@ -1372,11 +1426,23 @@ void ESCAParser::setKey(bool isOddKey,
 			// If no, set it
 			// If it's the odd key
 			if(isOddKey)
+			{
+				// See if this is a new key
+				if(memcmp(currentBuffer->oddKey, key, sizeof(currentBuffer->oddKey)) == 0)
+					// If no, boil out
+					return false;
 				// Copy it
 				memcpy(currentBuffer->oddKey, key, sizeof(currentBuffer->oddKey));
+			}
 			else
+			{
+				// See if this is a new key
+				if(memcmp(currentBuffer->evenKey, key, sizeof(currentBuffer->evenKey)) == 0)
+					// If no, boil out
+					return false;
 				// Copy it
 				memcpy(currentBuffer->evenKey, key, sizeof(currentBuffer->evenKey));
+			}
 
 			// Now this buffer has its key
 			currentBuffer->hasKey = true;
@@ -1403,6 +1469,8 @@ void ESCAParser::setKey(bool isOddKey,
 			break;
 		}
 	}
+
+	return true;
 }
 
 void ESCAParser::reset()
