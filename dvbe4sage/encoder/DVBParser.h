@@ -228,7 +228,7 @@ private:
 	int write(const BYTE* const buffer, int bytesToWrite);
 
 	// Check audio language in ES descriptor
-	static bool matchAudioLanguage(const BYTE* const buffer, const int bufferLength, LPCTSTR language);
+	static bool matchAudioLanguage(const BYTE* const buffer, const int bufferLength, const char* language);
 
 	// Default and copy constructors are disallowed
 	ESCAParser();
