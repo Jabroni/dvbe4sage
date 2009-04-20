@@ -1181,6 +1181,9 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 							   USHORT pid,
 							   bool& abandonPacket)
 {
+	// First, see if the packet is encrypted and set the flag
+	m_IsEncrypted = (packet->transport_scrambling_control != 0);
+
 	// This is the packet we're about to analyze
 	BYTE currentPacket[TS_PACKET_LEN];
 	
@@ -1676,9 +1679,6 @@ void ESCAParser::setESPid(USHORT pid,
 {
 	// Set the flag for the PID
 	m_IsESPid[pid] = isESPid;
-	// If one of the PIDs is not ES, consider it encrypted
-	if(!isESPid)
-		m_IsEncrypted = true;
 }
 
 bool ESCAParser::matchAudioLanguage(const BYTE* const buffer,
