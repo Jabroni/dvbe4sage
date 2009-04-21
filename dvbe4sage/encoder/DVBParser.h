@@ -206,7 +206,7 @@ private:
 	CCritSec						m_csOutputBuffer;					// Critical section on output buffers structure
 	HANDLE							m_WorkerThread;						// The worker thread handling decryption
 	HANDLE							m_SignallingEvent;					// Event for signalling we have new work for the worker thread
-	bool							m_IsEncrypted;						// True if the ES are encrypted
+	const bool						m_IsEncrypted;						// True if the ES are encrypted
 	__int64							m_FileLength;						// Contains the output file length so far
 	const __int64					m_MaxFileLength;					// Max file length for cyclic buffer, for regular file -1
 	__int64							m_CurrentPosition;					// Current position in the cyclic buffer, otherwise unused

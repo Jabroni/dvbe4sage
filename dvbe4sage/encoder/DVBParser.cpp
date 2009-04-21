@@ -1182,7 +1182,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 							   bool& abandonPacket)
 {
 	// First, see if the packet is encrypted and set the flag
-	m_IsEncrypted = (packet->transport_scrambling_control != 0);
+	//m_IsEncrypted = (packet->transport_scrambling_control != 0);
 
 	// This is the packet we're about to analyze
 	BYTE currentPacket[TS_PACKET_LEN];
@@ -1514,7 +1514,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_EMMCATypes(emmCATypes),
 	m_ExitWorkerThread(false),
 	m_pRecorder(pRecorder),
-	m_IsEncrypted(false),
+	m_IsEncrypted(!ecmCATypes.empty()),
 	m_FileLength((__int64)0),
 	m_MaxFileLength(maxFileLength),
 	m_CurrentPosition(0),
