@@ -338,6 +338,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 								 const hash_set<CAScheme>& ecmCaids,
 								 const EMMInfo& emmCaids,
 								 USHORT sid,
+								 LPCTSTR channelName,
 								 USHORT caPid,
 								 USHORT pmtPid,
 								 const BYTE* const currentPacket)
@@ -357,6 +358,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	currentClient.emmCaids = emmCaids;
 	currentClient.caller = caller;
 	currentClient.sid = sid;
+	currentClient.channelName = channelName;
 	currentClient.pmtPid = pmtPid;
 	if(isEcmPacket)
 	{
@@ -533,6 +535,9 @@ void PluginsHandler::fillTPStructure(LPTPROGRAM82 tp) const
 {
 	// Zero memory
 	memset(tp, 0, sizeof(TPROGRAM82));
+
+	// Copy the channel name
+	strcpy_s(tp->szName, sizeof(tp->szName) / sizeof(tp->szName[0]), CT2CA(m_pCurrentClient->channelName));
 
 	// Loop through all CAIDs
 	int i = 0;

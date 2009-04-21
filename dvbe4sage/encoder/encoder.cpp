@@ -388,6 +388,10 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// First, let's obtain the SID for the channel
 	USHORT sid = 0;
 
+	// The channel name will be held here
+	TCHAR channelName[256];
+	channelName[0] = TCHAR('\0');
+
 	// If provided with a SID, just use it
 	if(useSid)
 		sid = (USHORT)channel;
@@ -404,8 +408,13 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		return false;
 	}
 	else
+	{
+		// Get the channel name
+		_tcscpy_s(channelName, sizeof(channelName) / sizeof(channelName[0]), m_pParser->getServiceName(sid));
+
 		// Make a log entry
-		log(2, true, TEXT("Channel=%d was successfully mapped to SID=%hu\n"), channel, sid);
+		log(2, true, TEXT("Channel=%d was successfully mapped to SID=%hu, Name=\"%s\"\n"), channel, sid, channelName);
+	}
 
 	// Now search for the tuner
 	Tuner* tuner = NULL;
@@ -440,7 +449,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		else
 		{
 			// If transponder is not found, report an error
-			log(0, true, TEXT("Autodiscovery requested, but cannot find the transponder for SID \"%hu\", no recording done!\n"), sid);
+			log(0, true, TEXT("Autodiscovery requested, but cannot find the transponder for SID \"%hu\" (\"%s\"), no recording done!\n"), sid, channelName);
 
 			// Unlock the parser
 			m_pParser->unlock();
@@ -459,25 +468,25 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// Boil out if an appropriate tuner is not found
 	if(tuner == NULL)
 	{
-		log(0, true, TEXT("Cannot start recording for %s=%d, no sutable tuner found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel);
+		log(0, true, TEXT("Cannot start recording for %s=%d (\"%s\"), no sutable tuner found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel, channelName);
 		return false;
 	}
 	
 	// Make a log entry
 	if(useSid)
-		log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+		log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu (\"%s\"), Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), sid, channelName, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 	else
-		log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d, SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), channel, sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+		log(0, true, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), channel, channelName, sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
 	// If we found the tuner
 	if(tuner != NULL)
 	{
 		// Create the recorder
-		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, (USHORT)tunerOrdinal, outFileName, useSid, channel, sid, duration, this, size, bySage);
+		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, (USHORT)tunerOrdinal, outFileName, useSid, channel, sid, channelName, duration, this, size, bySage);
 
 		// Let's see if the recorder has an error, just delete it and exit
 		if(recorder->hasError())

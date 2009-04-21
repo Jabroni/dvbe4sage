@@ -26,6 +26,7 @@ private:
 	const __int64				m_Duration;
 	Tuner* const				m_pTuner;
 	const USHORT				m_Sid;
+	LPCTSTR						m_ChannelName;
 	Encoder* const				m_pEncoder;
 	time_t						m_Time;
 	HANDLE						m_StartRecordingThread;
@@ -42,7 +43,7 @@ private:
 	VirtualTuner*				m_VirtualTuner;
 
 public:
-	Recorder(PluginsHandler* const plugins, Tuner* const tuner, USHORT logicalTuner, LPCWSTR outFileName, bool useSid, int channel, USHORT sid, __int64 duration, Encoder* pEncoder, __int64 size, bool bySage);
+	Recorder(PluginsHandler* const plugins, Tuner* const tuner, USHORT logicalTuner, LPCWSTR outFileName, bool useSid, int channel, USHORT sid, LPCTSTR channelName, __int64 duration, Encoder* pEncoder, __int64 size, bool bySage);
 	virtual ~Recorder(void);
 	bool isRecording() const							{ return m_IsRecording; }
 	bool hasError() const								{ return m_HasError; }

@@ -65,7 +65,6 @@ Global
 		{80EC0583-498F-4864-ABBA-DADC3B5EDCA2}.Debug|Win32.ActiveCfg = Debug
 		{80EC0583-498F-4864-ABBA-DADC3B5EDCA2}.Release|Any CPU.ActiveCfg = Release
 		{80EC0583-498F-4864-ABBA-DADC3B5EDCA2}.Release|Mixed Platforms.ActiveCfg = Release
-		{80EC0583-498F-4864-ABBA-DADC3B5EDCA2}.Release|Mixed Platforms.Build.0 = Release
 		{80EC0583-498F-4864-ABBA-DADC3B5EDCA2}.Release|Win32.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution

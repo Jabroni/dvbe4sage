@@ -113,6 +113,7 @@ public:
 	time_t getTimeStamp() const											{ return m_TimeStamp; }
 	USHORT getNid() const												{ return m_CurrentNid; }
 	bool hasBeenCopied() const											{ return m_HasBeenCopied; }
+	LPCTSTR getServiceName(USHORT sid) const;
 
 	// Setter for "Has been copied" flag
 	void setHasBeenCopied()												{ m_HasBeenCopied = true; }
@@ -194,6 +195,7 @@ private:
 	FILE* const						m_pOutFile;							// Output file stream
 	bool							m_ExitWorkerThread;					// Flag for graceful exitting of worker thread
 	Recorder* const					m_pRecorder;						// The owining recorder
+	LPCTSTR							m_ChannelName;						// The channel name
 	
 	// Decryption stuff
 	Decrypter						m_Decrypter;						// Decrypter object
@@ -239,6 +241,7 @@ public:
 	ESCAParser(Recorder* const pRecorder,
 			   FILE* const pFile,
 			   PluginsHandler* const pPluginsHandler,
+			   LPCTSTR channelName,
 			   USHORT sid,
 			   USHORT pmtPid,
 			   const hash_set<CAScheme>& ecmCATypes,
@@ -316,6 +319,7 @@ public:
 	void getEMMCATypes(EMMInfo& emmCATypes) const									{ m_PSIParser.getEMMCATypes(emmCATypes); }
 	time_t getTimeStamp() const														{ return m_PSIParser.getTimeStamp(); }
 	bool hasBeenCopied() const														{ return m_PSIParser.hasBeenCopied(); }
+	LPCTSTR getServiceName(USHORT sid) const										{ return m_PSIParser.getServiceName(sid); }
 
 	// Setter for the internal parser "HasBeenCopied" flag
 	void setHasBeenCopied()															{ m_PSIParser.setHasBeenCopied(); }

@@ -62,6 +62,7 @@ private:
 	struct Client
 	{
 		ESCAParser*						caller;
+		LPCTSTR							channelName;
 		USHORT							sid;
 		USHORT							ecmPid;
 		USHORT							pmtPid;
@@ -118,6 +119,7 @@ public:
 					 const hash_set<CAScheme>& ecmCaids,
 					 const EMMInfo& emmCaids,
 					 USHORT sid,
+					 LPCTSTR channelName,
 					 USHORT caPid,
 					 USHORT pmtPid,
 					 const BYTE* const currentPacket);

@@ -1154,6 +1154,24 @@ bool PSIParser::getECMCATypesForSid(USHORT sid,
 		return false;
 }
 
+LPCTSTR PSIParser::getServiceName(USHORT sid) const
+{
+	hash_map<USHORT, Service>::const_iterator it = m_Services.find(sid);
+	if(it != m_Services.end())
+	{
+		hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find("eng");
+		if(it1 != it->second.serviceNames.end())
+			return CA2CT(it1->second.c_str());
+		it1 = it->second.serviceNames.begin();
+		if(it1 != it->second.serviceNames.end())
+			return CA2CT(it1->second.c_str());
+		else
+			return NULL;
+	}
+	else
+		return NULL;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1371,7 +1389,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 //				emmFile = NULL;
 //			}
 #endif //_FOR_JOKER
-			m_pPluginsHandler->putCAPacket(this, false, m_ECMCATypes, m_EMMCATypes, m_Sid, caPid, m_PmtPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, false, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 		}
 		// For ECM packets, see if the content is new
 		else if(memcmp(m_LastECMPacket, currentPacket + 4, PACKET_SIZE) != 0)
@@ -1380,7 +1398,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			memcpy(m_LastECMPacket, currentPacket + 4, PACKET_SIZE);
 			
 			// And send to the plugins
-			m_pPluginsHandler->putCAPacket(this, true, m_ECMCATypes, m_EMMCATypes, m_Sid, caPid, m_PmtPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, true, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 
 			// Lock the output buffers queue
 			CAutoLock lock(&m_csOutputBuffer);
@@ -1499,6 +1517,7 @@ void ESCAParser::reset()
 ESCAParser::ESCAParser(Recorder* const pRecorder,
 					   FILE* const pFile,
 					   PluginsHandler* const pPluginsHandler,
+					   LPCTSTR channelName,
 					   USHORT sid,
 					   USHORT pmtPid,
 					   const hash_set<CAScheme>& ecmCATypes,
@@ -1508,6 +1527,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_SignallingEvent(NULL),
 	m_pOutFile(pFile),
 	m_pPluginsHandler(pPluginsHandler),
+	m_ChannelName(channelName),
 	m_Sid(sid),
 	m_PmtPid(pmtPid),
 	m_ECMCATypes(ecmCATypes),

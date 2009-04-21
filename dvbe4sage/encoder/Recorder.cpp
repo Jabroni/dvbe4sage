@@ -115,6 +115,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				   bool useSid,
 				   const int channel,
 				   const USHORT sid,
+				   LPCTSTR channelName,
 				   const __int64 duration,
 				   Encoder* pEncoder,
 				   const __int64 size,
@@ -131,6 +132,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_IsBrokenPipe(false),
 	m_UseSid(useSid),
 	m_Sid(sid),
+	m_ChannelName(channelName),
 	m_LogicalTuner(logicalTuner),
 	m_FileName(outFileName),
 	m_Size(size),
@@ -283,8 +285,8 @@ bool Recorder::startRecording()
 
 void Recorder::stopRecording()
 {
-	log(0, false, TEXT("stopping recording of channel %d on tuner=\"%s\", Ordinal=%d\n"),
-		m_ChannelNumber, m_pTuner->getTunerFriendlyName(), m_pTuner->getTunerOrdinal());
+	log(0, false, TEXT("stopping recording of %s %d (\"%s\") on tuner=\"%s\", Ordinal=%d\n"),
+		m_UseSid ? TEXT("channel") : TEXT("service"), m_ChannelNumber, m_ChannelName, m_pTuner->getTunerFriendlyName(), m_pTuner->getTunerOrdinal());
 
 	// Make sure start recording test is finished
 	m_StartRecordingThreadCanEnd = true;
@@ -383,7 +385,7 @@ bool Recorder::changeState()
 					EMMInfo emmCATypes;
 					pParser->getEMMCATypes(emmCATypes);
 					// Create the parser
-					m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_Sid, pmtPid, ecmCATypes, emmCATypes, m_Size);
+					m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_ChannelName, m_Sid, pmtPid, ecmCATypes, emmCATypes, m_Size);
 					// Assign recorder's parser to PAT PID
 					pParser->assignParserToPid(0, m_pParser);
 					m_pParser->setESPid(0, true);
