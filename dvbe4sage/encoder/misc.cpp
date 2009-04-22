@@ -165,14 +165,21 @@ extern "C" ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str)
 	return BDA_POLARISATION_NOT_DEFINED;
 }
 
-extern "C" ENCODER_API ModulationType getModulationFromDescriptor(USHORT descriptor)
+extern "C" ENCODER_API ModulationType getModulationFromDescriptor(BYTE modulationSystem,
+																  BYTE modulationType)
 {
-	switch(descriptor)
+	switch(modulationType)
 	{
+		case 0:
 		case 1:
-			return BDA_MOD_QPSK;
+			if(modulationSystem)
+				return BDA_MOD_NBC_QPSK;
+			else
+				return BDA_MOD_QPSK;
 		case 2:
-			return BDA_MOD_8VSB;
+			return BDA_MOD_8PSK;
+		case 3:
+			return BDA_MOD_16QAM;
 		default:
 			return BDA_MOD_NOT_DEFINED;
 	}
@@ -183,9 +190,13 @@ extern "C" ENCODER_API LPCTSTR printableModulation(ModulationType modulation)
 	switch(modulation)
 	{
 		case BDA_MOD_QPSK:
-			return TEXT("QPSK");
-		case BDA_MOD_8VSB:
-			return TEXT("8PSK");
+			return TEXT("QPSK (DVB-S)");
+		case BDA_MOD_NBC_QPSK:
+			return TEXT("QPSK (DVB-S2)");
+		case BDA_MOD_8PSK:
+			return TEXT("8PSK (DVB-S2)");
+		case BDA_MOD_16QAM:
+			return TEXT("16QAM");
 		default:
 			return TEXT("Not defined");
 	}
@@ -200,6 +211,10 @@ extern "C" ENCODER_API ModulationType getModulationFromString(LPCTSTR str)
 	if(_tcsicmp(str, TEXT("QPSK")) == 0)
 		return BDA_MOD_QPSK;
 	if(_tcsicmp(str, TEXT("8PSK")) == 0)
-		return BDA_MOD_8VSB;
+		return BDA_MOD_8PSK;
+	if(_tcsicmp(str, TEXT("NBC-QPSK")) == 0)
+		return BDA_MOD_NBC_QPSK;
+	if(_tcsicmp(str, TEXT("16QAM")) == 0)
+		return BDA_MOD_16QAM;
 	return BDA_MOD_NOT_DEFINED;
 }

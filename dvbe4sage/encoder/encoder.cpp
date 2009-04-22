@@ -392,6 +392,9 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	TCHAR channelName[256];
 	channelName[0] = TCHAR('\0');
 
+	// Get the channel name
+	_tcscpy_s(channelName, sizeof(channelName) / sizeof(channelName[0]), m_pParser->getServiceName(sid));
+
 	// If provided with a SID, just use it
 	if(useSid)
 		sid = (USHORT)channel;
@@ -408,13 +411,8 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		return false;
 	}
 	else
-	{
-		// Get the channel name
-		_tcscpy_s(channelName, sizeof(channelName) / sizeof(channelName[0]), m_pParser->getServiceName(sid));
-
 		// Make a log entry
 		log(2, true, TEXT("Channel=%d was successfully mapped to SID=%hu, Name=\"%s\"\n"), channel, sid, channelName);
-	}
 
 	// Now search for the tuner
 	Tuner* tuner = NULL;

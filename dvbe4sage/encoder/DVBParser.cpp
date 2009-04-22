@@ -1019,7 +1019,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					transponder.symbolRate = 10000 * BcdCharToInt(satDescriptor->symbol_rate1) + 100 * BcdCharToInt(satDescriptor->symbol_rate2) +
 											 BcdCharToInt(satDescriptor->symbol_rate3);
 					// Get the modulation type
-					transponder.modulation = getModulationFromDescriptor(satDescriptor->modulationtype);
+					transponder.modulation = getModulationFromDescriptor(satDescriptor->modulationsystem, satDescriptor->modulationtype);
 					// Get the FEC rate
 					transponder.fec = getFECFromDescriptor(satDescriptor->fec_inner);
 					// Get the polarization

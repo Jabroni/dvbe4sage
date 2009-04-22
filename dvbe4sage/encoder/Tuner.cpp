@@ -85,8 +85,8 @@ void Tuner::tune(ULONG frequency,
 	m_BDAFilterGraph.m_FECRate = fecRate;
 
 	// Fix the modulation type for S2 tuning of Hauppauge devices
-	if(m_BDAFilterGraph.m_IsHauppauge && modulation == BDA_MOD_8VSB)
-		m_BDAFilterGraph.m_Modulation = BDA_MOD_8PSK;
+	if(!m_BDAFilterGraph.m_IsHauppauge && (modulation == BDA_MOD_8PSK || modulation == BDA_MOD_NBC_QPSK))
+		m_BDAFilterGraph.m_Modulation = BDA_MOD_8VSB;
 
 	m_LockStatus = false;
 }

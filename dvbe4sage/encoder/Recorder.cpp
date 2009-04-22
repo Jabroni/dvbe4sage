@@ -288,7 +288,7 @@ bool Recorder::startRecording()
 void Recorder::stopRecording()
 {
 	log(0, false, TEXT("stopping recording of %s %d (\"%s\") on tuner=\"%s\", Ordinal=%d\n"),
-		m_UseSid ? TEXT("channel") : TEXT("service"), m_ChannelNumber, m_ChannelName, m_pTuner->getTunerFriendlyName(), m_pTuner->getTunerOrdinal());
+		!m_UseSid ? TEXT("channel") : TEXT("service"), m_ChannelNumber, m_ChannelName, m_pTuner->getTunerFriendlyName(), m_pTuner->getTunerOrdinal());
 
 	// Make sure start recording test is finished
 	m_StartRecordingThreadCanEnd = true;
