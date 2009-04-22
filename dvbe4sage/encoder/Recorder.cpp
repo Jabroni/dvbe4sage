@@ -132,7 +132,6 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_IsBrokenPipe(false),
 	m_UseSid(useSid),
 	m_Sid(sid),
-	m_ChannelName(channelName),
 	m_LogicalTuner(logicalTuner),
 	m_FileName(outFileName),
 	m_Size(size),
@@ -144,6 +143,9 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_StopRecordingThreadId(0),
 	m_StartRecordingThreadId(0)
 {
+	// Copy the channel name
+	_tcscpy_s(m_ChannelName, sizeof(m_ChannelName) / sizeof(m_ChannelName[0]), channelName);
+
 	// If this is standalone recording, bypass all this bullshit
 	if(!bySage)
 	{

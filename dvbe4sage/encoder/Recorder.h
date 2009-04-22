@@ -26,7 +26,7 @@ private:
 	const __int64				m_Duration;
 	Tuner* const				m_pTuner;
 	const USHORT				m_Sid;
-	LPCTSTR						m_ChannelName;
+	TCHAR						m_ChannelName[256];
 	Encoder* const				m_pEncoder;
 	time_t						m_Time;
 	HANDLE						m_StartRecordingThread;
