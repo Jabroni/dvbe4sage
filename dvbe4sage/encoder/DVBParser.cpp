@@ -1248,7 +1248,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	//	return;
 
 	// Skip or fix PMT
-	if(pid == m_PmtPid)
+	if(pid == m_PmtPid && !g_Configuration.getDontFixPMT())
 	{
 		// First, determine if we need to skip this packet
 		// See if we reach the right packet to round it up

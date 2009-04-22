@@ -30,7 +30,8 @@ Configuration::Configuration() :
 	m_PMTDilutionFactor((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTDilutionFactor"), 1, INI_FILE_NAME)),
 	m_PMTThreshold((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 20, INI_FILE_NAME)),
 	m_PSIMaturityTime((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PSIMaturityTime"), 10, INI_FILE_NAME)),
-	m_UseNewTuningMethod(GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseNewTuningMethod"), 0, INI_FILE_NAME) == 0 ? false : true)
+	m_UseNewTuningMethod(GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseNewTuningMethod"), 0, INI_FILE_NAME) == 0 ? false : true),
+	m_DontFixPMT(GetPrivateProfileInt(TEXT("Advanced"), TEXT("DontFixPMT"), 0, INI_FILE_NAME) == 0 ? false : true)
 {	
 	// Buffer
 	TCHAR buffer[1024];
