@@ -9,6 +9,8 @@
 #include "logger.h"
 #include "configuration.h"
 
+char* const MDAPIVersion = "MD-API Version 01.03 - 01.06";
+
 // This is the worker thread main function waits for events
 DWORD WINAPI pluginsHandlerWorkerThreadRoutine(LPVOID param)
 {
@@ -96,7 +98,6 @@ PluginsHandler::PluginsHandler(HINSTANCE hInstance,
 
 					// Initialize it
 					char hotKey;
-					char* MDAPIVersion = "MD-API Version 01.03 - 01.06";
 					int keepRunning = 1;
 					plugin.m_fpInit(hInstance, hWnd, FALSE, counter, &hotKey, MDAPIVersion, &keepRunning);
 
@@ -190,7 +191,7 @@ LRESULT PluginsHandler::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			switch(wParam)
 			{
 				case MDAPI_GET_VERSION:
-					log(2, true, TEXT("MDAPI_GET_VERSION has been called\n"));
+					strcpy_s((char*)lParam, sizeof(MDAPIVersion) / sizeof(MDAPIVersion[0]), MDAPIVersion);
 					break;
 				case MDAPI_CHANNELCHANGE:
 					log(2, true, TEXT("MDAPI_CHANNELCHANGE has been called\n"));

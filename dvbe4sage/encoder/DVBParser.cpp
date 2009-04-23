@@ -720,6 +720,18 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 						// We don't know the channel number yet
 						newService.channelNumber = 0;
 
+						// Let's see if this service already has a name in English
+						hash_map<string, string>::const_iterator it = newService.serviceNames.find("eng");
+						if(it != newService.serviceNames.end())
+						{
+							// Get the service name
+							int serviceNameLength = *(currentDescriptor + DESCR_SERVICE_LEN + serviceInfoDescriptor->provider_name_length);
+							string serviceName((const char*)currentDescriptor + DESCR_SERVICE_LEN + serviceInfoDescriptor->provider_name_length + 1, serviceNameLength);
+
+							// Put the name of service in English into the map
+							newService.serviceNames["eng"] = serviceName;
+						}
+
 						break;
 					}
 					case 0x5D:
@@ -1154,22 +1166,32 @@ bool PSIParser::getECMCATypesForSid(USHORT sid,
 		return false;
 }
 
-LPCTSTR PSIParser::getServiceName(USHORT sid) const
+bool PSIParser::getServiceName(USHORT sid,
+							   LPTSTR output,
+							   int outputLength) const
 {
 	hash_map<USHORT, Service>::const_iterator it = m_Services.find(sid);
 	if(it != m_Services.end())
 	{
 		hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find("eng");
 		if(it1 != it->second.serviceNames.end())
-			return CA2CT(it1->second.c_str());
+		{
+			CA2T name(it1->second.c_str());
+			_tcscpy_s(output, outputLength, name);
+			return true;
+		}
 		it1 = it->second.serviceNames.begin();
 		if(it1 != it->second.serviceNames.end())
-			return CA2CT(it1->second.c_str());
+		{
+			CA2T name(it1->second.c_str());
+			_tcscpy_s(output, outputLength, name);
+			return true;
+		}
 		else
-			return NULL;
+			return false;
 	}
 	else
-		return NULL;
+		return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

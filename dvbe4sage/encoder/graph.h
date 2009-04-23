@@ -86,6 +86,7 @@ public:
 	BinaryConvolutionCodeRate	m_FECRate;
 	USHORT						m_Tid;
 	bool						m_IsHauppauge;				// True if the device is Hauppauge
+	bool						m_IsFireDTV;				// True if the device is FireDTV
 
 	// Twinhan specific stuff
 	IPin* FindPinOnFilter(IBaseFilter *pBaseFilter, char *pPinName,BOOL bCheckPinName);	

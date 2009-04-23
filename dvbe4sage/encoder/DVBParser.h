@@ -109,11 +109,11 @@ public:
 	bool getSidForChannel(USHORT channel, USHORT& sid) const;
 	bool getTransponderForSid(USHORT sid, Transponder& transponder) const;
 	bool getECMCATypesForSid(USHORT sid, hash_set<CAScheme>& ecmCATypes) const;
+	bool getServiceName(USHORT sid, LPTSTR output, int outputLength) const;
 	void getEMMCATypes(EMMInfo& emmCATypes) const						{ emmCATypes = m_EMMPids; }
 	time_t getTimeStamp() const											{ return m_TimeStamp; }
 	USHORT getNid() const												{ return m_CurrentNid; }
 	bool hasBeenCopied() const											{ return m_HasBeenCopied; }
-	LPCTSTR getServiceName(USHORT sid) const;
 
 	// Setter for "Has been copied" flag
 	void setHasBeenCopied()												{ m_HasBeenCopied = true; }
@@ -319,7 +319,8 @@ public:
 	void getEMMCATypes(EMMInfo& emmCATypes) const									{ m_PSIParser.getEMMCATypes(emmCATypes); }
 	time_t getTimeStamp() const														{ return m_PSIParser.getTimeStamp(); }
 	bool hasBeenCopied() const														{ return m_PSIParser.hasBeenCopied(); }
-	LPCTSTR getServiceName(USHORT sid) const										{ return m_PSIParser.getServiceName(sid); }
+	bool getServiceName(USHORT sid, LPTSTR output, int outputLength) const			{ return m_PSIParser.getServiceName(sid, output, outputLength); }
+
 
 	// Setter for the internal parser "HasBeenCopied" flag
 	void setHasBeenCopied()															{ m_PSIParser.setHasBeenCopied(); }

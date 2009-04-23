@@ -14,7 +14,8 @@ CBDAFilterGraph::CBDAFilterGraph(int ordinal):
 	m_iTunerNumber(ordinal),
 	m_Tid(0),
 	m_pDVBFilter(NULL),
-	m_IsHauppauge(false)
+	m_IsHauppauge(false),
+	m_IsFireDTV(false)
 {
 	if(FAILED(InitializeGraphBuilder()))
 		m_fGraphFailure = TRUE;
@@ -155,12 +156,17 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	FILTER_INFO filterInfo;
 	if(SUCCEEDED(hr = m_pTunerDemodDevice->QueryFilterInfo(&filterInfo)))
 	{
-		log(0, true, TEXT("Tuner Filter Info = \"%s\"\n"), CW2CT(filterInfo.achName));
-		_tcscpy_s(m_TunerName, sizeof(m_TunerName) / sizeof(TCHAR), CW2CT(filterInfo.achName));
+		CW2T filterName(filterInfo.achName);
+		log(0, true, TEXT("Tuner Filter Info = \"%s\"\n"), (LPCTSTR)filterName);
+		_tcscpy_s(m_TunerName, sizeof(m_TunerName) / sizeof(TCHAR), (LPCTSTR)filterName);
 
 		// Let's see if this is a Hauppauge device
 		if(_tcsstr(m_TunerName, TEXT("Hauppauge")) != NULL)
 			m_IsHauppauge = true;
+
+		// Let's see if this is a FireDTV device
+		if(_tcsstr(m_TunerName, TEXT("FireDTV")) != NULL)
+			m_IsFireDTV = true;
 	}
 
 	// Step3: load capture device and connect to tuner/demod device
