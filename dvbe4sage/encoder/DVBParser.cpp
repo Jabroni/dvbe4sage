@@ -1375,6 +1375,13 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		// Calculate the new CRC and put it there
 		*(long*)outputBuffer = htonl(_dvb_crc32(currentPacket + TS_LEN + 1 + pointer, HILO(pmt->section_length)  - 1));
 	}
+
+	// For all other ES PIDs
+	if(pid != 0 && pid != m_PmtPid && m_IsESPid[pid] && !m_ValidPacketFound[pid])
+		if(!packet->payload_unit_start_indicator)
+			return;
+		else
+			m_ValidPacketFound[pid] = true;
 	
 	// If this is an ES PID
 	if(m_IsESPid[pid])
@@ -1721,6 +1728,8 @@ void ESCAParser::setESPid(USHORT pid,
 {
 	// Set the flag for the PID
 	m_IsESPid[pid] = isESPid;
+	// Right now no packets have been written for this PID
+	m_ValidPacketFound[pid] = false;
 }
 
 bool ESCAParser::matchAudioLanguage(const BYTE* const buffer,

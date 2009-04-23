@@ -215,6 +215,7 @@ private:
 
 	// Assigned PID differentiator
 	hash_map<USHORT, bool>			m_IsESPid;							// PID to bool map, true for ES, false for CA
+	hash_map<USHORT, bool>			m_ValidPacketFound;					// PIT to bool map, true when a first valid packet was found for an ES PID
 	const USHORT					m_Sid;								// SID of the program being recorded
 	const USHORT					m_PmtPid;							// PID of PMT of the program being recorded
 	const hash_set<CAScheme>		m_ECMCATypes;						// ECM CA types of the program being recorded
