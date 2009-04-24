@@ -106,6 +106,15 @@ private:
 	void stopFilter(LPARAM lParam);
 	void dvbCommand(LPARAM lParam);
 
+	union Dcw
+	{
+		BYTE key[8];
+		__int64 number;
+	};
+
+	// Key checker
+	static bool wrong(const Dcw& dcw);
+
 public:
 	// Constructor
 	PluginsHandler(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu);

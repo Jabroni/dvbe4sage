@@ -284,6 +284,11 @@ void PluginsHandler::stopFilter(LPARAM lParam)
 	}
 }
 
+bool PluginsHandler::wrong(const Dcw& dcw)
+{
+	return dcw.number == 0;
+}
+
 // This is the callback called for each newly arrived dvb command
 void PluginsHandler::dvbCommand(LPARAM lParam)
 {
@@ -298,11 +303,7 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 	if(m_pCurrentClient != NULL)
 	{
 		// Here we put the key
-		union
-		{
-			BYTE key[8];
-			__int64 number;
-		} dcw;
+		Dcw dcw;
 
 		// If OK, copy the key from the DVB command buffer
 		for(int i = 0; i < 4; i++)
@@ -310,12 +311,19 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 			dcw.key[i * 2] = dvbCommand.buffer[6 + i * 2 + 1];
 			dcw.key[i * 2 + 1] = dvbCommand.buffer[6 + i * 2];
 		}
-		// Log the key
-		log(3, true, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
-				(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7]);
+
 		// And set the key to the parser which called us
-		if(dcw.number == 0 || !m_pCurrentClient->caller->setKey(isOddKey, dcw.key))
+		if(wrong(dcw) || !m_pCurrentClient->caller->setKey(isOddKey, dcw.key))
+		{
+			// Log the key
+			log(2, true, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+				(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7]);
 			return;
+		}
+		else
+			// Log the key
+			log(2, true, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - accepted!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+				(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7]);
 
 		// Cancel deferred tuning
 		m_DeferTuning = false;
