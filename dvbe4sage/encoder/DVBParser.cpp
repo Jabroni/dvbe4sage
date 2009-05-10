@@ -187,9 +187,18 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 	if(!m_AllowParsing)
 		return;
 
-	// Make sure we don't miss the adaptation field!
-	if(packet->adaptation_field_control != 1)
-		log(2, true, TEXT("Strange adaptation field control encountered\n"));
+	// If the packet contains only the adaptaion field, just skip it
+	if(packet->adaptation_field_control == 2)
+		return;
+
+	// Offset of the data, 0 unless the packet has adaptation field
+	USHORT offset = 0;
+
+	// If the packet contains adaptation field and data bytes, skip the adaptation field
+	if(packet->adaptation_field_control == 3)
+		// This is the adaptation field length
+		offset = *((BYTE*)packet + TS_LEN);
+		
 
 	// If this is the first time we encountered this PID, create a new entry for it
 	if(m_BufferForPid.find(pid) == m_BufferForPid.end())
@@ -212,9 +221,9 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 	sectionBuffer.lastContinuityCounter = (BYTE)packet->continuity_counter;
 
 	// Set the starting address
-	const BYTE* inputBuffer = (BYTE*)packet + TS_LEN;
+	const BYTE* inputBuffer = (BYTE*)packet + TS_LEN + offset;
 	// And the remaining length
-	short remainingLength = TS_PACKET_LEN - TS_LEN;
+	short remainingLength = TS_PACKET_LEN - TS_LEN - offset;
 
 	// Let's see if the packet contains start of a new section
 	if(packet->payload_unit_start_indicator)
@@ -448,7 +457,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 
 	// Log warning message if EMMPid is still 0
 	if(m_EMMPids.empty())
-		log(2, true, TEXT("!!! Warning: EMM PID has not been discovered after %hu PMT packets, assuming FTA!!!\n"), g_Configuration.getPMTThreshold());
+		log(2, true, TEXT("!!! Warning: no EMM PIDs have been discovered after %hu PMT packets, EMM data will not be passed to plugins!!!\n"), g_Configuration.getPMTThreshold());
 
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + PMT_LEN;

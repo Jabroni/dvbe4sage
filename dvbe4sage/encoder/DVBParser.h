@@ -32,6 +32,18 @@ struct Transponder
 	BinaryConvolutionCodeRate		fec;
 };
 
+// Elementary stream types
+enum ESType { ES_TYPE_VIDEO, ES_TYPE_AUDIO, ES_TYPE_DVB_SUBTITLE, ES_TYPE_TELETEXT_SUBTITLE, ES_TYPE_OTHER };
+
+// Elementary Stream Information
+struct ESInfo
+{
+	ESType							type;
+	string							language;
+	BYTE							streamType;
+	list<BYTE[256]>					descriptors;
+};
+
 // PSI tables parser
 class PSIParser : public TSPacketParser
 {
@@ -68,23 +80,27 @@ private:
 	void parseCATTable(const cat_t* const table, int remainingLength);
 	void parseUnknownTable(const pat_t* const table, const int remainingLength) const;
 
+	// This is provide-wide data
+	hash_map<USHORT, Transponder>					m_Transponders;			// TID to Transponder map
+	hash_map<USHORT, Service>						m_Services;				// SID to Service descriptor map
+	hash_map<USHORT, USHORT>						m_Channels;				// Channel number to SID map
+	USHORT											m_CurrentNid;			// Current network ID
+
+	// This is transponder-wide data
+	hash_map<USHORT, USHORT>						m_PMTPids;				// SID to PMT PID map
+	hash_map<USHORT, hash_set<CAScheme>>			m_CATypesForSid;		// SID to CA types map
+	hash_map<USHORT, hash_set<USHORT>>				m_ESPidsForSid;			// SID to ES PIDs map
+	hash_map<USHORT, hash_set<USHORT>>				m_CAPidsForSid;			// SID to CA PIDs map
+	hash_map<USHORT, SectionBuffer>					m_BufferForPid;			// PID to Table map
+	USHORT											m_CurrentTid;			// Current transponder ID
+	EMMInfo											m_EMMPids;				// EMM PID to EMM CA types map
+	
 	// Other important data
-	hash_map<USHORT, Transponder>					m_Transponders;		// TID to Transponder map
-	hash_map<USHORT, Service>						m_Services;			// SID to Service descriptor map
-	hash_map<USHORT, USHORT>						m_Channels;			// Channel number to SID map
-	hash_map<USHORT, USHORT>						m_PMTPids;			// SID to PMT PID map
-	hash_map<USHORT, hash_set<CAScheme>>			m_CATypesForSid;	// SID to CA types map
-	hash_map<USHORT, hash_set<USHORT>>				m_ESPidsForSid;		// SID to ES PIDs map
-	hash_map<USHORT, hash_set<USHORT>>				m_CAPidsForSid;		// SID to CA PIDs map
-	hash_map<USHORT, SectionBuffer>					m_BufferForPid;		// PID to Table map
-	USHORT											m_CurrentNid;		// Current network ID
-	USHORT											m_CurrentTid;		// Current transponder ID
-	USHORT											m_PMTCounter;		// Number of PMT packets encountered before any CAT packet
-	EMMInfo											m_EMMPids;			// EMM PID to EMM CA types map
-	DVBParser* const								m_pParent;			// Parent stream parser objects
-	bool											m_AllowParsing;		// Becomes false before stopping the graph
-	time_t											m_TimeStamp;		// Last update time stamp
-	bool											m_HasBeenCopied;	// True if the tables have been copied to the encoder
+	USHORT											m_PMTCounter;			// Number of PMT packets encountered before any CAT packet
+	DVBParser* const								m_pParent;				// Parent stream parser objects
+	bool											m_AllowParsing;			// Becomes false before stopping the graph
+	time_t											m_TimeStamp;			// Last update time stamp
+	bool											m_HasBeenCopied;		// True if the tables have been copied to the encoder
 
 	// Disallow default and copy constructors
 	PSIParser();
