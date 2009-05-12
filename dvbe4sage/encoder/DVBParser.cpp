@@ -730,15 +730,15 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 						newService.channelNumber = 0;
 
 						// Let's see if this service already has a name in English
-						hash_map<string, string>::const_iterator it = newService.serviceNames.find("eng");
-						if(it != newService.serviceNames.end())
+						hash_map<string, string>::const_iterator it = newService.serviceNames.find(string("eng"));
+						if(it == newService.serviceNames.end())
 						{
 							// Get the service name
 							int serviceNameLength = *(currentDescriptor + DESCR_SERVICE_LEN + serviceInfoDescriptor->provider_name_length);
 							string serviceName((const char*)currentDescriptor + DESCR_SERVICE_LEN + serviceInfoDescriptor->provider_name_length + 1, serviceNameLength);
 
 							// Put the name of service in English into the map
-							newService.serviceNames["eng"] = serviceName;
+							newService.serviceNames[string("eng")] = serviceName;
 						}
 
 						break;
@@ -1182,7 +1182,7 @@ bool PSIParser::getServiceName(USHORT sid,
 	hash_map<USHORT, Service>::const_iterator it = m_Services.find(sid);
 	if(it != m_Services.end())
 	{
-		hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find("eng");
+		hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find(string("eng"));
 		if(it1 != it->second.serviceNames.end())
 		{
 			CA2T name(it1->second.c_str());

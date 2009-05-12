@@ -45,7 +45,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)\encoder;&quot;C:\Program Files\Microsoft SDKs\Windows\v6.1\Samples\Multimedia\DirectShow\BaseClasses&quot;"
+				AdditionalIncludeDirectories="$(SolutionDir)\encoder;&quot;C:\Program Files\Microsoft SDKs\Windows\v7.0\Samples\Multimedia\DirectShow\BaseClasses&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -129,7 +129,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="$(SolutionDir)\encoder;&quot;C:\Program Files\Microsoft SDKs\Windows\v6.1\Samples\Multimedia\DirectShow\BaseClasses&quot;"
+				AdditionalIncludeDirectories="$(SolutionDir)\encoder;&quot;C:\Program Files\Microsoft SDKs\Windows\v7.0\Samples\Multimedia\DirectShow\BaseClasses&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG"
 				MinimalRebuild="false"
 				RuntimeLibrary="0"
