@@ -130,6 +130,7 @@ public:
 	time_t getTimeStamp() const											{ return m_TimeStamp; }
 	USHORT getNid() const												{ return m_CurrentNid; }
 	bool hasBeenCopied() const											{ return m_HasBeenCopied; }
+	bool canBeCopied() const											{ return !m_Transponders.empty() && !m_Services.empty(); }
 
 	// Setter for "Has been copied" flag
 	void setHasBeenCopied()												{ m_HasBeenCopied = true; }
@@ -336,6 +337,7 @@ public:
 	void getEMMCATypes(EMMInfo& emmCATypes) const									{ m_PSIParser.getEMMCATypes(emmCATypes); }
 	time_t getTimeStamp() const														{ return m_PSIParser.getTimeStamp(); }
 	bool hasBeenCopied() const														{ return m_PSIParser.hasBeenCopied(); }
+	bool canBeCopied() const														{ return m_PSIParser.canBeCopied(); }
 	bool getServiceName(USHORT sid, LPTSTR output, int outputLength) const			{ return m_PSIParser.getServiceName(sid, output, outputLength); }
 
 

@@ -61,7 +61,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 			DVBParser* const pParser = recorder->m_pTuner->getParser();
 
 			// Let's see if it's valid and can be used
-			if(pParser != NULL && !pParser->hasBeenCopied() && pParser->getTimeStamp() != 0 && 
+			if(pParser != NULL && pParser->canBeCopied() && !pParser->hasBeenCopied() && pParser->getTimeStamp() != 0 && 
 				(__int64)difftime(now, pParser->getTimeStamp()) > g_Configuration.getPSIMaturityTime())
 			{
 				// If yes, get the encoder's parser
