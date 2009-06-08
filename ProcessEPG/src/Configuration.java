@@ -95,14 +95,18 @@ public class Configuration
 		channelsWithAllProgrammesAsSeries.add(13);
 		channelsWithAllProgrammesAsSeries.add(14);
 		channelsWithAllProgrammesAsSeries.add(15);
-		channelsWithAllProgrammesAsSeries.add(501);
+		channelsWithAllProgrammesAsSeries.add(16);
+		channelsWithAllProgrammesAsSeries.add(993);
+		channelsWithAllProgrammesAsSeries.add(994);
 		
 		hdChannels = new HashSet<Integer>();
-		hdChannels.add(500);
-		hdChannels.add(501);
-		hdChannels.add(502);
-		hdChannels.add(503);
-		hdChannels.add(505);
+		hdChannels.add(989);
+		hdChannels.add(991);
+		hdChannels.add(992);
+		hdChannels.add(993);
+		hdChannels.add(994);
+		hdChannels.add(995);
+		hdChannels.add(996);
 		
 		forceRussian = new HashSet<Integer>();
 		forceEnglish = new HashSet<Integer>();
