@@ -406,6 +406,9 @@ bool Recorder::changeState()
 						pParser->assignParserToPid(*it, m_pParser);
 						m_pParser->setESPid(*it, false);
 					}
+					// Add CAT to the parser as well, saying it's not an ES type
+					pParser->assignParserToPid(1, m_pParser);
+					m_pParser->setESPid(1, false);
 					// Finally, tell the parser it has connected clients
 					pParser->setHasConnectedClients();
 

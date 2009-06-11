@@ -55,6 +55,8 @@ public:
 
 class ESCAParser;
 
+enum CAPacketType { TYPE_ECM, TYPE_EMM, TYPE_PMT, TYPE_CAT };
+
 class PluginsHandler
 {
 	friend DWORD WINAPI pluginsHandlerWorkerThreadRoutine(LPVOID param);
@@ -74,9 +76,8 @@ private:
 	struct Request
 	{
 		Client*			client;
-		bool			isEcmPacket;
 		BYTE			packet[PACKET_SIZE];
-		Request() : client(0), isEcmPacket(false) { ZeroMemory(packet, sizeof(packet)); }
+		Request() : client(0) { ZeroMemory(packet, sizeof(packet)); }
 	};
 
 	// Global data structures
@@ -87,8 +88,12 @@ private:
 	USHORT									m_CurrentSid;
 	TMDAPIFilterProc						m_CurrentEcmCallback;
 	TMDAPIFilterProc						m_CurrentEmmCallback;
+	TMDAPIFilterProc						m_CurrentPmtCallback;
+	TMDAPIFilterProc						m_CurrentCatCallback;
 	USHORT									m_CurrentEcmFilterId;
 	USHORT									m_CurrentEmmFilterId;
+	USHORT									m_CurrentPmtFilterId;
+	USHORT									m_CurrentCatFilterId;
 	CCritSec								m_cs;
 	HANDLE									m_WorkerThread;
 	bool									m_DeferTuning;
@@ -124,7 +129,7 @@ public:
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 	// CA packets handler
 	void putCAPacket(ESCAParser* caller,
-					 bool isEcmPacket,
+					 CAPacketType packetType,
 					 const hash_set<CAScheme>& ecmCaids,
 					 const EMMInfo& emmCaids,
 					 USHORT sid,

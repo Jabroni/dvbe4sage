@@ -43,8 +43,12 @@ PluginsHandler::PluginsHandler(HINSTANCE hInstance,
 	m_pCurrentClient(NULL),
 	m_CurrentEcmCallback(NULL),
 	m_CurrentEmmCallback(NULL),
+	m_CurrentPmtCallback(NULL),
+	m_CurrentCatCallback(NULL),
 	m_CurrentEcmFilterId(0),
 	m_CurrentEmmFilterId(0),
+	m_CurrentPmtFilterId(0),
+	m_CurrentCatFilterId(0),
 	m_CurrentSid(0),
 	m_DeferTuning(false),
 	m_WaitingForResponse(false),
@@ -168,8 +172,12 @@ PluginsHandler::~PluginsHandler()
 	m_pCurrentClient = NULL;
 	m_CurrentEcmCallback = NULL;
 	m_CurrentEmmCallback = NULL;
+	m_CurrentPmtCallback = NULL;
+	m_CurrentCatCallback = NULL;
 	m_CurrentEcmFilterId = 0;
 	m_CurrentEmmFilterId = 0;
+	m_CurrentPmtFilterId = 0;
+	m_CurrentCatFilterId = 0;
 }
 
 // Message handler
@@ -249,6 +257,18 @@ void PluginsHandler::startFilter(LPARAM lParam)
 			m_CurrentEcmFilterId = startFilter->Filter_ID;
 			log(2, true, TEXT("Start ECM filter for SID=%hu received\n"), m_CurrentSid);
 		}
+		else if(m_pCurrentClient->pmtPid == startFilter->Pid)
+		{
+			m_CurrentPmtCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
+			m_CurrentPmtFilterId = startFilter->Filter_ID;
+			log(2, true, TEXT("Start PMT filter for SID=%hu received\n"), m_CurrentSid);
+		}
+		else if(startFilter->Pid == 1)
+		{
+			m_CurrentCatCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
+			m_CurrentCatFilterId = startFilter->Filter_ID;
+			log(2, true, TEXT("Start CAT filter for SID=%hu received\n"), m_CurrentSid);
+		}
 		else if(m_pCurrentClient->emmCaids.hasPid(startFilter->Pid))
 		{
 			m_CurrentEmmCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
@@ -281,6 +301,18 @@ void PluginsHandler::stopFilter(LPARAM lParam)
 		m_CurrentEmmCallback = NULL;
 		m_CurrentEmmFilterId = 0;
 		log(2, true, TEXT("Stop EMM filter received\n"));
+	}
+	else if(runningId == (UINT)m_CurrentPmtCallback)
+	{
+		m_CurrentPmtCallback = NULL;
+		m_CurrentPmtFilterId = 0;
+		log(2, true, TEXT("Stop PMT filter received\n"));
+	}
+	else if(runningId == (UINT)m_CurrentCatCallback)
+	{
+		m_CurrentCatCallback = NULL;
+		m_CurrentCatFilterId = 0;
+		log(2, true, TEXT("Stop CAT filter received\n"));
 	}
 }
 
@@ -343,7 +375,7 @@ void PluginsHandler::dvbCommand(LPARAM lParam)
 
 // CA packets handler
 void PluginsHandler::putCAPacket(ESCAParser* caller,
-								 bool isEcmPacket,
+								 CAPacketType packetType,
 								 const hash_set<CAScheme>& ecmCaids,
 								 const EMMInfo& emmCaids,
 								 USHORT sid,
@@ -369,39 +401,55 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	currentClient.sid = sid;
 	currentClient.channelName = channelName;
 	currentClient.pmtPid = pmtPid;
-	if(isEcmPacket)
+	if(packetType == TYPE_ECM)
 	{
 		log(2, true, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
 		currentClient.ecmPid = caPid;
 	}
-	else
-		log(4, true, TEXT("A new EMM packet for SID=%hu received and put to the queue\n"), sid);
 	
 	// Make a new request
 	Request request;
 	// Put the client into it
 	request.client = &currentClient;
-	// Make sure ECM and EMM packets are distinguished
-	request.isEcmPacket = isEcmPacket;
 	// Copy the packet itself
 	memcpy(request.packet, currentPacket, sizeof(request.packet));
 
-	// Handle ECM packets
-	if(isEcmPacket)
+	// Handle incoming packets differently
+	switch(packetType)
 	{
-		// Put the request at the end of the queue
-		m_RequestQueue.push_back(request);
-		// Process the queue
-		processECMPacketQueue();
-	}
-	else
-	{
-		// Here we handle EMM packets, just send them to the filter when it's ready
-		if(m_CurrentEmmCallback != NULL)
-			// Process it
-			m_CurrentEmmCallback(m_CurrentEmmFilterId, PACKET_SIZE, request.packet);
-		else
-			log(4, true, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
+		case TYPE_ECM:
+			// Put the request at the end of the queue
+			m_RequestQueue.push_back(request);
+			// Process the queue
+			processECMPacketQueue();
+			break;
+		case TYPE_EMM:
+			// Here we handle EMM packets, just send them to the filter when it's ready
+			if(m_CurrentEmmCallback != NULL)
+				// Process it
+				m_CurrentEmmCallback(m_CurrentEmmFilterId, PACKET_SIZE, request.packet);
+			else
+				log(4, true, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
+			break;
+		case TYPE_PMT:
+			// Here we handle EMM packets, just send them to the filter when it's ready
+			if(m_CurrentPmtCallback != NULL)
+				// Process it
+				m_CurrentPmtCallback(m_CurrentPmtFilterId, PACKET_SIZE, request.packet);
+			else
+				log(4, true, TEXT("PMT callback hasn't been established yet, dropping the packet...\n"));
+			break;
+		case TYPE_CAT:
+			// Here we handle EMM packets, just send them to the filter when it's ready
+			if(m_CurrentCatCallback != NULL)
+				// Process it
+				m_CurrentCatCallback(m_CurrentCatFilterId, PACKET_SIZE, request.packet);
+			else
+				log(4, true, TEXT("CAT callback hasn't been established yet, dropping the packet...\n"));
+			break;
+		default:
+			log(0, true, TEXT("Received unknown kind of packet, dropping...\n"));
+			break;
 	}
 }
 
@@ -433,6 +481,10 @@ void PluginsHandler::processECMPacketQueue()
 			m_CurrentEcmCallback = NULL;
 			m_CurrentEmmFilterId = 0;
 			m_CurrentEmmCallback = NULL;
+			m_CurrentPmtFilterId = 0;
+			m_CurrentPmtCallback = NULL;
+			m_CurrentCatFilterId = 0;
+			m_CurrentCatCallback = NULL;
 			m_DeferTuning = false;
 			m_TimerInitialized = false;
 			m_IsTuningTimeout = false;
@@ -546,7 +598,8 @@ void PluginsHandler::fillTPStructure(LPTPROGRAM82 tp) const
 	memset(tp, 0, sizeof(TPROGRAM82));
 
 	// Copy the channel name
-	strcpy_s(tp->szName, sizeof(tp->szName) / sizeof(tp->szName[0]), CT2CA(m_pCurrentClient->channelName));
+	CT2A name(m_pCurrentClient->channelName);
+	strcpy_s(tp->szName, sizeof(tp->szName) / sizeof(tp->szName[0]), name);
 
 	// Loop through all CAIDs
 	int i = 0;

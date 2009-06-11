@@ -126,6 +126,8 @@ void DVBParser::resetParser(bool clearPSIParser)
 	assignParserToPid(0, &m_PSIParser);
 	// Pass the internal PSI parser to PID 0x01 (CAT)
 	assignParserToPid(0x01, &m_PSIParser);
+	// Pass the internal PSI parser to PID 0x10 (NIT)
+	assignParserToPid(0x10, &m_PSIParser);
 	// Pass the internal PSI parser to PID 0x11 (SDT and BAT)
 	assignParserToPid(0x11, &m_PSIParser);
 	// Reset the connected clients flag
@@ -1278,6 +1280,10 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	//else if(!m_FoundPATPacket)
 	//	return;
 
+	// Send PMT to CAM as well
+	if(pid == m_PmtPid)
+		sendToCam(currentPacket, pid);
+
 	// Skip or fix PMT
 	if(pid == m_PmtPid && !g_Configuration.getDontFixPMT())
 	{
@@ -1427,8 +1433,15 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 //				emmFile = NULL;
 //			}
 #endif //_FOR_JOKER
-			m_pPluginsHandler->putCAPacket(this, false, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, TYPE_EMM, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 		}
+		else if(caPid == m_PmtPid)
+			// Handle PMT packets
+			m_pPluginsHandler->putCAPacket(this, TYPE_PMT, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
+		else if(caPid == 1)
+			// Handle CAT packets
+			m_pPluginsHandler->putCAPacket(this, TYPE_CAT, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
+		// Now, we have only ECM packets left
 		// For ECM packets, see if the content is new
 		else if(memcmp(m_LastECMPacket, currentPacket + 4, PACKET_SIZE) != 0)
 		{
@@ -1436,7 +1449,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			memcpy(m_LastECMPacket, currentPacket + 4, PACKET_SIZE);
 			
 			// And send to the plugins
-			m_pPluginsHandler->putCAPacket(this, true, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
+			m_pPluginsHandler->putCAPacket(this, TYPE_ECM, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 
 			// Lock the output buffers queue
 			CAutoLock lock(&m_csOutputBuffer);
