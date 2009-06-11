@@ -57,9 +57,9 @@ Configuration::Configuration() :
 			_stscanf_s(token, TEXT("%hx"), &caid);
 			m_ServedCAIDs.insert(caid);
 		}
-	else
+	/*else
 		// Default is YES
-		m_ServedCAIDs.insert(0x90D);
+		m_ServedCAIDs.insert(0x90D);*/
 
 	// Get the initial polarization setting
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialPolarization"), TEXT("V"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);

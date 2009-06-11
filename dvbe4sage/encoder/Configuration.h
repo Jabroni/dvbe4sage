@@ -44,7 +44,7 @@ public:
 	
 	bool excludeTuner(int tunerOrdinal) const		{ return m_ExcludeTuners.count(tunerOrdinal) > 0; }
 	bool isDVBS2Tuner(int tunerOrdinal) const		{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
-	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.count(caid) > 0; }
+	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
 	UINT getLogLevel() const						{ return m_LogLevel; }
 	UINT getDCWTimeout() const						{ return m_DCWTimeout; }
 	UINT getTSPacketsPerBuffer() const				{ return m_TSPacketsPerBuffer; }
