@@ -1492,13 +1492,20 @@ bool ESCAParser::setKey(bool isOddKey,
 		// Get the buffer from the queue
 		OutputBuffer* const currentBuffer = m_OutputBuffers[i];
 
-		// Let's see if it already has a key
-		if(!currentBuffer->hasKey)
+		// Try to use the key only if the buffer doesn't have one or if it's the last buffer
+		if(!currentBuffer->hasKey || i + 1 == m_OutputBuffers.size())
 		{
+			// Usually, hasKey flag can be set
+			bool setHasKey = true;
+
 			// Let's see if the key can decrypt the current buffer
 			if(!isCorrectKey(currentBuffer, isOddKey, key))
-				// If no, boil out
-				return false;
+				// If this is not for the first packet, boil out
+				if(!m_FirstECMPacket)
+					return false;
+				else
+					// Otherwise postpone, just indicate that the hasKey fla cannot be set yet
+					setHasKey = false;
 
 			// If no, set it
 			// If it's the odd key
@@ -1522,7 +1529,7 @@ bool ESCAParser::setKey(bool isOddKey,
 			}
 
 			// Now this buffer has its key
-			currentBuffer->hasKey = true;
+			currentBuffer->hasKey = setHasKey;
 
 			// Let's see if we need to update a key to its successor
 			if(i + 1 < m_OutputBuffers.size())
@@ -1543,11 +1550,12 @@ bool ESCAParser::setKey(bool isOddKey,
 			SetEvent(m_SignallingEvent);
 
 			// Boil out
-			break;
+			return true;
 		}
 	}
 
-	return true;
+	// If nothing found, return false
+	return false;
 }
 
 void ESCAParser::reset()
