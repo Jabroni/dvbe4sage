@@ -250,6 +250,9 @@ private:
 	// Check audio language in ES descriptor
 	static bool matchAudioLanguage(const BYTE* const buffer, const int bufferLength, const char* language);
 
+	// Check if a key can decrypt the current buffer
+	bool isCorrectKey(const BYTE* const buffer, ULONG numberOfPackets, const bool isOddKey, const BYTE* const key);
+
 	// Default and copy constructors are disallowed
 	ESCAParser();
 	ESCAParser(ESCAParser&);

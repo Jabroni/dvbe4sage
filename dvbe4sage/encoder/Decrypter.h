@@ -20,7 +20,7 @@ private:
 	typedef void (*free_key_struct)(void*);
 	typedef int (*get_internal_parallelism)(void);
 	typedef int (*get_suggested_cluster_size)(void);
-	typedef void (*set_control_words)(void *keys, const unsigned char *even, const unsigned char *odd);
+	typedef void (*set_control_words)(void *keys, const BYTE* const even, const BYTE* const odd);
 	typedef int (*decrypt_packets)(void *keys, unsigned char **cluster);
 
 	HMODULE						m_hDeCSADll;
@@ -38,6 +38,6 @@ private:
 public:
 	Decrypter(void);
 	virtual ~Decrypter(void);
-	void setKeys(const BYTE* oddKey, const BYTE* evenKey);
+	void setKeys(const BYTE* const oddKey, const BYTE* const evenKey);
 	void decrypt(BYTE* packets, ULONG count);
 };

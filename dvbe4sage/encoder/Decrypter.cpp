@@ -49,8 +49,8 @@ Decrypter::~Decrypter(void)
 }
 
 // This function sets the keys for the decryptor
-void Decrypter::setKeys(const BYTE* oddKey,
-						const BYTE* evenKey)
+void Decrypter::setKeys(const BYTE* const oddKey,
+						const BYTE* const evenKey)
 {
 	// Check if initialized
 	if(m_isInitialized)

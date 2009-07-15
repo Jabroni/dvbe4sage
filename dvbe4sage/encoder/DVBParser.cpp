@@ -1495,6 +1495,11 @@ bool ESCAParser::setKey(bool isOddKey,
 		// Let's see if it already has a key
 		if(!currentBuffer->hasKey)
 		{
+			// Let's see if the key can decrypt the current buffer
+			if(!isCorrectKey(currentBuffer->buffer, currentBuffer->numberOfPackets, isOddKey, key))
+				// If no, boil out
+				return false;
+
 			// If no, set it
 			// If it's the odd key
 			if(isOddKey)
@@ -1783,4 +1788,57 @@ void PSIParser::copy(const PSIParser& other)
 	m_CurrentNid = other.m_CurrentNid;
 	m_CurrentTid = other.m_CurrentTid;
 	m_EMMPids = other.m_EMMPids;	
+}
+
+bool ESCAParser::isCorrectKey(const BYTE* const buffer,
+							  ULONG numberOfPackets,
+							  const bool isOddKey,
+							  const BYTE* const key)
+{
+	// Flag indicating any PES packets have been found
+	bool anyPESPacketsFound = false;
+
+	// Go through all the packets
+	for(ULONG i = 0; i < numberOfPackets; i++)
+	{
+		// Get the packet header
+		const ts_t* const packet = (const ts_t* const)(buffer + i * TS_PACKET_LEN);
+		// Let's see if we need to try to decrypt it, meaning:
+		// 1. The packet is the beginning of the payload unit
+		// 2. It is encrypted (this already implies the packet is not PMT or PAT)
+		// 3. It contains not only adaptation field
+		// 4. It doesn't have an error
+		if(packet->payload_unit_start_indicator &&
+		   packet->transport_scrambling_control != 0 &&
+		   packet->adaptation_field_control != 2 &&
+		   !packet->transport_error_indicator)
+		{
+			// There is at least one PES packet in the buffer
+			anyPESPacketsFound = true;
+
+			// Copy the packet in question aside
+			BYTE copyPacket[TS_PACKET_LEN];
+			memcpy(copyPacket, (void*)packet, sizeof(copyPacket));
+
+			// Set the decrypter keys
+			m_Decrypter.setKeys(key, key);
+
+			// Decrypt the packet
+			m_Decrypter.decrypt(copyPacket, 1);
+
+			// Calculate the offset of the PES packet header
+			const ULONG offset = (packet->adaptation_field_control == 3) ? (ULONG)(copyPacket[TS_LEN] + 1) : TS_LEN;
+
+			// Now let's see if we have a valid PES packet header
+			if(copyPacket[offset] == 0 && copyPacket[offset + 1] == 0 && copyPacket[offset + 2] == 1)
+				// If yes, we know for sure we have the right key
+				return true;
+
+			// If no, it doesn't mean anything, we might just have a wrong parity key
+			// (the packet is odd and the key is even or vise versa)
+		}
+	}
+
+	// If no PES packets have been in the buffer, the key still might be OK, otherwise the key is wrong
+	return !anyPESPacketsFound;
 }
