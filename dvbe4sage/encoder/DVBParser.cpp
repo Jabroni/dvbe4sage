@@ -1496,7 +1496,7 @@ bool ESCAParser::setKey(bool isOddKey,
 		if(!currentBuffer->hasKey)
 		{
 			// Let's see if the key can decrypt the current buffer
-			if(!isCorrectKey(currentBuffer->buffer, currentBuffer->numberOfPackets, isOddKey, key))
+			if(!isCorrectKey(currentBuffer, isOddKey, key))
 				// If no, boil out
 				return false;
 
@@ -1790,8 +1790,7 @@ void PSIParser::copy(const PSIParser& other)
 	m_EMMPids = other.m_EMMPids;	
 }
 
-bool ESCAParser::isCorrectKey(const BYTE* const buffer,
-							  ULONG numberOfPackets,
+bool ESCAParser::isCorrectKey(const OutputBuffer* const currentBuffer,
 							  const bool isOddKey,
 							  const BYTE* const key)
 {
@@ -1799,10 +1798,10 @@ bool ESCAParser::isCorrectKey(const BYTE* const buffer,
 	bool anyPESPacketsFound = false;
 
 	// Go through all the packets
-	for(ULONG i = 0; i < numberOfPackets; i++)
+	for(ULONG i = 0; i < currentBuffer->numberOfPackets; i++)
 	{
 		// Get the packet header
-		const ts_t* const packet = (const ts_t* const)(buffer + i * TS_PACKET_LEN);
+		const ts_t* const packet = (const ts_t* const)(currentBuffer->buffer + i * TS_PACKET_LEN);
 		// Let's see if we need to try to decrypt it, meaning:
 		// 1. The packet is the beginning of the payload unit
 		// 2. It is encrypted (this already implies the packet is not PMT or PAT)
@@ -1821,13 +1820,16 @@ bool ESCAParser::isCorrectKey(const BYTE* const buffer,
 			memcpy(copyPacket, (void*)packet, sizeof(copyPacket));
 
 			// Set the decrypter keys
-			m_Decrypter.setKeys(key, key);
+			m_Decrypter.setKeys(isOddKey ? key : currentBuffer->oddKey, !isOddKey ? key : currentBuffer->evenKey);
 
 			// Decrypt the packet
 			m_Decrypter.decrypt(copyPacket, 1);
 
 			// Calculate the offset of the PES packet header
-			const ULONG offset = (packet->adaptation_field_control == 3) ? (ULONG)(copyPacket[TS_LEN] + 1) : TS_LEN;
+			const ULONG offset = TS_LEN + ((packet->adaptation_field_control == 3) ? (ULONG)(copyPacket[TS_LEN] + 1) : 0);
+
+			// Log the offset value
+			log(4, true, TEXT("Offset = %lu\n"), offset);
 
 			// Now let's see if we have a valid PES packet header
 			if(copyPacket[offset] == 0 && copyPacket[offset + 1] == 0 && copyPacket[offset + 2] == 1)
