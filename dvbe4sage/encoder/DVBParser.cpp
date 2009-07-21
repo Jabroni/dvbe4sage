@@ -693,7 +693,7 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 		const USHORT serviceID = HILO(serviceDescriptor->service_id);
 
 		// Get the length of descriptors loop
-		const int descriptorsLoopLength = HILO(serviceDescriptor->descriptors_loop_length);
+		const USHORT descriptorsLoopLength = HILO(serviceDescriptor->descriptors_loop_length);
 
 		// Only if encountered a new service
 		if(m_Services.find(serviceID) == m_Services.end())
@@ -811,7 +811,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 	const BYTE* inputBuffer = (const BYTE*)table + NIT_LEN;
 
 	// Get bouquet descriptors length
-	int bouquetDescriptorsLength = HILO(table->network_descriptor_length);
+	USHORT bouquetDescriptorsLength = HILO(table->network_descriptor_length);
 
 	// Remove CRC and prefix
 	remainingLength -= CRC_LENGTH + NIT_LEN + bouquetDescriptorsLength;
@@ -854,7 +854,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 		inputBuffer += SIZE_NIT_MID;
 
 		// Get transport loop length
-		int transportLoopLength = HILO(transportStreams->transport_stream_loop_length);
+		USHORT transportLoopLength = HILO(transportStreams->transport_stream_loop_length);
 
 		// Update remaining length, should be 0 here!
 		remainingLength -= transportLoopLength + SIZE_NIT_MID;
@@ -866,7 +866,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			const nit_ts_t* const transportStream = (const nit_ts_t*)inputBuffer;
 
 			// Get length of descriptors
-			const int transportDescriptorsLength = HILO(transportStream->transport_descriptors_length);
+			const USHORT transportDescriptorsLength = HILO(transportStream->transport_descriptors_length);
 
 			// Update inputBuffer
 			inputBuffer += NIT_TS_LEN;
@@ -879,7 +879,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			{
 				// Get generic descriptor
 				const descr_gen_t* const generalDescriptor = CastGenericDescriptor(inputBuffer);
-				const int descriptorLength = generalDescriptor->descriptor_length;
+				const USHORT descriptorLength = generalDescriptor->descriptor_length;
 
 				switch(generalDescriptor->descriptor_tag)
 				{
@@ -947,7 +947,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 	const BYTE* inputBuffer = (const BYTE*)table + NIT_LEN;
 
 	// Get bouquet descriptors length
-	int networkDescriptorsLength = HILO(table->network_descriptor_length);
+	USHORT networkDescriptorsLength = HILO(table->network_descriptor_length);
 
 	// Remove CRC and prefix
 	remainingLength -= CRC_LENGTH + NIT_LEN + networkDescriptorsLength;
@@ -995,7 +995,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 	inputBuffer += SIZE_NIT_MID;
 
 	// Get transport loop length
-	int transportLoopLength = HILO(transportStreams->transport_stream_loop_length);
+	USHORT transportLoopLength = HILO(transportStreams->transport_stream_loop_length);
 
 	// Update remaining length, should be 0 here!
 	remainingLength -= transportLoopLength + SIZE_NIT_MID;
@@ -1007,7 +1007,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 		const nit_ts_t* const transportStream = (const nit_ts_t*)inputBuffer;
 
 		// Get length of descriptors
-		const int transportDescriptorsLength = HILO(transportStream->transport_descriptors_length);
+		const USHORT transportDescriptorsLength = HILO(transportStream->transport_descriptors_length);
 
 		// Get the TID
 		USHORT tid = HILO(transportStream->transport_stream_id);
@@ -1016,14 +1016,14 @@ void PSIParser::parseNITTable(const nit_t* const table,
 		inputBuffer += NIT_TS_LEN;
 		
 		// Length of remaining descriptors
-		int remainingDescriptorsLength = transportDescriptorsLength;
+		short remainingDescriptorsLength = transportDescriptorsLength;
 
 		// Loop through descriptors
 		while(remainingDescriptorsLength != 0)
 		{
 			// Get generic descriptor
 			const descr_gen_t* const generalDescriptor = CastGenericDescriptor(inputBuffer);
-			const int descriptorLength = generalDescriptor->descriptor_length;
+			const USHORT descriptorLength = generalDescriptor->descriptor_length;
 
 			switch(generalDescriptor->descriptor_tag)
 			{
