@@ -22,7 +22,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 
 		// Let's see if the time has passed
 		// Get the current time
-		time_t now;
+		time_t now = 0;
 		time(&now);
 
 		// Calculate the differentce
@@ -332,7 +332,7 @@ bool Recorder::changeState()
 	if(m_pTuner->running())
 	{
 		// Get the current time
-		time_t now;
+		time_t now = 0;
 		time(&now);
 
 		// Calculate the differentce

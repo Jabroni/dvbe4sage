@@ -11,7 +11,7 @@ class DVBFilterInputPin : public CRenderedInputPin
 private:
 	// Disallow default and copy constructors
 	DVBFilterInputPin();
-	DVBFilterInputPin(DVBFilterInputPin&);
+	DVBFilterInputPin(const DVBFilterInputPin&);
 public:
 	// Constructor
     DVBFilterInputPin(DVBFilter* pDVBFilter, CCritSec* pLock, HRESULT* phr);
@@ -56,7 +56,7 @@ private:
 	DVBParser					m_Parser;						// The parser itself
 
 	// Disallow copy constructor
-	DVBFilter(DVBFilter&);
+	DVBFilter(const DVBFilter&);
 
 public:
 	//DECLARE_IUNKNOWN

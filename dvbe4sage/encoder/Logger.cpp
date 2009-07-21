@@ -58,13 +58,13 @@ void Logger::log(UINT logLevel,
 
 		if(timeStamp)
 			_ftprintf(m_LogFile, TEXT("%hu-%02hu-%02hu %02hu:%02hu:%02hu.%03hu "), 
-									currentTime.wYear,
-									currentTime.wMonth,
-									currentTime.wDay,
-									currentTime.wHour,
-									currentTime.wMinute,
-									currentTime.wSecond,
-									currentTime.wMilliseconds);
+									(USHORT)currentTime.wYear,
+									(USHORT)currentTime.wMonth,
+									(USHORT)currentTime.wDay,
+									(USHORT)currentTime.wHour,
+									(USHORT)currentTime.wMinute,
+									(USHORT)currentTime.wSecond,
+									(USHORT)currentTime.wMilliseconds);
 		_vftprintf(m_LogFile, format, argList);
 	}
 	// Leave the critical section

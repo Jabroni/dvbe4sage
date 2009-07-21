@@ -13,10 +13,10 @@ class VirtualTuner
 
 	// No default and copy constructor
 	VirtualTuner();
-	VirtualTuner(VirtualTuner&);
+	VirtualTuner(const VirtualTuner&);
 public:
 	VirtualTuner(USHORT port, HWND hWnd);
-	~VirtualTuner();
+	virtual ~VirtualTuner();
 
 	void setRecorder(Recorder* recorder);
 	Recorder* getRecorder() const				{ return m_pRecorder; }

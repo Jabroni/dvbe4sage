@@ -18,7 +18,7 @@ private:
 
 	// We disable unsafe constructors
 	Tuner();
-	Tuner(Tuner&);
+	Tuner(const Tuner&);
 public:
 	Tuner(Encoder* const pEncoder, int ordinal, ULONG initialFrequency, ULONG initialSymbolRate, Polarisation initialPolarization, ModulationType initialModulation, BinaryConvolutionCodeRate initialFecRate);
 	virtual ~Tuner(void);

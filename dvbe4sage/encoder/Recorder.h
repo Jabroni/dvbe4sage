@@ -14,7 +14,7 @@ class Recorder
 private:
 	// Disallow default and copy constructors
 	Recorder();
-	Recorder(Recorder&);
+	Recorder(const Recorder&);
 
 	// Data members
 	PluginsHandler* const		m_pPluginsHandler;

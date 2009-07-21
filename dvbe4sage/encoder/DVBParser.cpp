@@ -258,7 +258,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 				// Adjust the expected length
 				sectionBuffer.expectedLength = 0;
 				// Pass it to further parsing
-				parseTable((const pat_t* const)sectionBuffer.buffer, sectionBuffer.offset, abandonPacket);
+				parseTable((const pat_t* const)sectionBuffer.buffer, (short)sectionBuffer.offset, abandonPacket);
 				// Adjust the offset once again
 				sectionBuffer.offset = 0;
 			}
@@ -314,7 +314,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 			if(sectionBuffer.expectedLength == 0)
 			{
 				// Parse the section
-				parseTable((const pat_t* const)sectionBuffer.buffer, sectionBuffer.offset, abandonPacket);
+				parseTable((const pat_t* const)sectionBuffer.buffer, (short)sectionBuffer.offset, abandonPacket);
 				// Reset the offset
 				sectionBuffer.offset = 0;
 				// Make sure the remainder is just stuffing '\xFF' bytes
@@ -327,7 +327,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 
 // This is the top level DVB SI stream parsing routine, to be called on a generic SI buffer
 void PSIParser::parseTable(const pat_t* const table,
-						   int remainingLength,
+						   short remainingLength,
 						   bool& abandonPacket)
 {
 	// Adjust input buffer pointer
@@ -340,7 +340,7 @@ void PSIParser::parseTable(const pat_t* const table,
 		const pat_t* const table = (const pat_t* const)inputBuffer;
 
 		// Get table length
-		const UINT tableLength = HILO(table->section_length) + TABLE_PREFIX_LEN;
+		const USHORT tableLength = HILO(table->section_length) + TABLE_PREFIX_LEN;
 
 		// Get the CRC
 		const UINT crc = ntohl(*(const UINT*)(inputBuffer + tableLength - CRC_LENGTH));
@@ -353,22 +353,22 @@ void PSIParser::parseTable(const pat_t* const table,
 				parsePATTable(table, tableLength, abandonPacket);		// Parse PAT table
 			//Or if this is a SDT table
 			else if(table->table_id == (BYTE)'\x42' || table->table_id == (BYTE)'\x46')
-				parseSDTTable((const sdt_t* const)table, tableLength);	// Parse the SDT table
+				parseSDTTable((const sdt_t* const)table, (short)tableLength);	// Parse the SDT table
 			// Or if this is a BAT table
 			else if(table->table_id == (BYTE)'\x4A')
-				parseBATTable((const nit_t* const)table, tableLength);	// Parse the BAT table
+				parseBATTable((const nit_t* const)table, (short)tableLength);	// Parse the BAT table
 			// Or if this is a PMT table
 			else if(table->table_id == (BYTE)'\x02')
-				parsePMTTable((const pmt_t* const)table, tableLength);	// Parse the PMT table
+				parsePMTTable((const pmt_t* const)table, (short)tableLength);	// Parse the PMT table
 			// Or if this is a NIT table
 			else if(table->table_id == (BYTE)'\x40')
-				parseNITTable((const nit_t* const)table, tableLength);	// Parse the NIT table
+				parseNITTable((const nit_t* const)table, (short)tableLength);	// Parse the NIT table
 			// Or if this is a CAT table
 			else if(table->table_id == (BYTE)'\x01')
-				parseCATTable((const cat_t* const)table, tableLength);	// Parse the CAT table
+				parseCATTable((const cat_t* const)table, (short)tableLength);	// Parse the CAT table
 			// Of it is everything else
 			else
-				parseUnknownTable(table, tableLength);					// Parse the unknown table
+				parseUnknownTable(table, (short)tableLength);					// Parse the unknown table
 		}
 		else
 			log(2, true, TEXT("!!! CRC error!\n"));
@@ -382,7 +382,7 @@ void PSIParser::parseTable(const pat_t* const table,
 }
 
 void PSIParser::parseCATTable(const cat_t* const table,
-							  int remainingLength)
+							  short remainingLength)
 {
 	// Boil out if EMM PID already known
 	if(!m_EMMPids.empty())
@@ -440,7 +440,7 @@ void PSIParser::parseCATTable(const cat_t* const table,
 }
 
 void PSIParser::parsePMTTable(const pmt_t* const table,
-							  int remainingLength)
+							  short remainingLength)
 {
 	// Get SID the for this PMT
 	USHORT programNumber = HILO(table->program_number);
@@ -611,7 +611,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 
 // PAT table parsing routine
 void PSIParser::parsePATTable(const pat_t* const table,
-							  int remainingLength,
+							  short remainingLength,
 							  bool& abandonPacket)
 {
 	// Adjust input buffer pointer
@@ -675,7 +675,7 @@ void PSIParser::parsePATTable(const pat_t* const table,
 // included in the output file, this is done when corresponding bouquet tables are analysed
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void PSIParser::parseSDTTable(const sdt_t* const table,
-							  int remainingLength)
+							  short remainingLength)
 {
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + SDT_LEN;
@@ -805,7 +805,7 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 //	2. Their type is 1 (video), 2 (audio) or 25 (HD video). We filter out interactive services for the time being.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void PSIParser::parseBATTable(const nit_t* const table,
-							  int remainingLength)
+							  short remainingLength)
 {
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + NIT_LEN;
@@ -941,7 +941,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 }
 
 void PSIParser::parseNITTable(const nit_t* const table,
-							  int remainingLength)
+							  short remainingLength)
 {
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + NIT_LEN;
@@ -1085,7 +1085,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 }
 
 void PSIParser::parseUnknownTable(const pat_t* const table,
-								  const int remainingLength) const
+								  const short remainingLength) const
 {
 	// Print diagnostics message
 	log(3, true, TEXT("$$$ Unknown table detected with TID=%02X, length=%u\n"), (UINT)table->table_id, remainingLength);
@@ -1273,7 +1273,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		*pSid = htons(m_Sid);
 		*ppmtPid = htons(m_PmtPid);
 		// Calculate the new CRC and put it there
-		*(long*)((BYTE*)pat + 12) = htonl(_dvb_crc32((BYTE*)pat, 12));
+		*(long*)((BYTE*)pat + 12) = htonl(_dvb_crc32((const BYTE*)pat, 12));
 		// Pat is fixed!
 	}
 	// Boil out if no PAT packets have been found so far

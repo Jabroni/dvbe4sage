@@ -71,14 +71,14 @@ private:
 	};
 
 	// Routines for handling varous tables parsing
-	void parseTable(const pat_t* const table,  int remainingLength, bool& abandonPacket);
-	void parsePATTable(const pat_t* const table, int remainingLength, bool& abandonPacket);
-	void parsePMTTable(const pmt_t* const table, int remainingLength);
-	void parseSDTTable(const sdt_t* const table, int remainingLength);
-	void parseBATTable(const nit_t* const table, int remainingLength);
-	void parseNITTable(const nit_t* const table, int remainingLength);
-	void parseCATTable(const cat_t* const table, int remainingLength);
-	void parseUnknownTable(const pat_t* const table, const int remainingLength) const;
+	void parseTable(const pat_t* const table,  short remainingLength, bool& abandonPacket);
+	void parsePATTable(const pat_t* const table, short remainingLength, bool& abandonPacket);
+	void parsePMTTable(const pmt_t* const table, short remainingLength);
+	void parseSDTTable(const sdt_t* const table, short remainingLength);
+	void parseBATTable(const nit_t* const table, short remainingLength);
+	void parseNITTable(const nit_t* const table, short remainingLength);
+	void parseCATTable(const cat_t* const table, short remainingLength);
+	void parseUnknownTable(const pat_t* const table, const short remainingLength) const;
 
 	// This is provide-wide data
 	hash_map<USHORT, Transponder>					m_Transponders;			// TID to Transponder map
@@ -104,7 +104,7 @@ private:
 
 	// Disallow default and copy constructors
 	PSIParser();
-	PSIParser(PSIParser&);
+	PSIParser(const PSIParser&);
 
 public:
 	// Constructor
@@ -255,7 +255,7 @@ private:
 
 	// Default and copy constructors are disallowed
 	ESCAParser();
-	ESCAParser(ESCAParser&);
+	ESCAParser(const ESCAParser&);
 
 public:
 	// The only valid constructor
@@ -309,7 +309,7 @@ private:
 	bool		m_HasConnectedClients;
 
 	// Disallow copy constructor
-	DVBParser(DVBParser&);
+	DVBParser(const DVBParser&);
 
 public:
 	// Default constructor

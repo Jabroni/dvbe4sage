@@ -461,7 +461,7 @@ void PluginsHandler::processECMPacketQueue()
 	if(m_TimerInitialized)
 	{
 		// Get the current time
-		time_t now;
+		time_t now = 0;
 		time(&now);
 
 		// Calculate the differentce

@@ -50,7 +50,8 @@ static unsigned int crc_table[256] = {
 	0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4
 };
 
-unsigned int _dvb_crc32(const unsigned char *data, int len)
+unsigned int _dvb_crc32(const unsigned char* data,
+						const int len)
 {
 	int i;
 	unsigned int crc = 0xffffffff;

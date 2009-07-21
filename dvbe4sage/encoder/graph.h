@@ -53,7 +53,7 @@ private:
 
 	// No default or copy constructor!
 	CBDAFilterGraph();
-	CBDAFilterGraph(CBDAFilterGraph&);
+	CBDAFilterGraph(const CBDAFilterGraph&);
 
 public:
     bool m_fGraphBuilt;
