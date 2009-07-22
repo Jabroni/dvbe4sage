@@ -237,7 +237,7 @@ HRESULT CBDAFilterGraph::LoadDemux()
 {
 	HRESULT hr = S_OK;
 
-	hr = CoCreateInstance(CLSID_MPEG2Demultiplexer, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, reinterpret_cast<void**>(&m_pDemux));
+	hr = m_pDemux.CoCreateInstance(CLSID_MPEG2Demultiplexer);
 	if (FAILED(hr))
 	{
 		log(0, true, TEXT("Cannot CoCreateInstance CLSID_MPEG2Demultiplexer, error 0x%.08X\n"), hr);
@@ -352,13 +352,13 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 	if (FAILED(hr))
 		return hr;
 
-	hr = pIDVBTuningSpace->put__NetworkType(CLSID_DVBSNetworkProvider);
+	hr = pIDVBTuningSpace->put__NetworkType(CLSID_NetworkProvider);
 	if (FAILED(hr))
 		return hr;
 
 	// create DVBS Locator
-	CComPtr <IDVBSLocator> pIDVBSLocator;
-	hr = CoCreateInstance(__uuidof(DVBSLocator), NULL, CLSCTX_INPROC_SERVER, __uuidof(IDVBSLocator), reinterpret_cast<void**>(&pIDVBSLocator));
+	CComPtr<IDVBSLocator> pIDVBSLocator;
+	hr = pIDVBSLocator.CoCreateInstance(__uuidof(DVBSLocator));
 	if (FAILED(hr) || !pIDVBSLocator)
 		return hr;
 
@@ -428,7 +428,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	//=====================================================================================================
 
 	//  Create an empty tune request.
-	CComPtr <ITuneRequest> pNewTuneRequest;
+	CComPtr<ITuneRequest> pNewTuneRequest;
 	hr = pDVBSTuningSpace->CreateTuneRequest(&pNewTuneRequest);
 	if(FAILED (hr))
 	{
@@ -437,7 +437,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	}
 
 	//query for an IDVBTuneRequest interface pointer
-	CComQIPtr<IDVBTuneRequest> pDVBSTuneRequest (pNewTuneRequest);
+	CComQIPtr<IDVBTuneRequest> pDVBSTuneRequest(pNewTuneRequest);
 	if(!pDVBSTuneRequest)
 	{
 		log(0, true, TEXT("CreateDVBSTuneRequest: Can't QI for IDVBTuneRequest, error 0x%.08X\n"), hr);
@@ -445,7 +445,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	}
 
 	CComPtr<IDVBSLocator> pDVBSLocator;
-	hr = pDVBSLocator.CoCreateInstance (__uuidof(DVBSLocator));	
+	hr = pDVBSLocator.CoCreateInstance(__uuidof(DVBSLocator));	
 	if (FAILED(hr) || !pDVBSLocator)
 		return hr;
 
@@ -479,7 +479,6 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 HRESULT CBDAFilterGraph::LoadNetworkProvider()
 {
 	HRESULT  hr = S_OK;
-	CComBSTR bstrNetworkType;
 	CLSID    CLSIDNetworkType;
 
 	// obtain tuning space then load network provider
@@ -495,22 +494,15 @@ HRESULT CBDAFilterGraph::LoadNetworkProvider()
 	}
 
 	// Get the current Network Type clsid
-	hr = m_pITuningSpace->get_NetworkType(&bstrNetworkType);
+	hr = m_pITuningSpace->get__NetworkType(&CLSIDNetworkType);
 	if (FAILED(hr))
 	{
-		log(0, true, TEXT("ITuningSpace::Get Network Type failed, error 0x%.08X\n"), hr);
-		return hr;
-	}
-
-	hr = CLSIDFromString(bstrNetworkType, &CLSIDNetworkType);
-	if (FAILED(hr))
-	{
-		log(0, true, TEXT("Cannot get CLSIDFromString, error 0x%.08X\n"), hr);
+		log(0, true, TEXT("ITuningSpace::get__NetworkType failed, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
 	// create the network provider based on the clsid obtained from the tuning space
-	hr = CoCreateInstance(CLSIDNetworkType, NULL, CLSCTX_INPROC_SERVER,	IID_IBaseFilter, reinterpret_cast<void**>(&m_pNetworkProvider));
+	hr = m_pNetworkProvider.CoCreateInstance(CLSIDNetworkType);
 	if (FAILED(hr))
 	{
 		log(0, true, TEXT("Cannot CoCreate Network Provider, error 0x%.08X\n"), hr);
