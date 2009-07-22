@@ -352,7 +352,7 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 	if (FAILED(hr))
 		return hr;
 
-	hr = pIDVBTuningSpace->put__NetworkType(CLSID_NetworkProvider);
+	hr = pIDVBTuningSpace->put__NetworkType(CLSID_DVBSNetworkProvider);
 	if (FAILED(hr))
 		return hr;
 
