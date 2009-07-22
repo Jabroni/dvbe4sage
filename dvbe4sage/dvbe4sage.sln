@@ -1107,8 +1107,8 @@ Global
 		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|Any CPU.ActiveCfg = Debug - Parallel 128 from SSE2|x64
 		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|Mixed Platforms.ActiveCfg = Debug - Parallel 128 from SSE2|Win32
 		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|Mixed Platforms.Build.0 = Debug - Parallel 128 from SSE2|Win32
-		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|Win32.ActiveCfg = Debug - Parallel 128 from SSE2|Win32
-		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|Win32.Build.0 = Debug - Parallel 128 from SSE2|Win32
+		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|Win32.ActiveCfg = Debug - Parallel 64 from MMX|Win32
+		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|Win32.Build.0 = Debug - Parallel 64 from MMX|Win32
 		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|x64.ActiveCfg = Debug - Parallel 128 from SSE2|x64
 		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Debug|x64.Build.0 = Debug - Parallel 128 from SSE2|x64
 		{0B56BE2A-BF3A-411D-975E-CF6EF6F1B566}.Release - Parallel 128 from 16 Char|Any CPU.ActiveCfg = Release - Parallel 128 from 16 Char|x64
@@ -1331,7 +1331,7 @@ Global
 		{CD1DB5C3-3522-45A7-866B-FA92C6BD6A23}.Debug|Any CPU.ActiveCfg = Debug - Parallel 128 from SSE2|x64
 		{CD1DB5C3-3522-45A7-866B-FA92C6BD6A23}.Debug|Mixed Platforms.ActiveCfg = Debug - Parallel 128 from SSE2|x64
 		{CD1DB5C3-3522-45A7-866B-FA92C6BD6A23}.Debug|Mixed Platforms.Build.0 = Debug - Parallel 128 from SSE2|x64
-		{CD1DB5C3-3522-45A7-866B-FA92C6BD6A23}.Debug|Win32.ActiveCfg = Debug - Parallel 128 from SSE2|Win32
+		{CD1DB5C3-3522-45A7-866B-FA92C6BD6A23}.Debug|Win32.ActiveCfg = Debug - Parallel 64 from MMX|Win32
 		{CD1DB5C3-3522-45A7-866B-FA92C6BD6A23}.Debug|x64.ActiveCfg = Debug - Parallel 128 from SSE2|x64
 		{CD1DB5C3-3522-45A7-866B-FA92C6BD6A23}.Debug|x64.Build.0 = Debug - Parallel 128 from SSE2|x64
 		{CD1DB5C3-3522-45A7-866B-FA92C6BD6A23}.Release - Parallel 128 from 16 Char|Any CPU.ActiveCfg = Release - Parallel 128 from 16 Char|x64
