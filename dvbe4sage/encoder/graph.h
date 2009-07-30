@@ -87,6 +87,8 @@ public:
 	USHORT						m_Tid;
 	bool						m_IsHauppauge;				// True if the device is Hauppauge
 	bool						m_IsFireDTV;				// True if the device is FireDTV
+	bool						m_IsTTBDG2;					// True if the device is a TechnoTrend Budget 2
+	bool						m_IsTTUSB2;					// True if the device is a TechnoTrend USB 2.0
 
 	// Twinhan specific stuff
 	IPin* FindPinOnFilter(IBaseFilter *pBaseFilter, char *pPinName,BOOL bCheckPinName);	

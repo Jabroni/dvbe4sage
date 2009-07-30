@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbasd.lib ffdecsa.lib"
+				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbasd.lib ffdecsa.lib ttBdaDrvApi_Dll.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\Win32\Debug - Parallel 64 from MMX;C:\Program Files\Microsoft SDKs\Windows\v7.0\Samples\Multimedia\DirectShow\BaseClasses\Debug_MBCS"
 				GenerateDebugInformation="true"
@@ -136,7 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbase.lib ffdecsa.lib"
+				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbase.lib ffdecsa.lib ttBdaDrvApi_Dll.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="..\Win32\Release - Parallel 128 from SSE2;C:\Program Files\Microsoft SDKs\Windows\v7.0\Samples\Multimedia\DirectShow\BaseClasses\Release_MBCS"
 				GenerateDebugInformation="true"
@@ -301,6 +301,22 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\bda_DrvInOutStructs.h"
+				>
+			</File>
+			<File
+				RelativePath=".\bdaapi_CIMsg.h"
+				>
+			</File>
+			<File
+				RelativePath=".\bdaapi_Typedefs.h"
+				>
+			</File>
+			<File
+				RelativePath=".\bdaapi_TypSlotInfo.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Configuration.h"
 				>
 			</File>
@@ -369,6 +385,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ttBdaDrvApi.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Tuner.h"
 				>
 			</File>
@@ -384,6 +404,18 @@
 			>
 			<File
 				RelativePath=".\pluginshandler.rc"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Libraries"
+			>
+			<File
+				RelativePath=".\ttBdaDrvApi.lib"
+				>
+			</File>
+			<File
+				RelativePath=".\ttBdaDrvApi_Dll.lib"
 				>
 			</File>
 		</Filter>

@@ -33,6 +33,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_4AF4995AF2934EEB9E37A30A8741C355"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_8B4DF4358A4D43B39E834AF0EA9D03FB"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -230,6 +236,26 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_4AF4995AF2934EEB9E37A30A8741C355"
+            {
+            "SourcePath" = "8:..\\Distributive\\ttBdaDrvApi_Dll.dll"
+            "TargetName" = "8:ttBdaDrvApi_Dll.dll"
+            "Tag" = "8:"
+            "Folder" = "8:_B28454CE8C49468587F623A82E6CA042"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_927B48DD0C5C05B84DDEC56ADEB5BC91"
             {
             "SourcePath" = "8:encoder.dll"
@@ -318,7 +344,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:DVB Enhancer for SageTV"
         "ProductCode" = "8:{1586CC80-99A2-4202-8F2A-ACA2D961DDCC}"
-        "PackageCode" = "8:{CAB8A233-A937-45FE-BCCE-4682F3173007}"
+        "PackageCode" = "8:{5F689F07-E680-4298-9CC1-B7F13CAAD0EC}"
         "UpgradeCode" = "8:{1B48341D-369A-4246-B159-BACC2C75BDAB}"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"

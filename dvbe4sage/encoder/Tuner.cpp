@@ -4,6 +4,10 @@
 #include "logger.h"
 #include "configuration.h"
 #include "encoder.h"
+#include "ttBdaDrvApi.h"
+
+int Tuner::m_TTBudget2Tuners = 0;
+int Tuner::m_USB2Tuners = 0;
 
 Tuner::Tuner(Encoder* const pEncoder,
 			 int ordinal,
@@ -29,14 +33,14 @@ Tuner::Tuner(Encoder* const pEncoder,
 		m_IsTunerOK = false;
 	}
 
-	// Get driver and device info and print it
+	// Get driver and device info and print it - works only for Twinhan cards
 	DEVICE_INFO DevInfo;
 	memset(&DevInfo, 0, sizeof(DEVICE_INFO));
 	DriverInfo  DrvInfo;
 	memset(&DrvInfo, 0, sizeof(DriverInfo));
 	if(m_BDAFilterGraph.THBDA_IOCTL_GET_DEVICE_INFO_Fun(&DevInfo) && m_BDAFilterGraph.THBDA_IOCTL_GET_DRIVER_INFO_Fun(&DrvInfo))
 	{
-		log(0, true, TEXT("Device Info: Device_Name=%s, Device_TYPE=%d, MAC=%02X-%02X-%02X-%02X-%02X-%02X\n"),
+		log(0, true, TEXT("Device Info: Device Name=%s, Device Type=%d, MAC=%02X:%02X:%02X:%02X:%02X:%02X, ordinal=%d\n"),
 						DevInfo.Device_Name,
 						DevInfo.Device_TYPE, 
 						(UINT)DevInfo.MAC_ADDRESS[0],
@@ -44,7 +48,8 @@ Tuner::Tuner(Encoder* const pEncoder,
 						(UINT)DevInfo.MAC_ADDRESS[2],
 						(UINT)DevInfo.MAC_ADDRESS[3],
 						(UINT)DevInfo.MAC_ADDRESS[4],
-						(UINT)DevInfo.MAC_ADDRESS[5]);
+						(UINT)DevInfo.MAC_ADDRESS[5],
+						ordinal);
 		log(0, true, TEXT("Driver Info: Company=%s, Version=%d.%d\n"),
 						DrvInfo.Company,
 						DrvInfo.Version_Major,
@@ -52,6 +57,26 @@ Tuner::Tuner(Encoder* const pEncoder,
 
 		// Set the LNB data
 		m_BDAFilterGraph.THBDA_IOCTL_SET_LNB_DATA_Fun(g_Configuration.getLNBLOF1(), g_Configuration.getLNBLOF2(), g_Configuration.getLNBSW());
+	}
+	// If our device if one of the TechnoTrend kind
+	if(m_BDAFilterGraph.m_IsTTBDG2 || m_BDAFilterGraph.m_IsTTUSB2)
+	{
+		// Determine whether it's budget ot USB 2.0
+		DEVICE_CAT deviceCategory = m_BDAFilterGraph.m_IsTTBDG2 ? BUDGET_2 : USB_2;
+		// Get device handle from TT BDA API
+		HANDLE hTT = bdaapiOpen(deviceCategory, m_BDAFilterGraph.m_IsTTBDG2 ? m_TTBudget2Tuners++ : m_USB2Tuners++);
+		// IF the handle is not bogus
+		if(hTT != INVALID_HANDLE_VALUE)
+		{
+			// Get the MAC address
+			DWORD high, low;
+			bdaapiGetMAC(hTT, &high, &low);
+			// Close the handle
+			bdaapiClose(hTT);
+			// Print out the MAC address information
+			log(0, true, TEXT("Device type=%s, MAC=%02X:%02X:%02X:%02X:%02X:%02X, ordinal=%d\n"), m_BDAFilterGraph.m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"),
+				(high & 0xFF0000) >> 16, (high & 0xFF00) >> 8, high & 0xFF, (low & 0xFF0000) >> 16, (low & 0xFF00) >> 8, low & 0xFF, ordinal);
+		}
 	}
 }
 

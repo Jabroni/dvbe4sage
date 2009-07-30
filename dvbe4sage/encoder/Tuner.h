@@ -15,6 +15,8 @@ private:
 	Encoder* const			m_pEncoder;
 	HANDLE					m_InitializationEvent;
 	bool					m_LockStatus;
+	static int				m_TTBudget2Tuners;
+	static int				m_USB2Tuners;
 
 	// We disable unsafe constructors
 	Tuner();
