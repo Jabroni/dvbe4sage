@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<channels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="channels.xsd">
+  <channel number="22">
+    <locator provider="Rashut_2" SID="10" />
+    <locator provider="YES_DBS" />
+  </channel>
+  <channel number="10">
+    <locator provider="Rashut_2" SID="20" />
+    <locator provider="YES_DBS" />
+  </channel>
+</channels>

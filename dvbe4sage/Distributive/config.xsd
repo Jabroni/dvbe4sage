@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="configuration">
+    <xs:complexType>
+      <xs:all>
+        <xs:element minOccurs="0" name="general">
+          <xs:complexType>
+            <xs:all>
+              <xs:element minOccurs="0" default="2" name="logLevel" type="xs:unsignedShort" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+        <xs:element minOccurs="0" name="SageTVIntegration">
+          <xs:complexType>
+            <xs:all>
+              <xs:element minOccurs="0" default="6969" name="listeningPort" type="xs:unsignedShort" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+        <xs:element minOccurs="0" name="recording">
+          <xs:complexType>
+            <xs:all>
+              <xs:element minOccurs="0" default="eng" name="preferredAudioLanguage" type="xs:normalizedString" />
+              <xs:element minOccurs="0" default="160000" name="TSPacketsPerOutputBuffer" type="xs:unsignedLong" />
+              <xs:element minOccurs="0" default="140" name="TSPacketsOutputThreshold" type="xs:unsignedLong" />
+              <xs:element minOccurs="0" default="false" name="disableWriteBuffering" type="xs:boolean" />
+              <xs:element minOccurs="0" default="1" name="PATDilutionFactor" type="xs:unsignedLong" />
+              <xs:element minOccurs="0" default="1" name="PMTDilutionFactor" type="xs:unsignedLong" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+        <xs:element minOccurs="0" name="tuning">
+          <xs:complexType>
+            <xs:all>
+              <xs:element minOccurs="0" default="20" name="timeout" type="xs:unsignedShort" />
+              <xs:element minOccurs="0" default="5" name="lockTimeout" type="xs:unsignedShort" />
+              <xs:element minOccurs="0" default="false" name="useNewMethod" type="xs:boolean" />
+              <xs:element minOccurs="0" default="1024" name="TSPacketsPerBuffer" type="xs:unsignedLong" />
+              <xs:element minOccurs="0" default="400" name="numberOfBuffers" type="xs:unsignedLong" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+        <xs:element minOccurs="0" name="plugins">
+          <xs:complexType>
+            <xs:all>
+              <xs:element minOccurs="0" name="servedCAIDs">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="CAID" type="xs:hexBinary" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element minOccurs="0" default="5" name="DCWTimeout" type="xs:unsignedShort" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

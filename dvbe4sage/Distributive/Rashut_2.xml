@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<provider name="Rashut_2" ONID="4369" acceptSID="true" parseNIT="false" DontFixPMT="false" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="provider.xsd">
+  <initialTuningInfo xsi:type="DVBSTuningInfo" frequency="11658000" symbolRate="8520" FECRate="2/3" modulation="QPSK" />
+</provider>

@@ -2,6 +2,7 @@
 
 #include "Configuration.h"
 #include "extern.h"
+//#include "config.hxx"
 
 Configuration g_Configuration;
 
@@ -80,4 +81,20 @@ Configuration::Configuration() :
 	// Get the preferred audio language
 	GetPrivateProfileString(TEXT("Recording"), TEXT("PreferredAudioLanguage"), TEXT("eng"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
 	m_PreferredAudioLanguage = buffer;
+	
+	/*ifstream ifs("config.xml");
+	try
+	{
+		auto_ptr<configuration> config(configuration_(ifs));
+		for(UINT i = 0; i < config->providers().provider().size(); i++)
+		{
+			const char* name = config->providers().provider()[i].name().c_str();
+			name = name;
+		}
+	}
+	catch(const xml_schema::exception& e)
+	{
+		ofstream ofs("error.txt");
+		ofs << e << endl;
+	}*/
 }

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="TuningInfo" abstract="true">
+    <xs:attribute name="frequency" type="xs:unsignedInt" use="required" />
+    <xs:attribute name="symbolRate" type="xs:unsignedShort" use="required" />
+  </xs:complexType>
+  <xs:complexType name="DVBSTuningInfo">
+    <xs:complexContent mixed="false">
+      <xs:extension base="TuningInfo">
+        <xs:attribute name="FECRate" use="required">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="1/2" />
+              <xs:enumeration value="2/3" />
+              <xs:enumeration value="3/4" />
+              <xs:enumeration value="5/6" />
+              <xs:enumeration value="7/8" />
+              <xs:enumeration value="8/9" />
+              <xs:enumeration value="3/5" />
+              <xs:enumeration value="4/5" />
+              <xs:enumeration value="9/10" />
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute name="modulation" use="required">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="QPSK" />
+              <xs:enumeration value="8PSK" />
+              <xs:enumeration value="16QAM" />
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute default="false" name="dvbs2" type="xs:boolean" use="optional" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Transponder">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="tuningInfo" type="TuningInfo" />
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="service">
+        <xs:complexType>
+          <xs:attribute name="SID" type="xs:unsignedShort" use="required" />
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="TID" type="xs:unsignedShort" use="required" />
+  </xs:complexType>
+  <xs:complexType name="ProviderInfo">
+    <xs:sequence>
+      <xs:element name="initialTuningInfo" type="TuningInfo" />
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="transponder" type="Transponder" />
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required" />
+    <xs:attribute name="ONID" type="xs:unsignedShort" use="required" />
+    <xs:attribute default="true" name="acceptSID" type="xs:boolean" use="optional" />
+    <xs:attribute default="true" name="parseNIT" type="xs:boolean" use="optional" />
+    <xs:attribute default="20" name="PSIMaturityTime" type="xs:unsignedShort" use="optional" />
+    <xs:attribute default="20" name="PMTThreshold" type="xs:unsignedShort" use="optional" />
+    <xs:attribute default="true" name="DontFixPMT" type="xs:boolean" use="optional" />
+    <xs:attribute default="false" name="cacheInfo" type="xs:boolean" use="optional" />
+  </xs:complexType>
+  <xs:element name="provider" type="ProviderInfo" />
+</xs:schema>

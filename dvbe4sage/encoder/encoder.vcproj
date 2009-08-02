@@ -14,6 +14,9 @@
 		/>
 	</Platforms>
 	<ToolFiles>
+		<ToolFile
+			RelativePath="..\..\..\Program Files\CodeSynthesis XSD 3.2\etc\vc-9.0\xsd-cxx-tree.rules"
+		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
@@ -30,6 +33,9 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
+				Name="C++/Tree Mapping Rule"
+			/>
+			<Tool
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
@@ -42,7 +48,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;C:\Program Files\Microsoft SDKs\Windows\v7.0\Samples\Multimedia\DirectShow\BaseClasses&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1; XERCES_STATIC_LIBRARY"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -61,7 +67,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbasd.lib ffdecsa.lib ttBdaDrvApi_Dll.lib"
+				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbasd.lib ffdecsa.lib ttBdaDrvApi_Dll.lib xerces-c_static_3D.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\Win32\Debug - Parallel 64 from MMX;C:\Program Files\Microsoft SDKs\Windows\v7.0\Samples\Multimedia\DirectShow\BaseClasses\Debug_MBCS"
 				GenerateDebugInformation="true"
@@ -105,6 +111,9 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
+				Name="C++/Tree Mapping Rule"
+			/>
+			<Tool
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
@@ -118,7 +127,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="&quot;C:\Program Files\Microsoft SDKs\Windows\v7.0\Samples\Multimedia\DirectShow\BaseClasses&quot;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS; XERCES_STATIC_LIBRARY"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="2"
@@ -136,7 +145,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbase.lib ffdecsa.lib ttBdaDrvApi_Dll.lib"
+				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbase.lib ffdecsa.lib ttBdaDrvApi_Dll.lib xerces-c_static_3.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="..\Win32\Release - Parallel 128 from SSE2;C:\Program Files\Microsoft SDKs\Windows\v7.0\Samples\Multimedia\DirectShow\BaseClasses\Release_MBCS"
 				GenerateDebugInformation="true"
@@ -176,6 +185,150 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath=".\cards.cxx"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\Distributive\cards.xsd"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="C++/Tree Mapping Rule"
+						OutDir="."
+						GenInline="true"
+						GenSerialization="true"
+						GenPolymorphic="true"
+						GenOstream="true"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="C++/Tree Mapping Rule"
+						OutDir="."
+						GenInline="true"
+						GenSerialization="true"
+						GenPolymorphic="true"
+						GenOstream="true"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\channels.cxx"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\Distributive\channels.xsd"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="C++/Tree Mapping Rule"
+						OutDir="."
+						GenInline="true"
+						GenSerialization="true"
+						GenPolymorphic="true"
+						GenOstream="true"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="C++/Tree Mapping Rule"
+						OutDir="."
+						GenInline="true"
+						GenSerialization="true"
+						GenPolymorphic="true"
+						GenOstream="true"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\config.cxx"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\Distributive\config.xsd"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="C++/Tree Mapping Rule"
+						OutDir="."
+						GenInline="true"
+						GenSerialization="true"
+						GenPolymorphic="true"
+						GenOstream="true"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="C++/Tree Mapping Rule"
+						OutDir="."
+						GenInline="true"
+						GenSerialization="true"
+						GenPolymorphic="true"
+						GenOstream="true"
+					/>
+				</FileConfiguration>
+			</File>
 			<File
 				RelativePath=".\Configuration.cpp"
 				>
@@ -259,6 +412,54 @@
 				>
 			</File>
 			<File
+				RelativePath=".\provider.cxx"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\Distributive\provider.xsd"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="C++/Tree Mapping Rule"
+						OutDir="."
+						GenInline="true"
+						GenSerialization="true"
+						GenPolymorphic="true"
+						GenOstream="true"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="C++/Tree Mapping Rule"
+						OutDir="."
+						GenInline="true"
+						GenSerialization="true"
+						GenPolymorphic="true"
+						GenOstream="true"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\Recorder.cpp"
 				>
 			</File>
@@ -317,6 +518,30 @@
 				>
 			</File>
 			<File
+				RelativePath=".\cards.hxx"
+				>
+			</File>
+			<File
+				RelativePath=".\cards.ixx"
+				>
+			</File>
+			<File
+				RelativePath=".\channels.hxx"
+				>
+			</File>
+			<File
+				RelativePath=".\channels.ixx"
+				>
+			</File>
+			<File
+				RelativePath=".\config.hxx"
+				>
+			</File>
+			<File
+				RelativePath=".\config.ixx"
+				>
+			</File>
+			<File
 				RelativePath=".\Configuration.h"
 				>
 			</File>
@@ -358,6 +583,14 @@
 			</File>
 			<File
 				RelativePath=".\pluginshandler.h"
+				>
+			</File>
+			<File
+				RelativePath=".\provider.hxx"
+				>
+			</File>
+			<File
+				RelativePath=".\provider.ixx"
 				>
 			</File>
 			<File
@@ -416,6 +649,14 @@
 			</File>
 			<File
 				RelativePath=".\ttBdaDrvApi_Dll.lib"
+				>
+			</File>
+			<File
+				RelativePath=".\xerces-c_static_3.lib"
+				>
+			</File>
+			<File
+				RelativePath=".\xerces-c_static_3D.lib"
 				>
 			</File>
 		</Filter>

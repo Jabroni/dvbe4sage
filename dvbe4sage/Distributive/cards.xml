@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cards xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cards.xsd">
+  <defaultProviders>
+    <provider name="YES_DBS">
+      <LNB LOF1="9750000" LOF2="10600000" SW="11700000" />
+    </provider>
+  </defaultProviders>
+  <card xsi:type="CardByOrdinal" ordinal="1" type="DVB-S2" />
+  <card xsi:type="CardByOrdinal" ordinal="2" excluded="true" />
+  <card xsi:type="CardByOrdinal" ordinal="3" type="DVB-S2" />
+  <card xsi:type="CardByOrdinal" ordinal="4" type="DVB-S2" />
+</cards>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="config.xsd">
+  <general>
+    <logLevel>2</logLevel>
+  </general>
+  <SageTVIntegration>
+    <listeningPort>6969</listeningPort>
+  </SageTVIntegration>
+  <plugins>
+    <DCWTimeout>5</DCWTimeout>
+  </plugins>
+  <recording>
+    <disableWriteBuffering>false</disableWriteBuffering>
+    <preferredAudioLanguage>eng</preferredAudioLanguage>
+    <TSPacketsOutputThreshold>140</TSPacketsOutputThreshold>
+    <TSPacketsPerOutputBuffer>160000</TSPacketsPerOutputBuffer>
+    <PATDilutionFactor>1</PATDilutionFactor>
+    <PMTDilutionFactor>1</PMTDilutionFactor>
+  </recording>
+  <tuning>
+    <lockTimeout>5</lockTimeout>
+    <timeout>20</timeout>
+    <useNewMethod>false</useNewMethod>
+    <TSPacketsPerBuffer>1024</TSPacketsPerBuffer>
+    <numberOfBuffers>400</numberOfBuffers>
+  </tuning>
+</configuration>
