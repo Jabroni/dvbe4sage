@@ -276,7 +276,7 @@ void PluginsHandler::startFilter(LPARAM lParam)
 			log(2, true, TEXT("Start EMM filter for SID=%hu received\n"), m_CurrentSid);
 		}
 		// Put the callback address into filter's running ID
-		startFilter->Running_ID = (UINT)(startFilter->Irq_Call_Adresse);
+		startFilter->Running_ID = (UINT)(startFilter->Filter_ID);
 	}
 	else
 		log(0, true, TEXT("Catastrophic error, no current client for a filter!\n"));
@@ -290,25 +290,25 @@ void PluginsHandler::stopFilter(LPARAM lParam)
 
 	// Nullify callbacks respectively
 	UINT runningId = (UINT)lParam;
-	if(runningId == (UINT)m_CurrentEcmCallback)
+	if(runningId == (UINT)m_CurrentEcmFilterId)
 	{
 		m_CurrentEcmFilterId = 0;
 		m_CurrentEcmCallback = NULL;
 		log(2, true, TEXT("Stop ECM filter received\n"));
 	}
-	else if(runningId == (UINT)m_CurrentEmmCallback)
+	else if(runningId == (UINT)m_CurrentEmmFilterId)
 	{
 		m_CurrentEmmCallback = NULL;
 		m_CurrentEmmFilterId = 0;
 		log(2, true, TEXT("Stop EMM filter received\n"));
 	}
-	else if(runningId == (UINT)m_CurrentPmtCallback)
+	else if(runningId == (UINT)m_CurrentPmtFilterId)
 	{
 		m_CurrentPmtCallback = NULL;
 		m_CurrentPmtFilterId = 0;
 		log(2, true, TEXT("Stop PMT filter received\n"));
 	}
-	else if(runningId == (UINT)m_CurrentCatCallback)
+	else if(runningId == (UINT)m_CurrentCatFilterId)
 	{
 		m_CurrentCatCallback = NULL;
 		m_CurrentCatFilterId = 0;
@@ -420,8 +420,8 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 		case TYPE_ECM:
 			// Put the request at the end of the queue
 			m_RequestQueue.push_back(request);
-			// Process the queue
-			processECMPacketQueue();
+			// Process the queue - no need for that, will be picked up by the worker thread anyway
+			// processECMPacketQueue();
 			break;
 		case TYPE_EMM:
 			// Here we handle EMM packets, just send them to the filter when it's ready
@@ -545,6 +545,14 @@ void PluginsHandler::processECMPacketQueue()
 			m_pCurrentClient = request.client;
 			// And current sid
 			m_CurrentSid = request.client->sid;
+			// Get the current time to handle timeouts
+			time(&m_Time);
+			// And mark the time is initialized
+			m_TimerInitialized = true;
+			// This is the tuning timeout
+			m_IsTuningTimeout = true;
+			// Unlock the critical section, since some of the plugins do SendMessage and not PostMessage
+			m_cs.Unlock();
 			// This client doesn't have any keys yet
 			// For each plugin, check if it handles this particular CA
 			for(list<Plugin>::iterator pit = m_Plugins.begin(); pit != m_Plugins.end(); pit++)
@@ -555,12 +563,8 @@ void PluginsHandler::processECMPacketQueue()
 					fillTPStructure(&tp);
 					// And then finally tune to the program
 					pit->m_fpChannelChange(tp);
-					// Get the current time to handle timeouts
-					time(&m_Time);
-					// And mark the time is initialized
-					m_TimerInitialized = true;
-					// This is the tuning timeout
-					m_IsTuningTimeout = true;
+					// Boil out (only plugin can handle achannel)
+					break;
 				}
 		}
 		else
