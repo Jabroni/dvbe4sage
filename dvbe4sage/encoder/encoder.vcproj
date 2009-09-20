@@ -15,7 +15,7 @@
 	</Platforms>
 	<ToolFiles>
 		<ToolFile
-			RelativePath="..\..\..\Program Files\CodeSynthesis XSD 3.2\etc\vc-9.0\xsd-cxx-tree.rules"
+			RelativePath="C:\Program Files (x86)\CodeSynthesis XSD 3.2\etc\vc-9.0\xsd-cxx-tree.rules"
 		/>
 	</ToolFiles>
 	<Configurations>

@@ -218,7 +218,8 @@ private:
 	Decrypter						m_Decrypter;						// Decrypter object
 	PluginsHandler*	const			m_pPluginsHandler;					// Plugins handler object
 	BYTE							m_LastECMPacket[PACKET_SIZE];		// Last new ECM packet
-	bool							m_FirstECMPacket;					// True for the first ECM packet
+	bool							m_NoECMPacketsYet;					// True as long as no ECM packets have been received
+	bool							m_NoDCWYet;							// True as long as no DCW has been received
 
 	// Output buffer stuff
 	deque<OutputBuffer* const>		m_OutputBuffers;					// Vector of output buffers (one per distinct ECM packet)

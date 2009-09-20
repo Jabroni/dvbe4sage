@@ -1458,7 +1458,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			OutputBuffer* const lastBuffer = m_OutputBuffers.back();
 
 			// If the last buffer is empty, we don't need a new one
-			if(!m_FirstECMPacket && lastBuffer->numberOfPackets != 0)
+			if(!m_NoECMPacketsYet && lastBuffer->numberOfPackets != 0)
 			{
 				// Create a new output buffer
 				OutputBuffer* const newBuffer = new OutputBuffer;
@@ -1474,8 +1474,8 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 				// For an empty buffer, we do need to invalidate the key
 				lastBuffer->hasKey = false;
 
-			// Invalidate the first ECM packet flag
-			m_FirstECMPacket = false;
+			// We now have recevied an ECM packet
+			m_NoECMPacketsYet = false;
 		}
 	}
 }
@@ -1501,11 +1501,13 @@ bool ESCAParser::setKey(bool isOddKey,
 			// Let's see if the key can decrypt the current buffer
 			if(!isCorrectKey(currentBuffer, isOddKey, key))
 				// If this is not for the first packet, boil out
-				if(!m_FirstECMPacket)
+				if(!m_NoDCWYet)
 					return false;
 				else
-					// Otherwise postpone, just indicate that the hasKey fla cannot be set yet
+					// Otherwise postpone, just indicate that the hasKey flag cannot be set yet
 					setHasKey = false;
+			else
+				m_NoDCWYet = false;
 
 			// If no, set it
 			// If it's the odd key
@@ -1570,8 +1572,9 @@ void ESCAParser::reset()
 		m_OutputBuffers.pop_front();
 	}
 
-	// Reset first ECM packet flag
-	m_FirstECMPacket = true;
+	// Reset the ECM and DCW flags
+	m_NoECMPacketsYet = true;
+	m_NoDCWYet = true;
 
 	// Add a single buffer to the end of the output queue
 	m_OutputBuffers.push_back(new OutputBuffer);
@@ -1606,7 +1609,8 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_PATContinuityCounter(0),
 	m_PMTCounter(0),
 	m_PMTContinuityCounter(0),
-	m_FirstECMPacket(true)
+	m_NoECMPacketsYet(true),
+	m_NoDCWYet(true)
 {
 	// Make sure last ECM packet is zeroed out
 	ZeroMemory(m_LastECMPacket, sizeof(m_LastECMPacket));
