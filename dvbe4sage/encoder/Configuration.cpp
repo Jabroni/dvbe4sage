@@ -2,7 +2,6 @@
 
 #include "Configuration.h"
 #include "extern.h"
-//#include "config.hxx"
 
 Configuration g_Configuration;
 
@@ -32,8 +31,10 @@ Configuration::Configuration() :
 	m_PMTThreshold((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 20, INI_FILE_NAME)),
 	m_PSIMaturityTime((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PSIMaturityTime"), 10, INI_FILE_NAME)),
 	m_UseNewTuningMethod(GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseNewTuningMethod"), 0, INI_FILE_NAME) == 0 ? false : true),
-	m_DontFixPMT(GetPrivateProfileInt(TEXT("Advanced"), TEXT("DontFixPMT"), 0, INI_FILE_NAME) == 0 ? false : true)
+	m_DontFixPMT(GetPrivateProfileInt(TEXT("Advanced"), TEXT("DontFixPMT"), 0, INI_FILE_NAME) == 0 ? false : true),
+	m_IsVGCam(GetPrivateProfileInt(TEXT("Plugins"), TEXT("IsVGCam"), 0, INI_FILE_NAME) == 0 ? false : true)
 {	
+
 	// Buffer
 	TCHAR buffer[1024];
 	// Context for parsing
@@ -81,7 +82,7 @@ Configuration::Configuration() :
 	// Get the preferred audio language
 	GetPrivateProfileString(TEXT("Recording"), TEXT("PreferredAudioLanguage"), TEXT("eng"), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
 	m_PreferredAudioLanguage = buffer;
-	
+
 	/*ifstream ifs("config.xml");
 	try
 	{

@@ -39,12 +39,14 @@ class Configuration
 	const USHORT				m_PMTThreshold;
 	const USHORT				m_PSIMaturityTime;
 	const bool					m_DontFixPMT;
+	const bool					m_IsVGCam;
 public:
 	Configuration();
 	
 	bool excludeTuner(int tunerOrdinal) const		{ return m_ExcludeTuners.count(tunerOrdinal) > 0; }
 	bool isDVBS2Tuner(int tunerOrdinal) const		{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
 	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
+	bool isVGCam() const							{ return m_IsVGCam; };
 	UINT getLogLevel() const						{ return m_LogLevel; }
 	UINT getDCWTimeout() const						{ return m_DCWTimeout; }
 	UINT getTSPacketsPerBuffer() const				{ return m_TSPacketsPerBuffer; }

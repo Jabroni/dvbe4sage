@@ -209,7 +209,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 			while(!found && FindNextFileW(search, &findData));
 
 			// Close the search handle
-			CloseHandle(search);
+			FindClose(search);
 
 			// If the file is found
 			if(found)

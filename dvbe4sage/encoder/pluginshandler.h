@@ -35,24 +35,6 @@ public:
 	bool hasPid(USHORT pid) const;
 };
 
-class Plugin
-{
-	friend class PluginsHandler;
-	HMODULE								m_hModule;
-	HMENU								m_hMenu;
-	Plugin_Init_Proc					m_fpInit;
-	Plugin_Channel_Change_Proc			m_fpChannelChange;
-	Plugin_Exit_Proc					m_fpExit;
-	Plugin_Hot_Key_Proc					m_fpHotKey;
-	Plugin_OSD_Key_Proc					m_fpOSDKey;
-	Plugin_Menu_Cmd_Proc				m_fpMenuCommand;
-	Plugin_Send_Dll_ID_Name_Proc		m_fpGetPluginName;
-	Plugin_Filter_Close_Proc			m_fpFilterClose;
-	Plugin_Extern_RecPlay_Proc			m_fpExternRecPlay;
-public:
-	virtual bool acceptsCAid(const hash_set<CAScheme>& caid) { return true; }
-};
-
 class ESCAParser;
 
 enum CAPacketType { TYPE_ECM, TYPE_EMM, TYPE_PMT, TYPE_CAT };
@@ -60,7 +42,7 @@ enum CAPacketType { TYPE_ECM, TYPE_EMM, TYPE_PMT, TYPE_CAT };
 class PluginsHandler
 {
 	friend DWORD WINAPI pluginsHandlerWorkerThreadRoutine(LPVOID param);
-private:
+protected:
 	struct Client
 	{
 		ESCAParser*						caller;
@@ -81,19 +63,10 @@ private:
 	};
 
 	// Global data structures
-	list<Plugin>							m_Plugins;
 	list<Request>							m_RequestQueue;
 	hash_map<ESCAParser*, Client>			m_Clients;
 	Client*									m_pCurrentClient;
 	USHORT									m_CurrentSid;
-	TMDAPIFilterProc						m_CurrentEcmCallback;
-	TMDAPIFilterProc						m_CurrentEmmCallback;
-	TMDAPIFilterProc						m_CurrentPmtCallback;
-	TMDAPIFilterProc						m_CurrentCatCallback;
-	USHORT									m_CurrentEcmFilterId;
-	USHORT									m_CurrentEmmFilterId;
-	USHORT									m_CurrentPmtFilterId;
-	USHORT									m_CurrentCatFilterId;
 	CCritSec								m_cs;
 	HANDLE									m_WorkerThread;
 	bool									m_DeferTuning;
@@ -102,14 +75,6 @@ private:
 	bool									m_TimerInitialized;
 	time_t									m_Time;
 	bool									m_ExitWorkerThread;
-
-	// Fill the TP structure function
-	void fillTPStructure(LPTPROGRAM82 tp) const;
-
-	// Callbacks
-	void startFilter(LPARAM lParam);
-	void stopFilter(LPARAM lParam);
-	void dvbCommand(LPARAM lParam);
 
 	union Dcw
 	{
@@ -120,13 +85,48 @@ private:
 	// Key checker
 	static bool wrong(const Dcw& dcw);
 
+protected:
+	virtual void processECMPacket(BYTE* packet) = 0;
+	virtual void processEMMPacket(BYTE* packet) = 0;
+	virtual void processPMTPacket(BYTE* packet) = 0;
+	virtual void processCATPacket(BYTE* packet) = 0;
+	virtual void resetProcessState() = 0;
+	virtual bool canProcessECM() = 0;
+	virtual bool handleTuningRequest() = 0;
+
+	void EndWorkerThread()
+	{
+		// Shutdown the worker thread 
+		// Make worker thread exit
+		m_ExitWorkerThread = true;
+		// Wait for it to exit
+		WaitForSingleObject(m_WorkerThread, INFINITE);
+		// And close its handle
+		CloseHandle(m_WorkerThread);
+	}
+	
+	void ECMRequestComplete()
+	{
+		// Cancel deferred tuning
+		m_DeferTuning = false;
+
+		// Indicate we're no longer waiting for response
+		m_WaitingForResponse = false;
+
+		// Indicate we're no longer waiting on timer
+		m_TimerInitialized = false;
+	}
 public:
 	// Constructor
-	PluginsHandler(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu);
+	PluginsHandler();
 	// Destructor
 	virtual ~PluginsHandler();
 	// Window procedure for handling messages
-	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
+	virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
+	{
+		return 0;
+	}
+
 	// CA packets handler
 	void putCAPacket(ESCAParser* caller,
 					 CAPacketType packetType,

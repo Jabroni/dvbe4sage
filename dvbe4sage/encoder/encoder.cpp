@@ -13,6 +13,8 @@
 #include "configuration.h"
 #include "virtualtuner.h"
 #include "extern.h"
+#include "MDAPIPluginHandler.h"
+#include "VGPluginHandler.h"
 
 Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pPluginsHandler(NULL),
@@ -26,8 +28,11 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	// Initialize COM stuff
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 
-	// Initialize plugins (to be flag dependent)
-	m_pPluginsHandler = new PluginsHandler(hInstance, hWnd, hParentMenu);
+	// Initialize plugins (either MDAPI or VGCam)
+	if (g_Configuration.isVGCam())
+		m_pPluginsHandler = new VGPluginsHandler();
+	else
+		m_pPluginsHandler = new MDAPIPluginsHandler(hInstance, hWnd, hParentMenu);
 
 	// Initialize tuners
 	for(int i = 0; i < CBDAFilterGraph::getNumberOfTuners(); i++)

@@ -15,7 +15,7 @@
 	</Platforms>
 	<ToolFiles>
 		<ToolFile
-			RelativePath="C:\Program Files (x86)\CodeSynthesis XSD 3.2\etc\vc-9.0\xsd-cxx-tree.rules"
+			RelativePath="..\..\..\..\..\..\..\Program Files (x86)\CodeSynthesis XSD 3.2\etc\vc-9.0\xsd-cxx-tree.rules"
 		/>
 	</ToolFiles>
 	<Configurations>
@@ -404,6 +404,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\MDAPIPluginHandler.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\misc.cpp"
 				>
 			</File>
@@ -489,6 +493,10 @@
 			</File>
 			<File
 				RelativePath=".\Tuner.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\VGPluginHandler.cpp"
 				>
 			</File>
 			<File
@@ -582,6 +590,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\MDAPIPluginHandler.h"
+				>
+			</File>
+			<File
 				RelativePath=".\pluginshandler.h"
 				>
 			</File>
@@ -623,6 +635,14 @@
 			</File>
 			<File
 				RelativePath=".\Tuner.h"
+				>
+			</File>
+			<File
+				RelativePath=".\VGHandler.h"
+				>
+			</File>
+			<File
+				RelativePath=".\VGPluginHandler.h"
 				>
 			</File>
 			<File
