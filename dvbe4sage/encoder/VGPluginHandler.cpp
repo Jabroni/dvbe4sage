@@ -6,9 +6,9 @@
 #include "logger.h"
 #include "configuration.h"
 
-#define EMM_TIMEOUT 100
-#define ECM_TIMEOUT 100
-#define STT_TIMEOUT 100
+#define EMM_TIMEOUT 1000
+#define ECM_TIMEOUT 1000
+//#define STT_TIMEOUT 100
 
 // This is the constructor of a class that has been exported.
 // see VGPluginsHandler.h for the class definition
@@ -48,7 +48,7 @@ void VGPluginsHandler::processECMPacket(BYTE *packet)
 void VGPluginsHandler::processEMMPacket(BYTE *packet)
 {
 	if (!m_DoEMM(packet + 1, EMM_TIMEOUT))
-		log(0, true, "Timed out while posting EMM to VGService");
+		log(3, true, "Timed out while posting EMM to VGService");
 }
 
 void WINAPI VGPluginsHandler::DCWHandlerCallback(void *pParm, int nParm, unsigned char pDCW[16])
