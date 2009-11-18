@@ -70,7 +70,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbasd.lib ffdecsa.lib ttBdaDrvApi_Dll.lib xerces-c_static_3D.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\Win32\Debug - Parallel 64 from MMX;..\3rdparty\baseclasses\Debug_MBCS"
+				AdditionalLibraryDirectories="..\Win32\Debug - Parallel 128 from SSE2;..\3rdparty\baseclasses\Debug_MBCS"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
