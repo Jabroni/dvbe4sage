@@ -68,3 +68,5 @@
 #include <deque>
 #include <iostream>
 #include <fstream>
+
+#include <ttBdaDrvApi.h>

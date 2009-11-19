@@ -47,8 +47,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\3rdparty\baseclasses"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1; XERCES_STATIC_LIBRARY"
+				AdditionalIncludeDirectories="..\3rdparty\baseclasses;..\3rdparty\ttbdadrvapi\include"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -68,9 +68,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbasd.lib ffdecsa.lib ttBdaDrvApi_Dll.lib xerces-c_static_3D.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib libci.lib ttBdaDrvApi_Lib.lib xerces-c_static_3D.lib"
+				ShowProgress="0"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\Win32\Debug - Parallel 128 from SSE2;..\3rdparty\baseclasses\Debug_MBCS"
+				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib\Debug"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -129,8 +130,8 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\3rdparty\baseclasses"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS; XERCES_STATIC_LIBRARY"
+				AdditionalIncludeDirectories="..\3rdparty\baseclasses;..\3rdparty\ttbdadrvapi\include"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				EnableEnhancedInstructionSet="2"
@@ -149,9 +150,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib amstrmid.lib ws2_32.lib strmbase.lib ffdecsa.lib ttBdaDrvApi_Dll.lib xerces-c_static_3.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib libci.lib ttBdaDrvApi_Lib.lib xerces-c_static_3.lib"
+				ShowProgress="0"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\Win32\Release - Parallel 128 from SSE2;..\3rdparty\baseclasses\Release_MBCS"
+				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib\Release"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -362,28 +364,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\dllmain.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						CompileAsManaged="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						CompileAsManaged="0"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath=".\DVBFilter.cpp"
 				>
 			</File>
@@ -492,6 +472,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\stringcbcopy.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\THIOCtrl.cpp"
 				>
 			</File>
@@ -513,22 +497,6 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
-			<File
-				RelativePath=".\bda_DrvInOutStructs.h"
-				>
-			</File>
-			<File
-				RelativePath=".\bdaapi_CIMsg.h"
-				>
-			</File>
-			<File
-				RelativePath=".\bdaapi_Typedefs.h"
-				>
-			</File>
-			<File
-				RelativePath=".\bdaapi_TypSlotInfo.h"
-				>
-			</File>
 			<File
 				RelativePath=".\cards.hxx"
 				>
@@ -634,10 +602,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\ttBdaDrvApi.h"
-				>
-			</File>
-			<File
 				RelativePath=".\Tuner.h"
 				>
 			</File>
@@ -667,14 +631,6 @@
 		<Filter
 			Name="Libraries"
 			>
-			<File
-				RelativePath=".\ttBdaDrvApi.lib"
-				>
-			</File>
-			<File
-				RelativePath=".\ttBdaDrvApi_Dll.lib"
-				>
-			</File>
 			<File
 				RelativePath=".\xerces-c_static_3.lib"
 				>

@@ -4,7 +4,6 @@
 #include "logger.h"
 #include "configuration.h"
 #include "encoder.h"
-#include "ttBdaDrvApi.h"
 
 int Tuner::m_TTBudget2Tuners = 0;
 int Tuner::m_USB2Tuners = 0;
