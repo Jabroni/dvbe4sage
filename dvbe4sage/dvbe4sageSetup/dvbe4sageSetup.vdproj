@@ -51,12 +51,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_4AF4995AF2934EEB9E37A30A8741C355"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_65874A58861647139D621B5D5EBAA773"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -356,26 +350,6 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_4AF4995AF2934EEB9E37A30A8741C355"
-            {
-            "SourcePath" = "8:..\\Distributive\\ttBdaDrvApi_Dll.dll"
-            "TargetName" = "8:ttBdaDrvApi_Dll.dll"
-            "Tag" = "8:"
-            "Folder" = "8:_B28454CE8C49468587F623A82E6CA042"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_65874A58861647139D621B5D5EBAA773"
             {
             "SourcePath" = "8:..\\Distributive\\Rashut_2.xml"
@@ -604,7 +578,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:DVB Enhancer for SageTV"
         "ProductCode" = "8:{1586CC80-99A2-4202-8F2A-ACA2D961DDCC}"
-        "PackageCode" = "8:{A503DAF5-D5E3-4CBE-8B6A-FE6A84196717}"
+        "PackageCode" = "8:{BA388EE7-12D9-4B1E-AC64-7077104908CD}"
         "UpgradeCode" = "8:{1B48341D-369A-4246-B159-BACC2C75BDAB}"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
@@ -849,7 +823,8 @@
                             "Type" = "3:8"
                             "ContextData" = "8:Bitmap"
                             "Attributes" = "3:4"
-                            "Setting" = "3:1"
+                            "Setting" = "3:2"
+                            "Value" = "8:_29788A97503B48B48C229B0ED3395FB6"
                             "UsePlugInResources" = "11:TRUE"
                             }
                             "CopyrightWarning"
@@ -1119,7 +1094,8 @@
                             "Type" = "3:8"
                             "ContextData" = "8:Bitmap"
                             "Attributes" = "3:4"
-                            "Setting" = "3:1"
+                            "Setting" = "3:2"
+                            "Value" = "8:_29788A97503B48B48C229B0ED3395FB6"
                             "UsePlugInResources" = "11:TRUE"
                             }
                             "CopyrightWarning"
@@ -1188,7 +1164,7 @@
         {
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_20CE556402244AB8B98B03B39AEE1E79"
             {
-            "SourcePath" = "8:..\\Debug\\encoder.dll"
+            "SourcePath" = "8:..\\Release\\encoder.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_B28454CE8C49468587F623A82E6CA042"
@@ -1216,7 +1192,7 @@
             }
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_29788A97503B48B48C229B0ED3395FB6"
             {
-            "SourcePath" = "8:..\\Debug\\dvbe4sage.exe"
+            "SourcePath" = "8:..\\Release\\dvbe4sage.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_B28454CE8C49468587F623A82E6CA042"
@@ -1244,7 +1220,7 @@
             }
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_8B4DF4358A4D43B39E834AF0EA9D03FB"
             {
-            "SourcePath" = "8:..\\dvbe4sagesvc\\obj\\Debug\\dvbe4sagesvc.exe"
+            "SourcePath" = "8:..\\dvbe4sagesvc\\obj\\x86\\Release\\dvbe4sagesvc.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_B28454CE8C49468587F623A82E6CA042"
