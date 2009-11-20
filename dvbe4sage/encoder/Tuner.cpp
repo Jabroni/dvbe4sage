@@ -39,18 +39,26 @@ Tuner::Tuner(Encoder* const pEncoder,
 	memset(&DrvInfo, 0, sizeof(DriverInfo));
 	if(m_BDAFilterGraph.THBDA_IOCTL_GET_DEVICE_INFO_Fun(&DevInfo) && m_BDAFilterGraph.THBDA_IOCTL_GET_DRIVER_INFO_Fun(&DrvInfo))
 	{
-		log(0, true, TEXT("Device Info: Device Name=%s, Device Type=%d, MAC=%02X:%02X:%02X:%02X:%02X:%02X, ordinal=%d\n"),
-						DevInfo.Device_Name,
-						DevInfo.Device_TYPE, 
+		// Let's get the MAC in a textual form - for Twinhan
+		char MAC[100];
+		sprintf_s(MAC, sizeof(MAC) / sizeof(MAC[0]), "%02X:%02X:%02X:%02X:%02X:%02X", 
 						(UINT)DevInfo.MAC_ADDRESS[0],
 						(UINT)DevInfo.MAC_ADDRESS[1],
 						(UINT)DevInfo.MAC_ADDRESS[2],
 						(UINT)DevInfo.MAC_ADDRESS[3],
 						(UINT)DevInfo.MAC_ADDRESS[4],
-						(UINT)DevInfo.MAC_ADDRESS[5],
-						ordinal);
+						(UINT)DevInfo.MAC_ADDRESS[5]);
+
+		m_MAC = MAC;
+		log(0, true, TEXT("Device ordinal=%d, MAC=%s,  name=%s, type=%s\n"),
+						ordinal,
+						CA2T(MAC),
+						CA2T(DevInfo.Device_Name),
+						DevInfo.Device_TYPE);
+			
+					
 		log(0, true, TEXT("Driver Info: Company=%s, Version=%d.%d\n"),
-						DrvInfo.Company,
+						CA2T(DrvInfo.Company),
 						DrvInfo.Version_Major,
 						DrvInfo.Version_Minor);
 
@@ -60,11 +68,11 @@ Tuner::Tuner(Encoder* const pEncoder,
 	// If our device if one of the TechnoTrend kind
 	if(m_BDAFilterGraph.m_IsTTBDG2 || m_BDAFilterGraph.m_IsTTUSB2)
 	{
-		// Determine whether it's budget ot USB 2.0
+		// Determine whether it's budget or USB 2.0
 		DEVICE_CAT deviceCategory = m_BDAFilterGraph.m_IsTTBDG2 ? BUDGET_2 : USB_2;
 		// Get device handle from TT BDA API
 		HANDLE hTT = bdaapiOpen(deviceCategory, m_BDAFilterGraph.m_IsTTBDG2 ? m_TTBudget2Tuners++ : m_USB2Tuners++);
-		// IF the handle is not bogus
+		// If the handle is not bogus
 		if(hTT != INVALID_HANDLE_VALUE)
 		{
 			// Get the MAC address
@@ -72,9 +80,24 @@ Tuner::Tuner(Encoder* const pEncoder,
 			bdaapiGetMAC(hTT, &high, &low);
 			// Close the handle
 			bdaapiClose(hTT);
+
+			// Let's get the MAC in a textual form - for TechnoTrend
+			char MAC[100];
+			sprintf_s(MAC, sizeof(MAC) / sizeof(MAC[0]), "%02X:%02X:%02X:%02X:%02X:%02X",
+						(high & 0xFF0000) >> 16,
+						(high & 0xFF00) >> 8,
+						high & 0xFF,
+						(low & 0xFF0000) >> 16,
+						(low & 0xFF00) >> 8,
+						low & 0xFF);
+
+			m_MAC = MAC;
+
 			// Print out the MAC address information
-			log(0, true, TEXT("Device type=%s, MAC=%02X:%02X:%02X:%02X:%02X:%02X, ordinal=%d\n"), m_BDAFilterGraph.m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"),
-				(high & 0xFF0000) >> 16, (high & 0xFF00) >> 8, high & 0xFF, (low & 0xFF0000) >> 16, (low & 0xFF00) >> 8, low & 0xFF, ordinal);
+			log(0, true, TEXT("Device ordinal=%d, MAC=%s,  type=%s\n"),
+						ordinal,
+						CA2T(MAC),
+						m_BDAFilterGraph.m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"));
 		}
 	}
 }

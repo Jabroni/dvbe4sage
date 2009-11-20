@@ -12,6 +12,7 @@ private:
 	CBDAFilterGraph			m_BDAFilterGraph;
 	HANDLE					m_WorkerThread;
 	bool					m_IsTunerOK;
+	string					m_MAC;
 	Encoder* const			m_pEncoder;
 	HANDLE					m_InitializationEvent;
 	bool					m_LockStatus;
@@ -29,6 +30,7 @@ public:
 	void stopRecording();
 	LPCTSTR getTunerFriendlyName() const	{ return m_BDAFilterGraph.getTunerName(); }
 	int getTunerOrdinal() const				{ return m_BDAFilterGraph.getTunerOrdinal(); }
+	const string& getTunerMac() const		{ return m_MAC; }
 	DVBParser* getParser()					{ return &m_BDAFilterGraph.getParser(); }
 	BOOL running()							{ return m_BDAFilterGraph.m_fGraphRunning; }
 	void runIdle();

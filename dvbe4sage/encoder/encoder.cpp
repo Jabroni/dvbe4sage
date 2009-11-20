@@ -45,7 +45,15 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 									 g_Configuration.getInitialPolarization(),
 									 g_Configuration.getInitialModulation(),
 									 g_Configuration.getInitialFEC());
+
 			// Let's see if we can use this tuner
+			if (g_Configuration.excludeTunersByMAC(tuner->getTunerMac()))
+			{
+				log(0, true, TEXT("Tuner ordinal=%d, MAC=%s, is excluded by MAC address\n"), i + 1, tuner->getTunerMac().c_str());
+				delete tuner;
+				continue;
+			}
+			
 			if(tuner->isTunerOK() && tuner->startRecording(true))
 			{
 				// Let's see if this is a DVB-S2 tuner and put it into the list accordingly

@@ -44,7 +44,11 @@ Configuration::Configuration() :
 	// Get the list of tuners to exclude
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("ExcludeTuners"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
 	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
-		m_ExcludeTuners.insert(_ttoi(token));
+		m_ExcludedTuners.insert(_ttoi(token));
+
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("ExcludeTunersMAC"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);
+	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		m_ExcludedTunersMAC.insert(token);
 
 	// Get the list of DVB-S2 tuners
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("DVBS2Tuners"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), INI_FILE_NAME);

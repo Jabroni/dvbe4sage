@@ -22,7 +22,9 @@ class Configuration
 	const UINT					m_InitialRunningTime;
 	const bool					m_UseSidForTuning;
 	const USHORT				m_NumberOfVirtualTuners;
-	hash_set<int>				m_ExcludeTuners;
+	hash_set<int>				m_ExcludedTuners;
+	hash_set<string>			m_ExcludedTunersMAC;
+
 	hash_set<int>				m_DVBS2Tuners;
 	string						m_DECSADllName;
 	const bool					m_DisableWriteBuffering;
@@ -44,7 +46,8 @@ class Configuration
 public:
 	Configuration();
 	
-	bool excludeTuner(int tunerOrdinal) const		{ return m_ExcludeTuners.count(tunerOrdinal) > 0; }
+	bool excludeTuner(int tunerOrdinal) const		{ return m_ExcludedTuners.count(tunerOrdinal) > 0; }
+	bool excludeTunersByMAC(const string mac) const	{ return m_ExcludedTunersMAC.count(mac) > 0 ; }
 	bool isDVBS2Tuner(int tunerOrdinal) const		{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
 	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
 	bool isVGCam() const							{ return m_IsVGCam; };
