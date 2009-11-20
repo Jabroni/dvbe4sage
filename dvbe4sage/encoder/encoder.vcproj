@@ -15,7 +15,7 @@
 	</Platforms>
 	<ToolFiles>
 		<ToolFile
-			RelativePath="C:\Program Files\CodeSynthesis XSD 3.2\etc\vc-9.0\xsd-cxx-tree.rules"
+			RelativePath="..\3rdparty\xsd\rules\xsd-cxx-tree.rules"
 		/>
 	</ToolFiles>
 	<Configurations>
@@ -47,7 +47,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\3rdparty\baseclasses;..\3rdparty\ttbdadrvapi\include"
+				AdditionalIncludeDirectories="..\3rdparty\baseclasses;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -71,7 +71,7 @@
 				AdditionalDependencies="winmm.lib ws2_32.lib libci.lib ttBdaDrvApi_Lib.lib xerces-c_static_3D.lib"
 				ShowProgress="0"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib\Debug"
+				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib\Debug;..\3rdparty\xsd\lib\x86"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -130,7 +130,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\3rdparty\baseclasses;..\3rdparty\ttbdadrvapi\include"
+				AdditionalIncludeDirectories="..\3rdparty\baseclasses;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -153,7 +153,7 @@
 				AdditionalDependencies="winmm.lib ws2_32.lib libci.lib ttBdaDrvApi_Lib.lib xerces-c_static_3.lib"
 				ShowProgress="0"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib\Release"
+				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib\Release;..\3rdparty\xsd\lib\x86"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -625,18 +625,6 @@
 			>
 			<File
 				RelativePath=".\pluginshandler.rc"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="Libraries"
-			>
-			<File
-				RelativePath=".\xerces-c_static_3.lib"
-				>
-			</File>
-			<File
-				RelativePath=".\xerces-c_static_3D.lib"
 				>
 			</File>
 		</Filter>
