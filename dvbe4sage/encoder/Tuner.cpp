@@ -50,15 +50,15 @@ Tuner::Tuner(Encoder* const pEncoder,
 						(UINT)DevInfo.MAC_ADDRESS[5]);
 
 		m_MAC = MAC;
-		log(0, true, TEXT("Device ordinal=%d, MAC=%s,  name=%s, type=%s\n"),
+		log(0, true, TEXT("Device ordinal=%d, MAC=%s,  name=%s, type=%d\n"),
 						ordinal,
-						CA2T(MAC),
-						CA2T(DevInfo.Device_Name),
+						(LPCTSTR)CA2T(MAC),
+						(LPCTSTR)CA2T(DevInfo.Device_Name),
 						DevInfo.Device_TYPE);
 			
 					
 		log(0, true, TEXT("Driver Info: Company=%s, Version=%d.%d\n"),
-						CA2T(DrvInfo.Company),
+						(LPCTSTR)CA2T(DrvInfo.Company),
 						DrvInfo.Version_Major,
 						DrvInfo.Version_Minor);
 
@@ -96,7 +96,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 			// Print out the MAC address information
 			log(0, true, TEXT("Device ordinal=%d, MAC=%s,  type=%s\n"),
 						ordinal,
-						CA2T(MAC),
+						(LPCTSTR)CA2T(MAC),
 						m_BDAFilterGraph.m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"));
 		}
 	}
