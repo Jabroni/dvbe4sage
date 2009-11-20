@@ -32,7 +32,8 @@ Configuration::Configuration() :
 	m_PSIMaturityTime((USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PSIMaturityTime"), 10, INI_FILE_NAME)),
 	m_UseNewTuningMethod(GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseNewTuningMethod"), 0, INI_FILE_NAME) == 0 ? false : true),
 	m_DontFixPMT(GetPrivateProfileInt(TEXT("Advanced"), TEXT("DontFixPMT"), 0, INI_FILE_NAME) == 0 ? false : true),
-	m_IsVGCam(GetPrivateProfileInt(TEXT("Plugins"), TEXT("IsVGCam"), 0, INI_FILE_NAME) == 0 ? false : true)
+	m_IsVGCam(GetPrivateProfileInt(TEXT("Plugins"), TEXT("IsVGCam"), 0, INI_FILE_NAME) == 0 ? false : true),
+	m_MaxNumberOfResets(GetPrivateProfileInt(TEXT("Plugins"), TEXT("MaxNumberOfResets"), 10, INI_FILE_NAME) == 0 ? false : true)
 {	
 
 	// Buffer

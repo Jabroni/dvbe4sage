@@ -230,6 +230,7 @@ private:
 	__int64							m_FileLength;						// Contains the output file length so far
 	const __int64					m_MaxFileLength;					// Max file length for cyclic buffer, for regular file -1
 	__int64							m_CurrentPosition;					// Current position in the cyclic buffer, otherwise unused
+	USHORT							m_ResetCounter;						// How many subsequent resets have been encountered?
 
 	// Assigned PID differentiator
 	hash_map<USHORT, bool>			m_IsESPid;							// PID to bool map, true for ES, false for CA

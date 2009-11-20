@@ -376,6 +376,7 @@ bool MDAPIPluginsHandler::handleTuningRequest()
 			// Fill the structure
 			TPROGRAM82 tp;
 			fillTPStructure(&tp);
+
 			// And then finally tune to the program
 			pit->m_fpChannelChange(tp);
 			bRet = true;
@@ -386,8 +387,11 @@ bool MDAPIPluginsHandler::handleTuningRequest()
 	return bRet;
 }
 
-void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp) const
+void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)
 {
+	// Lock the internal structures
+	m_cs.Lock();
+
 	// Zero memory
 	memset(tp, 0, sizeof(TPROGRAM82));
 
@@ -419,4 +423,7 @@ void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp) const
 	tp->wECM = m_pCurrentClient->ecmPid;
 	tp->wSID = m_pCurrentClient->sid;
 	tp->wPMT = m_pCurrentClient->pmtPid;
+
+	// Unlock the internal structures
+	m_cs.Unlock();
 }

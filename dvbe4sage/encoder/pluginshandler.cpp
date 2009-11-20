@@ -157,8 +157,9 @@ void PluginsHandler::processECMPacketQueue()
 			if(m_pCurrentClient != NULL && m_pCurrentClient->caller != NULL)
 				m_pCurrentClient->caller->reset();
 			// Remove the problematic request from the beginning of the queue (only for tuning timeouts)
-			if(m_IsTuningTimeout && !m_RequestQueue.empty())
-				m_RequestQueue.pop_front();
+			// Updated  on 20/11/2009 - temporarily removed, I'll see whether this plays nicely with some of the plugins
+			/*if(m_IsTuningTimeout && !m_RequestQueue.empty())
+				m_RequestQueue.pop_front();*/
 			// Let's nullify everything
 			m_CurrentSid = 0;
 			m_pCurrentClient = NULL;

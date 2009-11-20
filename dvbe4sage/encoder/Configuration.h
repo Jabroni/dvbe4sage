@@ -32,6 +32,7 @@ class Configuration
 	const ULONG					m_LNBLOF2;
 	const bool					m_UseNewTuningMethod;
 	hash_set<USHORT>			m_ServedCAIDs;
+	const USHORT				m_MaxNumberOfResets;
 
 	// All advanced stuff goes here
 	const USHORT				m_PATDilutionFactor;
@@ -71,6 +72,7 @@ public:
 	ULONG getLNBLOF1() const						{ return m_LNBLOF1; }
 	ULONG getLNBLOF2() const						{ return m_LNBLOF2; }
 	bool getUseNewTuningMethod() const				{ return m_UseNewTuningMethod; }
+	USHORT getMaxNumberOfResets() const				{ return m_MaxNumberOfResets; }
 
 	// All advanced stuff goes here
 	USHORT getPATDilutionFactor() const				{ return m_PATDilutionFactor; }

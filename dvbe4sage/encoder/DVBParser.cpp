@@ -1565,16 +1565,20 @@ void ESCAParser::reset()
 	// We have to do this within critical section
 	CAutoLock lock(&m_csOutputBuffer);
 
-	// Delete all remaining output buffers
-	while(!m_OutputBuffers.empty())
+	// Do reset only if passed the threshold
+	if(++m_ResetCounter >= g_Configuration.getMaxNumberOfResets())
 	{
-		delete m_OutputBuffers.front();
-		m_OutputBuffers.pop_front();
-	}
+		// Delete all remaining output buffers
+		while(!m_OutputBuffers.empty())
+		{
+			delete m_OutputBuffers.front();
+			m_OutputBuffers.pop_front();
+		}
 
-	// Reset the ECM and DCW flags
-	m_NoECMPacketsYet = true;
-	m_NoDCWYet = true;
+		// Reset the ECM and DCW flags
+		m_NoECMPacketsYet = true;
+		m_NoDCWYet = true;
+	}
 
 	// Add a single buffer to the end of the output queue
 	m_OutputBuffers.push_back(new OutputBuffer);
@@ -1610,7 +1614,8 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_PMTCounter(0),
 	m_PMTContinuityCounter(0),
 	m_NoECMPacketsYet(true),
-	m_NoDCWYet(true)
+	m_NoDCWYet(true),
+	m_ResetCounter(0)
 {
 	// Make sure last ECM packet is zeroed out
 	ZeroMemory(m_LastECMPacket, sizeof(m_LastECMPacket));
@@ -1692,6 +1697,9 @@ void ESCAParser::decryptAndWritePending(bool immediately)
 		// Let's see if we can write its contents
 		if((!m_IsEncrypted || currentBuffer->hasKey) && (m_OutputBuffers.size() > 1 || currentBuffer->numberOfPackets >= g_Configuration.getTSPacketsOutputThreshold() || immediately))
 		{
+			// We can zero the reset counter
+			m_ResetCounter = 0;
+
 			// Set the decrypter keys
 			m_Decrypter.setKeys(currentBuffer->oddKey, currentBuffer->evenKey);
 

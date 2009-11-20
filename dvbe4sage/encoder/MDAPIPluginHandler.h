@@ -37,7 +37,7 @@ protected:
 	USHORT									m_CurrentCatFilterId;
 
 	// Fill the TP structure function
-	void fillTPStructure(LPTPROGRAM82 tp) const;
+	void fillTPStructure(LPTPROGRAM82 tp);
 
 	// Callbacks
 	void startFilter(LPARAM lParam);
