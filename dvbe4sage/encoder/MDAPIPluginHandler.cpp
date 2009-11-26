@@ -22,6 +22,9 @@ MDAPIPluginsHandler::MDAPIPluginsHandler(HINSTANCE hInstance,
 	m_CurrentPmtFilterId(0),
 	m_CurrentCatFilterId(0)
 {
+	// Log the entry
+	log(0, true, TEXT("Working with MDAPI plugins\n"));
+
 	// We look for plugins under "Plugins" directory of the CWD
 	_tfinddata_t fileInfo;
 	intptr_t handle = _tfindfirst(TEXT(".\\Plugins\\*.dll"), &fileInfo);

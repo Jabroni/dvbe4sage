@@ -63,7 +63,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 						DrvInfo.Version_Minor);
 
 		// Set the LNB data
-		m_BDAFilterGraph.THBDA_IOCTL_SET_LNB_DATA_Fun(g_Configuration.getLNBLOF1(), g_Configuration.getLNBLOF2(), g_Configuration.getLNBSW());
+		m_BDAFilterGraph.THBDA_IOCTL_SET_LNB_DATA_Fun(g_pConfiguration->getLNBLOF1(), g_pConfiguration->getLNBLOF2(), g_pConfiguration->getLNBSW());
 	}
 	// If our device if one of the TechnoTrend kind
 	if(m_BDAFilterGraph.m_IsTTBDG2 || m_BDAFilterGraph.m_IsTTUSB2)
@@ -198,7 +198,7 @@ void Tuner::stopRecording()
 DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 {
 	// Sleep for the initial running time
-	Sleep(g_Configuration.getInitialRunningTime() * 1000);
+	Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
 
 	// Get the tuner
 	Tuner* pTuner = (Tuner*)vpTuner;

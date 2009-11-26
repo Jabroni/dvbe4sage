@@ -17,10 +17,13 @@ VGPluginsHandler::VGPluginsHandler() :
 	m_GetECM(NULL),
 	m_DoEMM(NULL)
 {
+	// Log the entry
+	log(0, true, TEXT("Working with VGHandler\n"));
+
 	// Get a handle to the DLL module.
 	LoadVGHandler(m_hinstLib, m_GetCardStatus, m_GetECM, m_DoEMM);
 	if (m_hinstLib == NULL)
-		log(0, true, "VGPluginsHandler() Could not load VCHandler.DLL (Error: %u)", GetLastError());
+		log(0, true, TEXT("VGPluginsHandler() Could not load vchandler.dll (error: %u)\n"), GetLastError());
 
 	return;
 }

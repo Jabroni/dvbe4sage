@@ -417,7 +417,7 @@ void PSIParser::parseCATTable(const cat_t* const table,
 			// And the provider ID
 			caScheme.provId = 0;
 			// Let's see if this CAID is served
-			if(g_Configuration.isCAIDServed(caScheme.caId))
+			if(g_pConfiguration->isCAIDServed(caScheme.caId))
 			{
 				// Make the log entry
 				log(2, true, TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"), 
@@ -447,7 +447,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 
 	// Let's see if we already discovered EMM PID or passed PMT packets counter threshold
 	// If no, boil out
-	if(m_EMMPids.empty() && m_PMTCounter < g_Configuration.getPMTThreshold())
+	if(m_EMMPids.empty() && m_PMTCounter < g_pConfiguration->getPMTThreshold())
 	{
 		m_PMTCounter++;
 		return;
@@ -459,7 +459,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 
 	// Log warning message if EMMPid is still 0
 	if(m_EMMPids.empty())
-		log(2, true, TEXT("!!! Warning: no EMM PIDs have been discovered after %hu PMT packets, EMM data will not be passed to plugins!!!\n"), g_Configuration.getPMTThreshold());
+		log(2, true, TEXT("!!! Warning: no EMM PIDs have been discovered after %hu PMT packets, EMM data will not be passed to plugins!!!\n"), g_pConfiguration->getPMTThreshold());
 
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + PMT_LEN;
@@ -500,7 +500,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			// And the PROVID
 			caScheme.provId = 0;
 			// Let's see if this CAID is served
-			if(g_Configuration.isCAIDServed(caScheme.caId))
+			if(g_pConfiguration->isCAIDServed(caScheme.caId))
 			{
 				// Add the CA Scheme to the set
 				caMap.insert(caScheme);
@@ -578,7 +578,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 				// And the PROVID
 				caScheme.provId = 0;
 				// Let's see if this CAID is served
-				if(g_Configuration.isCAIDServed(caScheme.caId))
+				if(g_pConfiguration->isCAIDServed(caScheme.caId))
 				{
 					// Add the CA Scheme to the set
 					caMap.insert(caScheme);
@@ -1246,7 +1246,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	{
 		// First, determine if we need to skip this packet
 		// See if we reach the right packet to round it up
-		m_PATCounter %= g_Configuration.getPATDilutionFactor();
+		m_PATCounter %= g_pConfiguration->getPATDilutionFactor();
 		// If the counter is not 0, increment it and boil out
 		if(m_PATCounter++ != 0)
 			return;
@@ -1285,11 +1285,11 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		sendToCam(currentPacket, pid);
 
 	// Skip or fix PMT
-	if(pid == m_PmtPid && !g_Configuration.getDontFixPMT())
+	if(pid == m_PmtPid && !g_pConfiguration->getDontFixPMT())
 	{
 		// First, determine if we need to skip this packet
 		// See if we reach the right packet to round it up
-		m_PMTCounter %= g_Configuration.getPMTDilutionFactor();
+		m_PMTCounter %= g_pConfiguration->getPMTDilutionFactor();
 		// If the counter is not 0, increment it and boil out
 		if(m_PMTCounter++ != 0)
 			return;
@@ -1359,14 +1359,14 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 						copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
 										matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
 										ESInfoLength,
-										g_Configuration.getPrefferedAudioLanguage()));
+										g_pConfiguration->getPrefferedAudioLanguage()));
 						break;
 					// Here we take care of all other audio streams
 					case 2:
 						copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
 										!matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
 										ESInfoLength,
-										g_Configuration.getPrefferedAudioLanguage()));
+										g_pConfiguration->getPrefferedAudioLanguage()));
 						break;
 					// Here we take care of all other streams
 					default:
@@ -1566,7 +1566,7 @@ void ESCAParser::reset()
 	CAutoLock lock(&m_csOutputBuffer);
 
 	// Do reset only if passed the threshold
-	if(++m_ResetCounter >= g_Configuration.getMaxNumberOfResets())
+	if(++m_ResetCounter >= g_pConfiguration->getMaxNumberOfResets())
 	{
 		// Delete all remaining output buffers
 		while(!m_OutputBuffers.empty())
@@ -1667,7 +1667,7 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 	OutputBuffer* const currentBuffer = m_OutputBuffers.back();
 
 	// This really shoudn't happen!
-	if(currentBuffer->numberOfPackets >= g_Configuration.getTSPacketsPerOutputBuffer())
+	if(currentBuffer->numberOfPackets >= g_pConfiguration->getTSPacketsPerOutputBuffer())
 		log(0, true, TEXT("Too many packets for decryption!\n"));
 	else
 	{
@@ -1695,7 +1695,7 @@ void ESCAParser::decryptAndWritePending(bool immediately)
 		OutputBuffer* const currentBuffer = m_OutputBuffers.front();
 
 		// Let's see if we can write its contents
-		if((!m_IsEncrypted || currentBuffer->hasKey) && (m_OutputBuffers.size() > 1 || currentBuffer->numberOfPackets >= g_Configuration.getTSPacketsOutputThreshold() || immediately))
+		if((!m_IsEncrypted || currentBuffer->hasKey) && (m_OutputBuffers.size() > 1 || currentBuffer->numberOfPackets >= g_pConfiguration->getTSPacketsOutputThreshold() || immediately))
 		{
 			// We can zero the reset counter
 			m_ResetCounter = 0;

@@ -136,8 +136,8 @@ STDMETHODIMP DVBFilterInputPin::ReceiveCanBlock()
 // We have very spicific requirement for the buffer size, it must be devisible by 188!
 STDMETHODIMP DVBFilterInputPin::GetAllocatorRequirements(ALLOCATOR_PROPERTIES *pProps)
 {
-	pProps->cbBuffer = 188 * g_Configuration.getTSPacketsPerBuffer();
-	pProps->cBuffers = g_Configuration.getNumberOfBuffers();
+	pProps->cbBuffer = 188 * g_pConfiguration->getTSPacketsPerBuffer();
+	pProps->cBuffers = g_pConfiguration->getNumberOfBuffers();
 	return S_OK;
 }
 

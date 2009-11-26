@@ -12,6 +12,7 @@ extern "C" ENCODER_API void deleteEncoder();
 extern "C" ENCODER_API LRESULT encoderWindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 extern "C" ENCODER_API void waitForFullInitialization();
 
+#ifdef NEED_ACCESS_FUNCTIONS
 // External getters
 extern "C" ENCODER_API LPCTSTR getLogFileName();
 extern "C" ENCODER_API int getNumberOfTuners();
@@ -40,3 +41,4 @@ extern "C" ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str);
 extern "C" ENCODER_API ModulationType getModulationFromDescriptor(BYTE modulationSystem, BYTE modulationType);
 extern "C" ENCODER_API LPCTSTR printableModulation(ModulationType modulation);
 extern "C" ENCODER_API ModulationType getModulationFromString(LPCTSTR str);
+#endif	// NEED_ACCESS_FUNCTIONS

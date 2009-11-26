@@ -48,7 +48,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\3rdparty\baseclasses;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -131,7 +131,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="..\3rdparty\baseclasses;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				EnableEnhancedInstructionSet="2"
@@ -196,6 +196,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -204,6 +205,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -216,6 +218,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="C++/Tree Mapping Rule"
@@ -228,6 +231,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="C++/Tree Mapping Rule"
@@ -244,6 +248,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -252,6 +257,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -264,6 +270,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="C++/Tree Mapping Rule"
@@ -276,6 +283,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="C++/Tree Mapping Rule"
@@ -292,6 +300,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -300,6 +309,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -312,6 +322,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="C++/Tree Mapping Rule"
@@ -324,6 +335,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="C++/Tree Mapping Rule"
@@ -404,6 +416,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -412,6 +425,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -424,6 +438,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="C++/Tree Mapping Rule"
@@ -436,6 +451,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="C++/Tree Mapping Rule"

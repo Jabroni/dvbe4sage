@@ -440,9 +440,9 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	//			Added by Michael
 	//=====================================================================================================
 
-	pDVBSTuningSpace->put_LNBSwitch(g_Configuration.getLNBSW());
-	pDVBSTuningSpace->put_LowOscillator(g_Configuration.getLNBLOF1());
-	pDVBSTuningSpace->put_HighOscillator(g_Configuration.getLNBLOF2());
+	pDVBSTuningSpace->put_LNBSwitch(g_pConfiguration->getLNBSW());
+	pDVBSTuningSpace->put_LowOscillator(g_pConfiguration->getLNBLOF1());
+	pDVBSTuningSpace->put_HighOscillator(g_pConfiguration->getLNBLOF2());
 	pDVBSTuningSpace->put_SpectralInversion(BDA_SPECTRAL_INVERSION_AUTOMATIC);
 
 	//=====================================================================================================
@@ -966,7 +966,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 {
 	HRESULT hr = S_OK;
 
-	if(!g_Configuration.getUseNewTuningMethod())
+	if(!g_pConfiguration->getUseNewTuningMethod())
 	{
 		log(2, true, TEXT("Using tuning request-based tuning method...\n"));
 
@@ -1059,26 +1059,26 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 			return FALSE;
 		}
 		
-		hr = pLNB->put_HighLowSwitchFrequency(g_Configuration.getLNBSW());
+		hr = pLNB->put_HighLowSwitchFrequency(g_pConfiguration->getLNBSW());
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set LNB switch frequency to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_Configuration.getLNBSW(), hr);
+			log(0, true, TEXT("Failed to set LNB switch frequency to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBSW(), hr);
 			BuildGraphError();
 			return FALSE;
 		}
 
-		hr = pLNB->put_LocalOscilatorFrequencyLowBand(g_Configuration.getLNBLOF1());
+		hr = pLNB->put_LocalOscilatorFrequencyLowBand(g_pConfiguration->getLNBLOF1());
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set LNB low band to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_Configuration.getLNBLOF1(), hr);
+			log(0, true, TEXT("Failed to set LNB low band to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBLOF1(), hr);
 			BuildGraphError();
 			return FALSE;
 		}
 
-		hr = pLNB->put_LocalOscilatorFrequencyHighBand(g_Configuration.getLNBLOF2());
+		hr = pLNB->put_LocalOscilatorFrequencyHighBand(g_pConfiguration->getLNBLOF2());
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set LNB high band to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_Configuration.getLNBLOF2(), hr);
+			log(0, true, TEXT("Failed to set LNB high band to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBLOF2(), hr);
 			BuildGraphError();
 			return FALSE;
 		}

@@ -62,7 +62,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 
 			// Let's see if it's valid and can be used
 			if(pParser != NULL && pParser->canBeCopied() && !pParser->hasBeenCopied() && pParser->getTimeStamp() != 0 && 
-				(__int64)difftime(now, pParser->getTimeStamp()) > g_Configuration.getPSIMaturityTime())
+				(__int64)difftime(now, pParser->getTimeStamp()) > g_pConfiguration->getPSIMaturityTime())
 			{
 				// If yes, get the encoder's parser
 				DVBParser* const pEncoderParser = recorder->m_pEncoder->getParser();
@@ -153,7 +153,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 		m_fout = _wfsopen(outFileName, L"wb", _SH_DENYWR);
 
 		// Make it use no buffer if used as cyclic buffer
-		if(g_Configuration.getDisableWriteBuffering() || m_Size != (__int64)-1)
+		if(g_pConfiguration->getDisableWriteBuffering() || m_Size != (__int64)-1)
 			setvbuf(m_fout, NULL, _IONBF, 0);
 
 		// Check if opening file succeeded
@@ -221,7 +221,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				m_fout = _wfsopen((outFilePath + findData.cFileName).c_str(), L"wb", _SH_DENYWR);
 
 				// Make it use no buffer if used as cyclic buffer
-				if(g_Configuration.getDisableWriteBuffering() || m_Size != (__int64)-1)
+				if(g_pConfiguration->getDisableWriteBuffering() || m_Size != (__int64)-1)
 					setvbuf(m_fout, NULL, _IONBF, 0);
 
 				// Check if opening file succeeded
@@ -336,10 +336,10 @@ bool Recorder::changeState()
 		time(&now);
 
 		// Calculate the differentce
-		if(difftime(now, m_Time) > g_Configuration.getTuningTimeout())
+		if(difftime(now, m_Time) > g_pConfiguration->getTuningTimeout())
 		{
 			// Log stop recording message
-			log(0, true, TEXT("Could not start recording after %u seconds, "), g_Configuration.getTuningTimeout());
+			log(0, true, TEXT("Could not start recording after %u seconds, "), g_pConfiguration->getTuningTimeout());
 
 			// Unlock the parser
 			pParser->unlock();
@@ -352,10 +352,10 @@ bool Recorder::changeState()
 		}
 
 		// Check for tuner lock timeout
-		if(!m_pTuner->getLockStatus() && difftime(now, m_Time) > g_Configuration.getTuningLockTimeout())
+		if(!m_pTuner->getLockStatus() && difftime(now, m_Time) > g_pConfiguration->getTuningLockTimeout())
 		{
 			// Log stop recording message
-			log(0, true, TEXT("Could not lock signal after %u seconds, "), g_Configuration.getTuningLockTimeout());
+			log(0, true, TEXT("Could not lock signal after %u seconds, "), g_pConfiguration->getTuningLockTimeout());
 
 			// Unlock the parser
 			pParser->unlock();

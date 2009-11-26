@@ -23,31 +23,31 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 {
 	// Set the logger level
 	if(g_pLogger != NULL)
-		g_pLogger->setLogLevel(g_Configuration.getLogLevel());
+		g_pLogger->setLogLevel(g_pConfiguration->getLogLevel());
 
 	// Initialize COM stuff
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 
 	// Initialize plugins (either MDAPI or VGCam)
-	if (g_Configuration.isVGCam())
+	if (g_pConfiguration->isVGCam())
 		m_pPluginsHandler = new VGPluginsHandler();
 	else
 		m_pPluginsHandler = new MDAPIPluginsHandler(hInstance, hWnd, hParentMenu);
 
 	// Initialize tuners
 	for(int i = 0; i < CBDAFilterGraph::getNumberOfTuners(); i++)
-		if(!g_Configuration.excludeTuner(i + 1))
+		if(!g_pConfiguration->excludeTuner(i + 1))
 		{
 			Tuner* tuner = new Tuner(this,
 									 i + 1,
-									 g_Configuration.getInitialFrequency(),
-									 g_Configuration.getInitialSymbolRate(),
-									 g_Configuration.getInitialPolarization(),
-									 g_Configuration.getInitialModulation(),
-									 g_Configuration.getInitialFEC());
+									 g_pConfiguration->getInitialFrequency(),
+									 g_pConfiguration->getInitialSymbolRate(),
+									 g_pConfiguration->getInitialPolarization(),
+									 g_pConfiguration->getInitialModulation(),
+									 g_pConfiguration->getInitialFEC());
 
 			// Let's see if we can use this tuner
-			if (g_Configuration.excludeTunersByMAC(tuner->getTunerMac()))
+			if (g_pConfiguration->excludeTunersByMAC(tuner->getTunerMac()))
 			{
 				log(0, true, TEXT("Tuner ordinal=%d, MAC=%s, is excluded by MAC address\n"), i + 1, tuner->getTunerMac().c_str());
 				delete tuner;
@@ -57,7 +57,7 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 			if(tuner->isTunerOK() && tuner->startRecording(true))
 			{
 				// Let's see if this is a DVB-S2 tuner and put it into the list accordingly
-				if(g_Configuration.isDVBS2Tuner(tuner->getTunerOrdinal()))
+				if(g_pConfiguration->isDVBS2Tuner(tuner->getTunerOrdinal()))
 					m_Tuners.push_back(tuner);
 				else
 					m_Tuners.insert(m_Tuners.begin(), tuner);
@@ -72,9 +72,9 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
 	// Create some virtual tuners
-	for(USHORT i = 0; i < g_Configuration.getNumberOfVirtualTuners(); i++)
+	for(USHORT i = 0; i < g_pConfiguration->getNumberOfVirtualTuners(); i++)
 	{
-		VirtualTuner* const virtualTuner = new VirtualTuner(g_Configuration.getListeningPort() + i, hWnd);
+		VirtualTuner* const virtualTuner = new VirtualTuner(g_pConfiguration->getListeningPort() + i, hWnd);
 		m_VirtualTuners.push_back(virtualTuner);
 		m_VirtualTunersMap[virtualTuner->getServerSocket()] = virtualTuner;
 	}
@@ -190,7 +190,7 @@ void Encoder::socketOperation(SOCKET socket,
 							source.c_str(), channelInt, durationInt, fileName.c_str());
 
 						// Start the recording itself
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_Configuration.getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, true);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, true);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
@@ -254,7 +254,7 @@ void Encoder::socketOperation(SOCKET socket,
 							source.c_str(), channelInt, sizeInt, fileName.c_str());
 
 						// Start the actual recording
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_Configuration.getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt, true);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt, true);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
@@ -357,7 +357,7 @@ Tuner* Encoder::getTuner(int tunerOrdinal,
 				// The tuner we're looking for should be not running and if the program requires DVB-S2
 				// we should pick only a compatible tuner
 				if(!m_Tuners[i]->running() && (pTransponder->modulation == BDA_MOD_QPSK || 
-					g_Configuration.isDVBS2Tuner(m_Tuners[i]->getTunerOrdinal())))
+					g_pConfiguration->isDVBS2Tuner(m_Tuners[i]->getTunerOrdinal())))
 					{
 						tuner = m_Tuners[i];
 						break;

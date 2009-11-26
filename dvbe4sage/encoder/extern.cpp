@@ -2,6 +2,7 @@
 
 #include "encoder.h"
 #include "logger.h"
+#include "configuration.h"
 #include "extern.h"
 
 // This it the global encoder object
@@ -12,6 +13,7 @@ extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance,
 										  HMENU hParentMenu)
 {
 	g_pLogger = new Logger;
+	g_pConfiguration = new Configuration;
 	g_pEncoder = new Encoder(hInstance, hWnd, hParentMenu);
 }
 

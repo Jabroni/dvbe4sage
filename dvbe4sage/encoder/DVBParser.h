@@ -166,7 +166,7 @@ class ESCAParser : public TSPacketParser
 
 		// Default constructor
 		OutputBuffer() : 
-			buffer(new BYTE[TS_PACKET_LEN * g_Configuration.getTSPacketsPerOutputBuffer()]),
+			buffer(new BYTE[TS_PACKET_LEN * g_pConfiguration->getTSPacketsPerOutputBuffer()]),
 			numberOfPackets(0),
 			hasKey(false)
 		{
@@ -183,11 +183,11 @@ class ESCAParser : public TSPacketParser
 
 		// Copy constructor
 		OutputBuffer(const OutputBuffer& other) : 
-			buffer(new BYTE[TS_PACKET_LEN * g_Configuration.getTSPacketsPerOutputBuffer()])
+			buffer(new BYTE[TS_PACKET_LEN * g_pConfiguration->getTSPacketsPerOutputBuffer()])
 		{
 			numberOfPackets = other.numberOfPackets;
 			hasKey = other.hasKey;
-			memcpy(buffer, other.buffer, TS_PACKET_LEN * g_Configuration.getTSPacketsPerOutputBuffer());
+			memcpy(buffer, other.buffer, TS_PACKET_LEN * g_pConfiguration->getTSPacketsPerOutputBuffer());
 			memcpy(oddKey, other.oddKey, sizeof(oddKey));
 			memcpy(evenKey, other.evenKey, sizeof(evenKey));
 		}

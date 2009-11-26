@@ -150,7 +150,7 @@ void PluginsHandler::processECMPacketQueue()
 		time(&now);
 
 		// Calculate the differentce
-		if(difftime(now, m_Time) > g_Configuration.getDCWTimeout())
+		if(difftime(now, m_Time) > g_pConfiguration->getDCWTimeout())
 		{
 			log(2, true, TEXT("Timeout for SID=%hu, resetting plugins...Do you have subscription for this channel?\n"), m_CurrentSid);
 			// Reset the parser for this client

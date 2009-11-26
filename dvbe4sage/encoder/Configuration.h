@@ -5,44 +5,44 @@ using namespace stdext;
 
 class Configuration
 {
-	const UINT					m_LogLevel;
-	const UINT					m_DCWTimeout;
-	const UINT					m_TSPacketsPerBuffer;
-	const UINT					m_NumberOfBuffers;
-	const UINT					m_TSPacketsPerOutputBuffer;
-	const UINT					m_TSPacketsOutputThreshold;
-	const UINT					m_TuningTimeout;
-	const UINT					m_TuningLockTimeout;
-	const USHORT				m_ListeningPort;
-	const ULONG					m_InitialFrequency;
-	const ULONG					m_InitialSymbolRate;
+	UINT						m_LogLevel;
+	UINT						m_DCWTimeout;
+	UINT						m_TSPacketsPerBuffer;
+	UINT						m_NumberOfBuffers;
+	UINT						m_TSPacketsPerOutputBuffer;
+	UINT						m_TSPacketsOutputThreshold;
+	UINT						m_TuningTimeout;
+	UINT						m_TuningLockTimeout;
+	USHORT						m_ListeningPort;
+	ULONG						m_InitialFrequency;
+	ULONG						m_InitialSymbolRate;
 	Polarisation				m_InitialPolarization;
 	ModulationType				m_InitialModulation;
 	BinaryConvolutionCodeRate	m_InitialFEC;
-	const UINT					m_InitialRunningTime;
-	const bool					m_UseSidForTuning;
-	const USHORT				m_NumberOfVirtualTuners;
+	UINT						m_InitialRunningTime;
+	bool						m_UseSidForTuning;
+	USHORT						m_NumberOfVirtualTuners;
 	hash_set<int>				m_ExcludedTuners;
 	hash_set<string>			m_ExcludedTunersMAC;
 
 	hash_set<int>				m_DVBS2Tuners;
 	string						m_DECSADllName;
-	const bool					m_DisableWriteBuffering;
+	bool						m_DisableWriteBuffering;
 	string						m_PreferredAudioLanguage;
-	const ULONG					m_LNBSW;
-	const ULONG					m_LNBLOF1;
-	const ULONG					m_LNBLOF2;
-	const bool					m_UseNewTuningMethod;
+	ULONG						m_LNBSW;
+	ULONG						m_LNBLOF1;
+	ULONG						m_LNBLOF2;
+	bool						m_UseNewTuningMethod;
 	hash_set<USHORT>			m_ServedCAIDs;
-	const USHORT				m_MaxNumberOfResets;
+	USHORT						m_MaxNumberOfResets;
 
 	// All advanced stuff goes here
-	const USHORT				m_PATDilutionFactor;
-	const USHORT				m_PMTDilutionFactor;
-	const USHORT				m_PMTThreshold;
-	const USHORT				m_PSIMaturityTime;
-	const bool					m_DontFixPMT;
-	const bool					m_IsVGCam;
+	USHORT						m_PATDilutionFactor;
+	USHORT						m_PMTDilutionFactor;
+	USHORT						m_PMTThreshold;
+	USHORT						m_PSIMaturityTime;
+	bool						m_DontFixPMT;
+	bool						m_IsVGCam;
 public:
 	Configuration();
 	
@@ -85,4 +85,4 @@ public:
 	bool getDontFixPMT() const						{ return m_DontFixPMT; }
 };
 
-extern Configuration g_Configuration;
+extern Configuration* g_pConfiguration;
