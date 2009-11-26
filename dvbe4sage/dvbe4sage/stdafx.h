@@ -58,7 +58,8 @@
 #endif
 
 #include <share.h>
-#include <streams.h>
+
+
 #include <bdatypes.h>
 #include <list>
 #include <hash_set>
