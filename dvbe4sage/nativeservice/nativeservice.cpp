@@ -3,9 +3,21 @@
 #include <string.h>
 #include <share.h>
 #include <tchar.h>
+#include <conio.h>
 #include "../encoder/extern.h"
 
-#define SERVICE_NAME	TEXT("DVB Enhancer For SageTV")
+#define SERVICE_NAME		TEXT("DVB Enhancer For SageTV\0")
+
+#define WINDOW_CLASS_NAME	TEXT("MyHiddenClass")
+#define WINDOW_NAME			TEXT("MyWindow")
+
+#define INSTALL_FLAG		TEXT("/install")
+#define UNINSTALL_FLAG		TEXT("/uninstall")
+#define USERNAME_PREFIX		TEXT("/user:")
+#define PASSWORD_PREFIX		TEXT("/password:")
+
+#define STRING_LENGTH(str)	((sizeof(str) - 1)/ sizeof(TCHAR))
+
 // Static variables
 SERVICE_STATUS ServiceStatus;
 SERVICE_STATUS_HANDLE hStatus;
@@ -42,7 +54,7 @@ LRESULT CALLBACK myWndProc(HWND hwnd,
 						   WPARAM wParam,
 						   LPARAM lParam)
 {
-	OutputDebugString(TEXT("Got message\n"));
+	//OutputDebugString(TEXT("Got message\n"));
 	switch(uMsg)
 	{
 		case WM_CREATE:
@@ -54,7 +66,8 @@ LRESULT CALLBACK myWndProc(HWND hwnd,
 	}
 }
 
-void ServiceMain(int argc, char** argv) 
+void ServiceMain(int argc,
+				 TCHAR** argv) 
 {
 	// Set current directory to where the modules are located
 	TCHAR path[MAXSHORT];
@@ -62,7 +75,6 @@ void ServiceMain(int argc, char** argv)
 	LPTSTR end = _tcsrchr(path, TCHAR('\\'));
 	end[0] = TCHAR('\0');
 	SetCurrentDirectory(path);
-	//SetCurrentDirectory("C:\\Program Files (x86)\\Michael Pogrebisky\\DVB Enhancer for SageTV");
 
 	ServiceStatus.dwServiceType        = SERVICE_WIN32_OWN_PROCESS; 
 	ServiceStatus.dwCurrentState       = SERVICE_START_PENDING; 
@@ -86,11 +98,11 @@ void ServiceMain(int argc, char** argv)
 	WNDCLASS myWndClass;
 	ZeroMemory(&myWndClass, sizeof(myWndClass));
 	myWndClass.lpfnWndProc = myWndProc;
-	myWndClass.lpszClassName = TEXT("MyHiddenClass");
+	myWndClass.lpszClassName = WINDOW_CLASS_NAME;
 	myWndClass.hInstance = GetModuleHandle(NULL);
 	ATOM myClass = RegisterClass(&myWndClass);
 	
-	hWnd = CreateWindow(TEXT("MyHiddenClass"), TEXT("MyWindow"), 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+	hWnd = CreateWindow(WINDOW_CLASS_NAME, WINDOW_NAME, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
 
 	// Create the service worker thread
 	HANDLE hStartupThread = CreateThread(NULL, 0, StartupThread, (LPVOID)hWnd, 0, NULL);
@@ -126,7 +138,7 @@ void ServiceMain(int argc, char** argv)
 
 				// Now, we can report the running status to SCM. 
 				ServiceStatus.dwCurrentState = SERVICE_RUNNING; 
-				SetServiceStatus (hStatus, &ServiceStatus);
+				SetServiceStatus(hStatus, &ServiceStatus);
 			}
 		}
 	}
@@ -140,8 +152,185 @@ void ServiceMain(int argc, char** argv)
 	SetServiceStatus(hStatus, &ServiceStatus);
 }
 
-void main(int argc, TCHAR** argv)
+void PrintUsageInfo(LPCTSTR executableFilePath)
 {
-	SERVICE_TABLE_ENTRY ServiceTable[] = { { SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)ServiceMain } , { NULL, NULL } };
-	StartServiceCtrlDispatcher(ServiceTable);  
+	_ftprintf(stderr, TEXT("Usage:\n\"%s\" /install [/user:domain\\username] [/password:password] - install the service\n\"%s\" /uninstall - uninstall the service\n"),
+		executableFilePath, executableFilePath);
+}
+
+void getpass(LPTSTR getpassbuff)
+{
+	size_t i = 0;
+	for(;;)
+    {
+		TCHAR c = _gettch();
+		if(c == TCHAR('\r'))
+		{
+			getpassbuff[i] = TCHAR('\0');
+			_puttc(TCHAR('\n'), stdout);
+			break;
+		}
+		else
+			getpassbuff[i++] = c;
+    }
+}
+
+int main(int argc,
+		 TCHAR** argv)
+{
+	int retCode = 0;
+
+	if(argc == 1)
+	{
+		// Usual service start
+		SERVICE_TABLE_ENTRY ServiceTable[] = { { SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)ServiceMain } , { NULL, NULL } };
+		if(!StartServiceCtrlDispatcher(ServiceTable))
+		{
+			// If started not as a service, print usage information and exit
+			PrintUsageInfo(argv[0]);
+			return -1;
+		}
+	}
+	else
+	{
+		// We assume no username or password have been specified so far
+		LPCTSTR username = NULL;
+		LPCTSTR password = NULL;
+
+		// Different modes and states
+		enum MODE { MODE_NONE, MODE_INSTALL, MODE_UNINSTALL, MODE_ERROR } mode = MODE_NONE;
+
+		// Loop throught the arguments
+		for(int i = 1; i < argc; i++)
+			if(mode == MODE_NONE && !_tcsicmp(argv[i], INSTALL_FLAG))
+				mode = MODE_INSTALL;
+			else if(mode == MODE_NONE && !_tcsicmp(argv[i], UNINSTALL_FLAG))
+				mode = MODE_UNINSTALL;
+			else if((mode == MODE_NONE || mode == MODE_INSTALL) && !_tcsncicmp(argv[i], USERNAME_PREFIX, STRING_LENGTH(USERNAME_PREFIX)))
+				// Let's get the username from here
+				username = argv[i] + STRING_LENGTH(USERNAME_PREFIX);
+			else if((mode == MODE_NONE || mode == MODE_INSTALL) && !_tcsncicmp(argv[i], PASSWORD_PREFIX, STRING_LENGTH(PASSWORD_PREFIX)))
+				// Let's get the password from here
+				password = argv[i] + STRING_LENGTH(PASSWORD_PREFIX);
+			else
+			{
+				mode = MODE_ERROR;
+				break;
+			}
+		
+		switch(mode)
+		{
+			case MODE_ERROR:
+				// Print usage information
+				PrintUsageInfo(argv[0]);
+				return -1;
+			case MODE_INSTALL:
+			{
+				// Install the service here
+
+				TCHAR pwdBuffer[100];
+
+				// Let's ask password if needed but not supplied
+				if(username != NULL && password == NULL)
+				{
+					// Let's get the password from the console
+					_tprintf(TEXT("Please, specify the password for the user \"%s\":"), username);
+					getpass(pwdBuffer);
+					password = pwdBuffer;
+				}
+
+				// Open the service manager
+				SC_HANDLE managerHandle = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE);
+
+				// Check whether we successfully opened the service manager
+				if(managerHandle == NULL)
+				{
+					_ftprintf(stderr, TEXT("Could not open the service manager, error code=%d, are you running this program as an administrator?\n"), GetLastError());
+					return -1;
+				}
+
+				// Get the current executable full path
+				TCHAR binrayFullPath[MAXSHORT];
+				GetModuleFileName(NULL, binrayFullPath, sizeof(binrayFullPath) / sizeof(binrayFullPath[0]));
+
+				// Now, try to create the service
+				SC_HANDLE serviceHandle = CreateService(managerHandle, SERVICE_NAME, SERVICE_NAME, SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
+														SERVICE_AUTO_START, SERVICE_ERROR_NORMAL, binrayFullPath, NULL, NULL, NULL, username, password);
+
+				// Check whether we successfully created our service
+				if(serviceHandle == NULL)
+				{
+					if(username == NULL)
+						_ftprintf(stderr, TEXT("Could not create a service \"%s\" as \"LocalSystem\", error code=%d\n"), SERVICE_NAME, GetLastError());
+					else
+						_ftprintf(stderr, TEXT("Could not create a service \"%s\" using username=\"%s\" and password=\"%s\", error code=%d, please, check the specified credentials!\n"),
+												SERVICE_NAME, username, password, GetLastError());
+					CloseServiceHandle(managerHandle);
+					return -1;
+				}
+
+				// Print success message
+				_tprintf(TEXT("Service successfully installed!\n"));
+
+				// Now, change the dependency of SageTV service
+				SC_HANDLE sageHandle = OpenService(managerHandle, TEXT("SageTV"), SERVICE_ALL_ACCESS);
+				if(sageHandle != NULL)
+					if(ChangeServiceConfig(sageHandle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, NULL, NULL, NULL, SERVICE_NAME, NULL, NULL, NULL))
+						_ftprintf(stderr, TEXT("Could not change dependency of the SageTV service, error code=%d\n"), GetLastError());
+					else
+						_tprintf(TEXT("Successfully changed the SageTV service dependency\n"));
+
+				// All is OK, just close the handles
+				CloseServiceHandle(serviceHandle);
+				if(sageHandle != NULL)
+					CloseServiceHandle(sageHandle);
+				CloseServiceHandle(managerHandle);
+				break;
+			}
+			case MODE_UNINSTALL:
+			{
+				// Uninstall the service here
+		
+				// Open the service manager
+				SC_HANDLE managerHandle = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+
+				// Check whether we successfully opened the service manager
+				if(managerHandle == NULL)
+				{
+					_ftprintf(stderr, TEXT("Could not open the service manager, error code=%d, are you running this program as an administrator?\n"), GetLastError());
+					return -1;
+				}
+
+				// Open the service
+				SC_HANDLE serviceHandle = OpenService(managerHandle, SERVICE_NAME, SERVICE_ALL_ACCESS);
+
+				// Check whether we successfully openeded our service
+				if(serviceHandle == NULL)
+				{
+					_ftprintf(stderr, TEXT("Could not open the service \"%s\", error code=%d, it might have already been deleted\n"), SERVICE_NAME, GetLastError());
+					CloseServiceHandle(managerHandle);
+					return -1;
+				}
+
+				// Now delete the service
+				if(!DeleteService(serviceHandle))
+				{
+					_ftprintf(stderr, TEXT("Could not delete the service \"%s\", error code=%d, might be a permission problem\n"), GetLastError());
+					retCode = -1;
+				}
+				else
+					// Print success message
+					_tprintf(TEXT("Service successfully uninstalled!\n"));
+
+				// All is OK, just close the handles
+				CloseServiceHandle(serviceHandle);
+				CloseServiceHandle(managerHandle);
+				break;
+			}
+			default:
+				break;
+		}
+	}
+
+	return retCode;
 }
