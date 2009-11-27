@@ -23,17 +23,6 @@ SERVICE_STATUS ServiceStatus;
 SERVICE_STATUS_HANDLE hStatus;
 HWND hWnd;
 
-#define WM_END_OF_INITIALIZATION	WM_USER + 25
-
-DWORD WINAPI StartupThread(LPVOID lpParameter)
-{
-	HWND hWnd = (HWND)lpParameter;
-	createEncoder(GetModuleHandle(NULL), hWnd, NULL);
-	waitForFullInitialization();
-	PostMessage(hWnd, WM_END_OF_INITIALIZATION, 0, 0);
-	return 0;
-}
-
 // Control handler function
 void ControlHandler(DWORD request) 
 { 
@@ -100,19 +89,16 @@ void ServiceMain(int argc,
 	myWndClass.lpfnWndProc = myWndProc;
 	myWndClass.lpszClassName = WINDOW_CLASS_NAME;
 	myWndClass.hInstance = GetModuleHandle(NULL);
-	ATOM myClass = RegisterClass(&myWndClass);
-	
+	ATOM myClass = RegisterClass(&myWndClass);	
 	hWnd = CreateWindow(WINDOW_CLASS_NAME, WINDOW_NAME, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
 
-	// Create the service worker thread
-	HANDLE hStartupThread = CreateThread(NULL, 0, StartupThread, (LPVOID)hWnd, 0, NULL);
-
-	//createEncoder(GetModuleHandle(NULL), hWnd, NULL);
-	//waitForFullInitialization();
+	// Initialize the encoder
+	createEncoder(GetModuleHandle(NULL), hWnd, NULL);
+	waitForFullInitialization();
 
 	// Now, we can report the running status to SCM. 
-	//ServiceStatus.dwCurrentState = SERVICE_RUNNING; 
-	//SetServiceStatus (hStatus, &ServiceStatus);
+	ServiceStatus.dwCurrentState = SERVICE_RUNNING; 
+	SetServiceStatus (hStatus, &ServiceStatus);
 
 	// Now, execute the message loop
 	MSG msg;
@@ -126,20 +112,9 @@ void ServiceMain(int argc,
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 
-			// We can quit if the message is to quit
+			// We can quit if the message is to quit (received when the service is told to stop)
 			if(msg.message == WM_QUIT)
 				break;
-
-			static bool checkStartupThread = true;
-			static DWORD exitCode = 0;
-			if(checkStartupThread && msg.message == WM_END_OF_INITIALIZATION)
-			{
-				checkStartupThread = false;
-
-				// Now, we can report the running status to SCM. 
-				ServiceStatus.dwCurrentState = SERVICE_RUNNING; 
-				SetServiceStatus(hStatus, &ServiceStatus);
-			}
 		}
 	}
 
@@ -269,13 +244,17 @@ int main(int argc,
 					return -1;
 				}
 
+				SERVICE_DESCRIPTION serviceDescription;
+				serviceDescription.lpDescription = TEXT("This launches DVB Enhancer for SageTV application in the service mode, so it can be used in a completely unattended manner.");
+				ChangeServiceConfig2(serviceHandle, SERVICE_CONFIG_DESCRIPTION, (LPVOID)&serviceDescription);
+
 				// Print success message
 				_tprintf(TEXT("Service successfully installed!\n"));
 
 				// Now, change the dependency of SageTV service
 				SC_HANDLE sageHandle = OpenService(managerHandle, TEXT("SageTV"), SERVICE_ALL_ACCESS);
 				if(sageHandle != NULL)
-					if(ChangeServiceConfig(sageHandle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, NULL, NULL, NULL, SERVICE_NAME, NULL, NULL, NULL))
+					if(!ChangeServiceConfig(sageHandle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, NULL, NULL, NULL, SERVICE_NAME, NULL, NULL, NULL))
 						_ftprintf(stderr, TEXT("Could not change dependency of the SageTV service, error code=%d\n"), GetLastError());
 					else
 						_tprintf(TEXT("Successfully changed the SageTV service dependency\n"));
