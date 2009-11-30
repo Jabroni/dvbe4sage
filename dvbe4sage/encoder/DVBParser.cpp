@@ -419,15 +419,24 @@ void PSIParser::parseCATTable(const cat_t* const table,
 			// Let's see if this CAID is served
 			if(g_pConfiguration->isCAIDServed(caScheme.caId))
 			{
-				// Make the log entry
-				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"), 
-						caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				// Temporary hack - use only one EMM pid per CAID
+				// TODO : fixme!
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				if(m_EMMPids.empty())
+					// Make the log entry
+					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, so packets with this PID will be passed to plugins\n"), 
+							caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+				else
+					// Make the log entry
+					log(0, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, but another EMM PID=0x%hX(%hu) was already found, so packets with this PID will NOT be passed to plugins\n"),
+							caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId, m_EMMPids.begin()->pid, m_EMMPids.begin()->pid);
 				// And add to the EMM PIDS map
 				m_EMMPids.insert(caScheme);
 			}
 			else
 				// Make the log entry
-				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"), 
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served, so packets with this PID will NOT be passed to plugins\n"), 
 						caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 		}
 		// Adjust length and pointer
@@ -502,17 +511,28 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			// Let's see if this CAID is served
 			if(g_pConfiguration->isCAIDServed(caScheme.caId))
 			{
-				// Add the CA Scheme to the set
-				caMap.insert(caScheme);
-				// Add the ECM pid to the map of PIDs we need to listen to
-				m_CAPidsForSid[programNumber].insert(caScheme.pid);
-				// Log the descriptor data
-				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"),
-							programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				// Temporary hack - use only one ECM pid per CAID per program
+				// TODO : fixme!
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				if(m_CAPidsForSid[programNumber].empty() || *m_CAPidsForSid[programNumber].begin() == caScheme.pid)
+				{
+					// Add the CA Scheme to the set
+					caMap.insert(caScheme);
+					// Add the ECM pid to the map of PIDs we need to listen to
+					m_CAPidsForSid[programNumber].insert(caScheme.pid);
+					// Log the descriptor data
+					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, so ECM packets with this PID will be passed to plugins\n"),
+								programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+				}
+				else
+					// Log the descriptor data
+					log(0, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, but another ECM PID=0x%hX(%hu) was already found for the same SID, so packets with this PID will NOT be passed to plugins\n"),
+								programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId, *m_CAPidsForSid[programNumber].begin(), *m_CAPidsForSid[programNumber].begin());
 			}
 			else
 				// Log the descriptor data
-				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"),
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served, so ECM packets with this PID will NOT be passed to plugins\n"),
 							programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 		}
 
@@ -529,10 +549,6 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 	// Add the CA type into the map only if there were CA descriptors
 	if(hasCADescriptors)
 		m_CATypesForSid[programNumber] = caMap;
-	
-	// Add the EMM PIDs discovered earlier
-	for(EMMInfo::const_iterator it = m_EMMPids.begin(); it != m_EMMPids.end(); it++)
-		m_CAPidsForSid[programNumber].insert(it->pid);
 
 	// For each stream descriptor do
 	while(remainingLength != 0)
@@ -580,17 +596,28 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 				// Let's see if this CAID is served
 				if(g_pConfiguration->isCAIDServed(caScheme.caId))
 				{
-					// Add the CA Scheme to the set
-					caMap.insert(caScheme);
-					// Add the ECM pid to the map of PIDs we need to listen to
-					m_CAPidsForSid[programNumber].insert(caScheme.pid);
-					// Log the descriptor data
-					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"),
-								ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					// Temporary hack - use only one ECM pid per CAID per program
+					// TODO : fixme!
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					if(m_CAPidsForSid[programNumber].empty() || *m_CAPidsForSid[programNumber].begin() == caScheme.pid)
+					{
+						// Add the CA Scheme to the set
+						caMap.insert(caScheme);
+						// Add the ECM pid to the map of PIDs we need to listen to
+						m_CAPidsForSid[programNumber].insert(caScheme.pid);
+						// Log the descriptor data
+						log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, so ECM packets with this PID will be passed to plugins\n"),
+									ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
+					}
+					else
+						// Log the descriptor data
+						log(0, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, but another ECM PID=0x%hX(%hu) was already found for the same SID, so packets with this PID will NOT be passed to plugins\n"),
+									ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId, *m_CAPidsForSid[programNumber].begin(), *m_CAPidsForSid[programNumber].begin());
 				}
 				else
 					// Log the descriptor data
-					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"),
+					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served, so ECM packets with this PID will NOT be passed to plugins\n"),
 								ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 			}
 
@@ -601,12 +628,16 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		}
 		// Let's see if we had CA descriptors but none was actually used for this ES PID
 		if(caMap.empty() && hasCADescriptors)
-			log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used for PID=%hu, SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), ESPid, programNumber);
+			log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used for PID=%hu, SID=%hu, either you have forgotten to specify \"ServedCAIDs\" or this PID is not going to be decoded because it uses a non-default ECM PID\n"), ESPid, programNumber);
 
 		// Add the CA type into the map only if there were CA descriptors
-		if(hasCADescriptors)
+		if(hasCADescriptors && !caMap.empty() && m_CATypesForSid.find(programNumber) == m_CATypesForSid.end())
 			m_CATypesForSid[programNumber] = caMap;
 	}
+
+	// Add the EMM PIDs discovered earlier
+	for(EMMInfo::const_iterator it = m_EMMPids.begin(); it != m_EMMPids.end(); it++)
+		m_CAPidsForSid[programNumber].insert(it->pid);
 }
 
 // PAT table parsing routine

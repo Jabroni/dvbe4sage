@@ -6,8 +6,8 @@
 #include "logger.h"
 #include "configuration.h"
 
-#define EMM_TIMEOUT 1000
-#define ECM_TIMEOUT 1000
+#define EMM_TIMEOUT 0
+#define ECM_TIMEOUT 0
 //#define STT_TIMEOUT 100
 
 // This is the constructor of a class that has been exported.
