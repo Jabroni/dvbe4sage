@@ -310,12 +310,19 @@ private:
 	// Flag saying no clients connected yet
 	bool		m_HasConnectedClients;
 
-	// Disallow copy constructor
+	// Tuner ordinal number
+	const UINT	m_TunerOrdinal;
+
+	// Disallow default and copy constructor
+	DVBParser();
 	DVBParser(const DVBParser&);
 
 public:
 	// Default constructor
-	DVBParser() : m_PSIParser(this), m_HasConnectedClients(false), m_LeftoverLength(0) {}
+	DVBParser(UINT ordinal) : m_PSIParser(this), m_HasConnectedClients(false), m_LeftoverLength(0), m_TunerOrdinal(ordinal) {}
+
+	// Tuner ordinal getter
+	UINT getTunerOrdinal() const													{ return m_TunerOrdinal; }
 
 	// Copy the PSI parser data
 	void copy(const DVBParser& other)												{ m_PSIParser.copy(other.m_PSIParser); }

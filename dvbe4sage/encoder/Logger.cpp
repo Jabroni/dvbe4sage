@@ -41,38 +41,18 @@ Logger::~Logger(void)
 
 void Logger::log(UINT logLevel,
 				 bool timeStamp,
+				 UINT tunerOrdinal,
 				 LPCTSTR format, ...)
 {
-	// Do this in critical section
-	EnterCriticalSection(&m_cs);
-
 	va_list argList;
 	va_start(argList, format);
 
-	// Write log only if the level of the message is lower than or equal to the requested level
-	if(logLevel <= m_LogLevel)
-	{
-		// Get current time in local
-		SYSTEMTIME currentTime;
-		GetLocalTime(&currentTime);
-
-		if(timeStamp)
-			_ftprintf(m_LogFile, TEXT("%hu-%02hu-%02hu %02hu:%02hu:%02hu.%03hu "), 
-									(USHORT)currentTime.wYear,
-									(USHORT)currentTime.wMonth,
-									(USHORT)currentTime.wDay,
-									(USHORT)currentTime.wHour,
-									(USHORT)currentTime.wMinute,
-									(USHORT)currentTime.wSecond,
-									(USHORT)currentTime.wMilliseconds);
-		_vftprintf(m_LogFile, format, argList);
-	}
-	// Leave the critical section
-	LeaveCriticalSection(&m_cs);
+	valog(logLevel, timeStamp, tunerOrdinal, format, argList);
 }
 
 void Logger::valog(UINT logLevel,
 				   bool timeStamp,
+				   UINT tunerOrdinal,
 				   LPCTSTR format,
 				   va_list argList)
 {
@@ -87,14 +67,20 @@ void Logger::valog(UINT logLevel,
 		GetLocalTime(&currentTime);
 
 		if(timeStamp)
+		{
 			_ftprintf(m_LogFile, TEXT("%hu-%02hu-%02hu %02hu:%02hu:%02hu.%03hu "), 
-									currentTime.wYear,
-									currentTime.wMonth,
-									currentTime.wDay,
-									currentTime.wHour,
-									currentTime.wMinute,
-									currentTime.wSecond,
-									currentTime.wMilliseconds);
+									(USHORT)currentTime.wYear,
+									(USHORT)currentTime.wMonth,
+									(USHORT)currentTime.wDay,
+									(USHORT)currentTime.wHour,
+									(USHORT)currentTime.wMinute,
+									(USHORT)currentTime.wSecond,
+									(USHORT)currentTime.wMilliseconds,
+									tunerOrdinal);
+			if(tunerOrdinal != 0)
+				_ftprintf(m_LogFile, TEXT("#%u: "), tunerOrdinal);
+		}
+
 		_vftprintf(m_LogFile, format, argList);
 	}
 	// Leave the critical section
@@ -115,6 +101,7 @@ void Logger::setLogLevel(UINT level)
 
 void log(UINT logLevel,
 		 bool timeStamp,
+		 UINT tunerOrdinal,
 		 LPCTSTR format, ...)
 {
 	// Do this only if the global encoder object is initialized
@@ -125,6 +112,6 @@ void log(UINT logLevel,
 		va_start(argList, format);
 
 		// And call the log function on the encoder
-		g_pLogger->valog(logLevel, timeStamp, format, argList);
+		g_pLogger->valog(logLevel, timeStamp, tunerOrdinal, format, argList);
 	}
 }

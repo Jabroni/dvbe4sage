@@ -18,12 +18,12 @@ VGPluginsHandler::VGPluginsHandler() :
 	m_DoEMM(NULL)
 {
 	// Log the entry
-	log(0, true, TEXT("Working with VGHandler\n"));
+	log(0, true, 0, TEXT("Working with VGHandler\n"));
 
 	// Get a handle to the DLL module.
 	LoadVGHandler(m_hinstLib, m_GetCardStatus, m_GetECM, m_DoEMM);
 	if (m_hinstLib == NULL)
-		log(0, true, TEXT("VGPluginsHandler() Could not load vchandler.dll (error: %u)\n"), GetLastError());
+		log(0, true, 0, TEXT("VGPluginsHandler() Could not load vchandler.dll (error: %u)\n"), GetLastError());
 
 	return;
 }
@@ -45,13 +45,13 @@ VGPluginsHandler::~VGPluginsHandler()
 void VGPluginsHandler::processECMPacket(BYTE *packet)
 {
 	if (!m_GetECM(this, packet[1]&0x1, packet + 1, &DCWHandlerCallback, ECM_TIMEOUT))
-		log(0, true, "Timed out while posting ECM to VGHandler");
+		log(0, true, 0, "Timed out while posting ECM to VGHandler");
 }
 
 void VGPluginsHandler::processEMMPacket(BYTE *packet)
 {
 	if (!m_DoEMM(packet + 1, EMM_TIMEOUT))
-		log(3, true, "Timed out while posting EMM to VGService");
+		log(3, true, 0, "Timed out while posting EMM to VGService");
 }
 
 void WINAPI VGPluginsHandler::DCWHandlerCallback(void *pParm, int nParm, unsigned char pDCW[16])
@@ -87,19 +87,19 @@ void WINAPI VGPluginsHandler::DCWHandler(int nParm,
 		if(wrong(dcw) || !m_pCurrentClient->caller->setKey(isOddKey, dcw.key))
 		{
 			// Log the key
-			log(2, true, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+			log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 				(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7]);
 			return;
 		}
 		else
 			// Log the key
-			log(2, true, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - accepted!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+			log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - accepted!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7]);
 
-		log(2, true, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
+		log(2, true, 0, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
 
 		ECMRequestComplete();
 	}
 	else
-		log(0, true, TEXT("Key received but the client has already left\n"));
+		log(0, true, 0, TEXT("Key received but the client has already left\n"));
 }

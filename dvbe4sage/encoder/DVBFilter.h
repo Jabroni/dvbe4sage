@@ -55,14 +55,15 @@ private:
 	CCritSec					m_Lock;							// Main renderer critical section
 	DVBParser					m_Parser;						// The parser itself
 
-	// Disallow copy constructor
+	// Disallow default and copy constructors
+	DVBFilter();
 	DVBFilter(const DVBFilter&);
 
 public:
 	//DECLARE_IUNKNOWN
 
 	// Constructor
-    DVBFilter();
+    DVBFilter(UINT ordinal);
 	// Destructor
 	virtual ~DVBFilter();
 

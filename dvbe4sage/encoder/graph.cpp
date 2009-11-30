@@ -9,7 +9,7 @@
 
 // Constructor, initializes member variables
 // and calls InitializeGraphBuilder
-CBDAFilterGraph::CBDAFilterGraph(int ordinal):
+CBDAFilterGraph::CBDAFilterGraph(UINT ordinal):
 	m_fGraphBuilt(FALSE),
 	m_fGraphRunning(FALSE),
 	m_iTunerNumber(ordinal),
@@ -80,7 +80,7 @@ HRESULT CBDAFilterGraph::InitializeGraphBuilder()
 	// create the filter graph
 	if (FAILED(hr = m_pFilterGraph.CoCreateInstance(CLSID_FilterGraph)))
 	{
-		log(0, true, TEXT("Couldn't CoCreate IGraphBuilder, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Couldn't CoCreate IGraphBuilder, error 0x%.08X\n"), hr);
 		m_fGraphFailure = true;
 		return hr;
 	}
@@ -108,14 +108,14 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	// tune to a channel
 	if (FAILED(hr = LoadNetworkProvider()))
 	{
-		log(0, true, TEXT("Cannot load network provider, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot load network provider, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
 
 	hr = m_pNetworkProvider->QueryInterface(__uuidof (ITuner), reinterpret_cast <void**> (&m_pITuner));
 	if (FAILED(hr)) {
-		log(0, true, TEXT("pNetworkProvider->QI: Can't QI for ITuner, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("pNetworkProvider->QI: Can't QI for ITuner, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
@@ -125,7 +125,7 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	CComPtr <IDVBTuneRequest> pDVBSTuneRequest;
 	if (FAILED(hr = CreateDVBSTuneRequest(&pDVBSTuneRequest)))
 	{
-		log(0, true, TEXT("Cannot create tune request, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot create tune request, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
@@ -133,7 +133,7 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	//submit the tune request to the network provider
 	hr = m_pITuner->put_TuneRequest(pDVBSTuneRequest);
 	if (FAILED(hr)) {
-		log(0, true, TEXT("Cannot submit the tune request, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot submit the tune request, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
@@ -150,7 +150,7 @@ HRESULT CBDAFilterGraph::BuildGraph()
 //	if (FAILED(hr = LoadFilter(KSCATEGORY_BDA_NETWORK_TUNER, &m_pTunerDemodDevice, &m_NetworkProvider, TRUE, TRUE)) || !m_pTunerDemodDevice)
 	if (FAILED(hr = LoadFilter(KSCATEGORY_BDA_NETWORK_TUNER, &m_pTunerDemodDevice, m_pNetworkProvider, TRUE, TRUE)) || !m_pTunerDemodDevice)
 	{
-		log(0, true, TEXT("Cannot load tuner device and connect network provider, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot load tuner device and connect network provider, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr != S_OK ? hr : E_FAIL;
 	}
@@ -160,7 +160,7 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	if(SUCCEEDED(hr = m_pTunerDemodDevice->QueryFilterInfo(&filterInfo)))
 	{
 		CW2T filterName(filterInfo.achName);
-		log(0, true, TEXT("Tuner Filter Info = \"%s\"\n"), (LPCTSTR)filterName);
+		log(0, true, m_iTunerNumber, TEXT("Tuner Filter Info = \"%s\"\n"), (LPCTSTR)filterName);
 		_tcscpy_s(m_TunerName, sizeof(m_TunerName) / sizeof(TCHAR), (LPCTSTR)filterName);
 
 		// Let's see if this is a Hauppauge device
@@ -192,12 +192,12 @@ HRESULT CBDAFilterGraph::BuildGraph()
     }
 
 	// Create out filter
-	m_pDVBFilter = new DVBFilter;
+	m_pDVBFilter = new DVBFilter(m_iTunerNumber);
 
 	// Step5: Finally, add our filter to the graph
 	if(FAILED(hr = m_pFilterGraph->AddFilter(m_pDVBFilter, L"DVB Capture Filter")))
 	{
-		log(0, true, TEXT("Cannot add our filter to the graph, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot add our filter to the graph, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
@@ -205,17 +205,17 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	// And connect it
 	if(FAILED(hr = ConnectFilters(m_pCaptureDevice, m_pDVBFilter)))
 	{
-		log(0, true, TEXT("Cannot connect our filter to the graph, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot connect our filter to the graph, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
 
-	log(0, true, TEXT("Loaded our transport stream filter\n"));
+	log(0, true, m_iTunerNumber, TEXT("Loaded our transport stream filter\n"));
 
 	// Step5: Load demux
 	if (FAILED(hr = LoadDemux()))
 	{
-		log(0, true, TEXT("Cannot load demux, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot load demux, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
@@ -223,7 +223,7 @@ HRESULT CBDAFilterGraph::BuildGraph()
 	// Step6: Render demux pins
 	if (FAILED(hr = RenderDemux()))
 	{
-		log(0, true, TEXT("Cannot Rend demux, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot Rend demux, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
@@ -251,18 +251,18 @@ HRESULT CBDAFilterGraph::LoadDemux()
 	hr = m_pDemux.CoCreateInstance(CLSID_MPEG2Demultiplexer);
 	if (FAILED(hr))
 	{
-		log(0, true, TEXT("Cannot CoCreateInstance CLSID_MPEG2Demultiplexer, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot CoCreateInstance CLSID_MPEG2Demultiplexer, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
 	hr = m_pFilterGraph->AddFilter(m_pDemux, L"Demux");
 	if (FAILED(hr))
 	{
-		log(0, true, TEXT("Unable to add demux filter to graph, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Unable to add demux filter to graph, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
-	log(0, true, TEXT("Added demux filter to the graph\n"));
+	log(0, true, m_iTunerNumber, TEXT("Added demux filter to the graph\n"));
 
 	return hr;
 }
@@ -283,11 +283,11 @@ HRESULT CBDAFilterGraph::RenderDemux()
 
 	if (FAILED(hr))
 	{
-		log(0, true, TEXT("Cannot connect demux to capture filter, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot connect demux to capture filter, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
-	log(0, true, TEXT("Connected demux to our filter output pin\n"));
+	log(0, true, m_iTunerNumber, TEXT("Connected demux to our filter output pin\n"));
 
 	CComQIPtr<IMpeg2Demultiplexer> pDemux(m_pDemux);
 	CComPtr<IEnumPins> pPinEnum = NULL;
@@ -303,7 +303,7 @@ HRESULT CBDAFilterGraph::RenderDemux()
 				PIN_INFO pinInfo;
 				if(SUCCEEDED(pins[i]->QueryPinInfo(&pinInfo)) && pinInfo.dir == PINDIR_OUTPUT)
 					if(FAILED(pDemux->DeleteOutputPin(pinInfo.achName)))
-						log(0, true, TEXT("Failed to delete a demux pin \"%S\"\n"), pinInfo.achName);
+						log(0, true, m_iTunerNumber, TEXT("Failed to delete a demux pin \"%S\"\n"), pinInfo.achName);
 			}
 		}
 	}
@@ -319,14 +319,14 @@ HRESULT CBDAFilterGraph::RenderDemux()
 		CComQIPtr<IMPEG2PIDMap> pMappedPin(pPin1);
 		ULONG pids[] = { 12345 };
 		if(FAILED(hr = pMappedPin->MapPID(sizeof(pids) / sizeof(pids[0]), pids, MEDIA_MPEG2_PSI)))
-			log(0, true, TEXT("Failed to map PID in the demux, error 0x%.08X\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to map PID in the demux, error 0x%.08X\n"), hr);
 	}
 
 	// load transform information filter and connect it to the demux
 	hr = LoadFilter(KSCATEGORY_BDA_TRANSPORT_INFORMATION, &m_pTIF, m_pDemux, TRUE, FALSE);	
 	if (FAILED(hr))
 	{
-		log(0, true, TEXT("Cannot load TIF, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot load TIF, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -356,7 +356,7 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 	hr = m_pITuningSpace.CoCreateInstance(__uuidof(DVBSTuningSpace));
 	if (FAILED(hr) || m_pITuningSpace == NULL)
 	{
-		log(0, true, TEXT("CreateTuningSpace : failed to create a DVB-S system tuning space, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : failed to create a DVB-S system tuning space, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -364,21 +364,21 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 	CComQIPtr<IDVBSTuningSpace> pIDVBTuningSpace(m_pITuningSpace);
 	if(pIDVBTuningSpace == NULL)
 	{
-		log(0, true, TEXT("CreateTuningSpace : Cannot QI for IDVBSTuningSpace\n"));
+		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : Cannot QI for IDVBSTuningSpace\n"));
 		return E_FAIL;
 	}
 
 	hr = pIDVBTuningSpace->put_SystemType(DVB_Satellite);
 	if(FAILED(hr))
 	{
-		log(0, true, TEXT("CreateTuningSpace: failed to set system type DVB_Satellite, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace: failed to set system type DVB_Satellite, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
 	hr = pIDVBTuningSpace->put__NetworkType(CLSID_DVBSNetworkProvider);
 	if(FAILED(hr))
 	{
-		log(0, true, TEXT("CreateTuningSpace : failed to set network type CLSID_DVBSNetworkProvider, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : failed to set network type CLSID_DVBSNetworkProvider, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -387,7 +387,7 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 	hr = pIDVBSLocator.CoCreateInstance(__uuidof(DVBSLocator));
 	if(FAILED(hr) || !pIDVBSLocator)
 	{
-		log(0, true, TEXT("CreateTuningSpace : failed to create a DVB-S locator, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : failed to create a DVB-S locator, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -403,7 +403,7 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 	hr = pIDVBTuningSpace->put_DefaultLocator(pIDVBSLocator);
 	if(FAILED(hr))
 	{
-		log(0, true, TEXT("CreateTuningSpace : failed to set the locator to the tuning space, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : failed to set the locator to the tuning space, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -417,14 +417,14 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 
 	if (pTuneRequest == NULL)
 	{
-		log(0, true, TEXT("CreateDVBSTuneRequest : invalid pointer\n"));
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest : invalid pointer\n"));
 		return E_POINTER;
 	}
 
 	// Making sure we have a valid tuning space
 	if (m_pITuningSpace == NULL)
 	{
-		log(0, true, TEXT("CreateDVBSTuneRequest : the tuning Space is NULL\n"));
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest : the tuning Space is NULL\n"));
 		return E_FAIL;
 	}
 
@@ -432,7 +432,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	CComQIPtr<IDVBSTuningSpace> pDVBSTuningSpace (m_pITuningSpace);
 	if(!pDVBSTuningSpace)
 	{
-		log(0, true, TEXT("CreateDVBSTuneRequest : cannot QI for an IDVBSTuningSpace\n"));
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest : cannot QI for an IDVBSTuningSpace\n"));
 		return E_FAIL;
 	}
 
@@ -454,7 +454,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	hr = pDVBSTuningSpace->CreateTuneRequest(&pNewTuneRequest);
 	if(FAILED (hr))
 	{
-		log(0, true, TEXT("CreateTuneRequest : cannot create a tuninig request, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateTuneRequest : cannot create a tuninig request, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -462,7 +462,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	CComQIPtr<IDVBTuneRequest> pDVBSTuneRequest(pNewTuneRequest);
 	if(!pDVBSTuneRequest)
 	{
-		log(0, true, TEXT("CreateDVBSTuneRequest: cannot QI for IDVBTuneRequest, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest: cannot QI for IDVBTuneRequest, error 0x%.08X\n"), hr);
 		return E_FAIL;
 	}
 
@@ -473,7 +473,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 
 	if(FAILED(hr))
 	{
-		log(0, true, TEXT("CreateDVBSTuneRequest : cannot create a DVB-S locator, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest : cannot create a DVB-S locator, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -487,7 +487,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	hr = pDVBSTuneRequest->put_Locator(pDVBSLocator);
 	if(FAILED (hr))
 	{
-		log(0, true, TEXT("CreateDVBSTuneRequest : cannot put the locator to the tuning space, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest : cannot put the locator to the tuning space, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -510,7 +510,7 @@ HRESULT CBDAFilterGraph::LoadNetworkProvider()
 		hr = CreateTuningSpace();
 		if (FAILED(hr) || !m_pITuningSpace)
 		{
-			log(0, true, TEXT("LoadNetworkProvider : cannot create tuning space, error 0x%.08X\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("LoadNetworkProvider : cannot create tuning space, error 0x%.08X\n"), hr);
 			return E_FAIL;
 		}
 	}
@@ -519,7 +519,7 @@ HRESULT CBDAFilterGraph::LoadNetworkProvider()
 	hr = m_pITuningSpace->get__NetworkType(&CLSIDNetworkType);
 	if (FAILED(hr))
 	{
-		log(0, true, TEXT("LoadNetworkProvider : ITuningSpace::get__NetworkType failed, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("LoadNetworkProvider : ITuningSpace::get__NetworkType failed, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -527,7 +527,7 @@ HRESULT CBDAFilterGraph::LoadNetworkProvider()
 	hr = m_pNetworkProvider.CoCreateInstance(CLSIDNetworkType);
 	if (FAILED(hr))
 	{
-		log(0, true, TEXT("LoadNetworkProvider : cannot CoCreate Network Provider, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("LoadNetworkProvider : cannot CoCreate Network Provider, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -561,7 +561,7 @@ HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid,
 		hr = m_pICreateDevEnum.CoCreateInstance(CLSID_SystemDeviceEnum);
 		if (FAILED(hr))
 		{
-			log(0, true, TEXT("LoadFilter : cannot CoCreate ICreateDevEnum, error 0x%.08X\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("LoadFilter : cannot CoCreate ICreateDevEnum, error 0x%.08X\n"), hr);
 			return hr;
 		}
 	}
@@ -572,18 +572,18 @@ HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid,
 	// the call can return S_FALSE if no moniker exists, so explicitly check S_OK
 	if (FAILED(hr))
 	{
-		log(0, true, TEXT("LoadFilter : cannot CreateClassEnumerator, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("LoadFilter : cannot CreateClassEnumerator, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
 	if (S_OK != hr) 
 	{
 		// Class not found
-		log(0, true, TEXT("LoadFilter : class not found, CreateClassEnumerator returned S_FALSE\n"));
+		log(0, true, m_iTunerNumber, TEXT("LoadFilter : class not found, CreateClassEnumerator returned S_FALSE\n"));
 		return E_UNEXPECTED;
 	}
 
-	int counter = 0;
+	UINT counter = 0;
 	// next filter
 	while (pIEnumMoniker->Next(1, &pIMoniker, 0) == S_OK)
 	{
@@ -606,7 +606,7 @@ HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid,
 		hr = pBag->Read(L"FriendlyName", &varBSTR, NULL);
 		if (FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to friendly name for the filter - skipping!\n"));
+			log(0, true, m_iTunerNumber, TEXT("Failed to friendly name for the filter - skipping!\n"));
 			pIMoniker = NULL;
 			continue;
 		}
@@ -620,7 +620,7 @@ HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid,
 
 		if (FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to get IID_IBaseFilter pointer for the filter \"%S\" to the graph - skipping!\n"), varBSTR.bstrVal);
+			log(0, true, m_iTunerNumber, TEXT("Failed to get IID_IBaseFilter pointer for the filter \"%S\" to the graph - skipping!\n"), varBSTR.bstrVal);
 			pIMoniker = NULL;
 			pFilter = NULL;
 			continue;
@@ -630,7 +630,7 @@ HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid,
 
 		if (FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to add filter \"%S\" to the graph - skipping!\n"), varBSTR.bstrVal);
+			log(0, true, m_iTunerNumber, TEXT("Failed to add filter \"%S\" to the graph - skipping!\n"), varBSTR.bstrVal);
 			continue;
 		}
 
@@ -646,7 +646,7 @@ HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid,
 				//that's the filter we want
 				fFoundFilter = TRUE;
 				pFilter.QueryInterface(ppFilter);
-				log(0, true, TEXT("Loading filter \"%S\" - succeeded!\n"), varBSTR.bstrVal);
+				log(0, true, m_iTunerNumber, TEXT("Loading filter \"%S\" - succeeded!\n"), varBSTR.bstrVal);
 				break;
 			}
 			else
@@ -655,7 +655,7 @@ HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid,
 				// that wasn't the the filter we wanted
 				// so unload and try the next one
 				hr = m_pFilterGraph->RemoveFilter(pFilter);
-				log(3, true, TEXT("Loading filter \"%S\" - doesn't fit, unloading!\n"), varBSTR.bstrVal);
+				log(3, true, m_iTunerNumber, TEXT("Loading filter \"%S\" - doesn't fit, unloading!\n"), varBSTR.bstrVal);
 				if (FAILED(hr))
 					return hr;
 			}
@@ -737,7 +737,7 @@ HRESULT CBDAFilterGraph::TearDownGraph()
 
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("TearDownGraph: cannot EnumFilters, error 0x%.08X\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("TearDownGraph: cannot EnumFilters, error 0x%.08X\n"), hr);
 			return E_FAIL;
 		}
 
@@ -778,7 +778,7 @@ HRESULT CBDAFilterGraph::ConnectFilters(IBaseFilter* pFilterUpstream,
 
 	if(FAILED(hr))
 	{
-		log(0, true, TEXT("Cannot Enumerate Upstream Filter's Pins, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot Enumerate Upstream Filter's Pins, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -788,7 +788,7 @@ HRESULT CBDAFilterGraph::ConnectFilters(IBaseFilter* pFilterUpstream,
 		hr = pIPinUpstream->QueryPinInfo (&PinInfoUpstream);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Cannot Obtain Upstream Filter's PIN_INFO, error 0x%.08X\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Cannot Obtain Upstream Filter's PIN_INFO, error 0x%.08X\n"), hr);
 			return hr;
 		}
 
@@ -804,7 +804,7 @@ HRESULT CBDAFilterGraph::ConnectFilters(IBaseFilter* pFilterUpstream,
 			hr = pFilterDownstream->EnumPins (&pIEnumPinsDownstream);
 			if(FAILED(hr))
 			{
-				log(0, true, TEXT("Cannot enumerate pins on downstream filter, error 0x%.08X\n"), hr);
+				log(0, true, m_iTunerNumber, TEXT("Cannot enumerate pins on downstream filter, error 0x%.08X\n"), hr);
 				return hr;
 			}
 
@@ -823,7 +823,7 @@ HRESULT CBDAFilterGraph::ConnectFilters(IBaseFilter* pFilterUpstream,
 					hr = pIPinDownstream->ConnectedTo (&pPinUp);
 					if(FAILED(hr) && hr != VFW_E_NOT_CONNECTED)
 					{
-						log(0, true, TEXT("Failed in pIPinDownstream->ConnectedTo(), error 0x%.08X\n"), hr);
+						log(0, true, m_iTunerNumber, TEXT("Failed in pIPinDownstream->ConnectedTo(), error 0x%.08X\n"), hr);
 						continue;
 					}
 
@@ -891,7 +891,7 @@ HRESULT CBDAFilterGraph::RunGraph()
 		{
 			// stop parts of the graph that ran
 			m_pIMediaControl->Stop();
-			log(0, true, TEXT("Cannot run the graph, error 0x%.08X\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Cannot run the graph, error 0x%.08X\n"), hr);
 		}
 	}
 
@@ -908,7 +908,7 @@ HRESULT CBDAFilterGraph::StopGraph()
 
 	if(m_pIMediaControl == NULL)
 	{
-		log(2, true, TEXT("Graph already deleted\n"));
+		log(2, true, m_iTunerNumber, TEXT("Graph already deleted\n"));
 		return S_OK;
 	}
 
@@ -927,9 +927,9 @@ HRESULT CBDAFilterGraph::StopGraph()
 	m_Tid = 0;
 
 	if(!m_fGraphRunning)
-		log(2, true, TEXT("Graph successfully stopped\n"));
+		log(2, true, m_iTunerNumber, TEXT("Graph successfully stopped\n"));
 	else
-		log(0, true, TEXT("Cannot stop the graph, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot stop the graph, error 0x%.08X\n"), hr);
 
 	return hr;
 }
@@ -968,14 +968,14 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 
 	if(!g_pConfiguration->getUseNewTuningMethod())
 	{
-		log(2, true, TEXT("Using tuning request-based tuning method...\n"));
+		log(2, true, m_iTunerNumber, TEXT("Using tuning request-based tuning method...\n"));
 
 		// create a tune request to initialize the network provider
 		// before connecting other filters
 		CComPtr <IDVBTuneRequest> pDVBSTuneRequest;
 		if (FAILED(hr = CreateDVBSTuneRequest(&pDVBSTuneRequest)))
 		{
-			log(0, true, TEXT("Cannot create tune request, error 0x%.08X\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Cannot create tune request, error 0x%.08X\n"), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -984,19 +984,19 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = m_pITuner->put_TuneRequest(pDVBSTuneRequest);
 		if (FAILED(hr))
 		{
-			log(0, true, TEXT("Cannot submit the tune request, error 0x%.08X\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Cannot submit the tune request, error 0x%.08X\n"), hr);
 			BuildGraphError();
 			return FALSE;
 		}
 	}
 	else
 	{
-		log(2, true, TEXT("Using device control-based tuning method...\n"));
+		log(2, true, m_iTunerNumber, TEXT("Using device control-based tuning method...\n"));
 
 		CComQIPtr<IBDA_DeviceControl> pDeviceControl(m_pTunerDemodDevice);
 		if(pDeviceControl == NULL)
 		{
-			log(0, true, TEXT("Failed to QI IBDA_DeviceControl on tuner demod device, tuning failed\n"));
+			log(0, true, m_iTunerNumber, TEXT("Failed to QI IBDA_DeviceControl on tuner demod device, tuning failed\n"));
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1004,7 +1004,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		CComQIPtr<IBDA_Topology> pBDATopology(m_pTunerDemodDevice);
 		if(pBDATopology == NULL)
 		{
-			log(0, true, TEXT("Failed to QI IBDA_Topology on tuner demod device, tuning failed\n"));
+			log(0, true, m_iTunerNumber, TEXT("Failed to QI IBDA_Topology on tuner demod device, tuning failed\n"));
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1014,7 +1014,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pBDATopology->GetControlNode(0, 1, 0, &pControlNode);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Can't obtain the tuner control node, error 0x%.08X, tuning failed\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Can't obtain the tuner control node, error 0x%.08X, tuning failed\n"), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1022,7 +1022,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		CComQIPtr<IBDA_FrequencyFilter> pFreqControl(pControlNode);
 		if(pFreqControl == NULL)
 		{
-			log(0, true, TEXT("Failed to QI IBDA_FrequencyFilter on the tuner node, tuning failed\n"));
+			log(0, true, m_iTunerNumber, TEXT("Failed to QI IBDA_FrequencyFilter on the tuner node, tuning failed\n"));
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1030,7 +1030,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pDeviceControl->StartChanges();
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Start changes failed on the device control, error 0x%.08X, tuning failed\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Start changes failed on the device control, error 0x%.08X, tuning failed\n"), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1038,7 +1038,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pFreqControl->put_Frequency(m_ulCarrierFrequency);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set frequency \"%lu\" on the frequency control, error 0x%.08X, tuning failed\n"), m_ulCarrierFrequency, hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set frequency \"%lu\" on the frequency control, error 0x%.08X, tuning failed\n"), m_ulCarrierFrequency, hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1046,7 +1046,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pFreqControl->put_Polarity(m_SignalPolarisation);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set polarization \"%s\" on the frequency control, error 0x%.08X, tuning failed\n"), printablePolarization(m_SignalPolarisation), hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set polarization \"%s\" on the frequency control, error 0x%.08X, tuning failed\n"), printablePolarization(m_SignalPolarisation), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1054,7 +1054,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		CComQIPtr<IBDA_LNBInfo> pLNB(pControlNode);
 		if(pLNB == NULL)
 		{
-			log(0, true, TEXT("Failed to QI IBDA_LNBInfo on the tuner node, tuning failed\n"));
+			log(0, true, m_iTunerNumber, TEXT("Failed to QI IBDA_LNBInfo on the tuner node, tuning failed\n"));
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1062,7 +1062,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pLNB->put_HighLowSwitchFrequency(g_pConfiguration->getLNBSW());
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set LNB switch frequency to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBSW(), hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set LNB switch frequency to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBSW(), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1070,7 +1070,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pLNB->put_LocalOscilatorFrequencyLowBand(g_pConfiguration->getLNBLOF1());
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set LNB low band to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBLOF1(), hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set LNB low band to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBLOF1(), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1078,7 +1078,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pLNB->put_LocalOscilatorFrequencyHighBand(g_pConfiguration->getLNBLOF2());
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set LNB high band to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBLOF2(), hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set LNB high band to \"%lu\" on the LNB control, error 0x%.08X, tuning failed\n"), g_pConfiguration->getLNBLOF2(), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1087,7 +1087,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pBDATopology->GetControlNode(0, 1, 1, &pControlNode);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Can't obtain the demod control node, error 0x%.08X, tuning failed\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Can't obtain the demod control node, error 0x%.08X, tuning failed\n"), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1095,7 +1095,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		CComQIPtr<IBDA_DigitalDemodulator> pDemod(pControlNode);
 		if(pDemod == NULL)
 		{
-			log(0, true, TEXT("Failed to QI IBDA_DigitalDemodulator on the demod node, tuning failed\n"));
+			log(0, true, m_iTunerNumber, TEXT("Failed to QI IBDA_DigitalDemodulator on the demod node, tuning failed\n"));
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1104,7 +1104,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pDemod->put_InnerFECMethod(&fecMethod);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set Inner FEC method to \"BDA_FEC_VITERBI\" on the demod, error 0x%.08X, tuning failed\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set Inner FEC method to \"BDA_FEC_VITERBI\" on the demod, error 0x%.08X, tuning failed\n"), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1112,7 +1112,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pDemod->put_InnerFECRate(&m_FECRate);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set Inner FEC rate to \"%s\" on the demod, error 0x%.08X, tuning failed\n"), printableFEC(m_FECRate), hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set Inner FEC rate to \"%s\" on the demod, error 0x%.08X, tuning failed\n"), printableFEC(m_FECRate), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1120,7 +1120,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pDemod->put_ModulationType(&m_Modulation);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set Modulation to \"%s\" on the demod, error 0x%.08X, tuning failed\n"), printableModulation(m_Modulation), hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set Modulation to \"%s\" on the demod, error 0x%.08X, tuning failed\n"), printableModulation(m_Modulation), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1128,7 +1128,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pDemod->put_SymbolRate(&m_ulSymbolRate);
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Failed to set Symbol Rate to \"%lu\" on the demod, error 0x%.08X, tuning failed\n"), m_ulSymbolRate, hr);
+			log(0, true, m_iTunerNumber, TEXT("Failed to set Symbol Rate to \"%lu\" on the demod, error 0x%.08X, tuning failed\n"), m_ulSymbolRate, hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1136,7 +1136,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 		hr = pDeviceControl->CommitChanges();
 		if(FAILED(hr))
 		{
-			log(0, true, TEXT("Start changes failed on the device control, error 0x%.08X, tuning failed\n"), hr);
+			log(0, true, m_iTunerNumber, TEXT("Start changes failed on the device control, error 0x%.08X, tuning failed\n"), hr);
 			BuildGraphError();
 			return FALSE;
 		}
@@ -1152,7 +1152,7 @@ int CBDAFilterGraph::getNumberOfTuners()
 	HRESULT hr = pICreateDevEnum.CoCreateInstance(CLSID_SystemDeviceEnum);
 	if(FAILED(hr))
 	{
-		log(0, true, TEXT("getNumberOfTuners(): Cannot CoCreate ICreateDevEnum, error 0x%.08X\n"), hr);
+		log(0, true, 0, TEXT("getNumberOfTuners(): Cannot CoCreate ICreateDevEnum, error 0x%.08X\n"), hr);
 		return 0;
 	}
 
@@ -1163,7 +1163,7 @@ int CBDAFilterGraph::getNumberOfTuners()
 	// the call can return S_FALSE if no moniker exists, so explicitly check S_OK
 	if(hr != S_OK)
 	{
-		log(0, true, TEXT("getNumberOfTuners(): Cannot CreateClassEnumerator, error 0x%.08X\n"), hr);
+		log(0, true, 0, TEXT("getNumberOfTuners(): Cannot CreateClassEnumerator, error 0x%.08X\n"), hr);
 		return 0;
 	}
 

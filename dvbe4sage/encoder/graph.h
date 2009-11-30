@@ -27,7 +27,7 @@ private:
 	DummyNetworkProvider	m_NetworkProvider;			// Our dummy network provider
 
 	TCHAR					m_TunerName[100];			// Tuner friendly name
-	int						m_iTunerNumber;				// Tuner ordinal number
+	UINT					m_iTunerNumber;				// Tuner ordinal number
 	USHORT					m_pmtPid;					// Current PMT pid
 	LNB_DATA				m_LNB_Data;					// LNB data
 
@@ -60,7 +60,7 @@ public:
     bool m_fGraphRunning;
     bool m_fGraphFailure;
 
-    CBDAFilterGraph(int ordinal);
+    CBDAFilterGraph(UINT ordinal);
     ~CBDAFilterGraph();
 
 	HRESULT BuildGraph();

@@ -23,7 +23,7 @@ MDAPIPluginsHandler::MDAPIPluginsHandler(HINSTANCE hInstance,
 	m_CurrentCatFilterId(0)
 {
 	// Log the entry
-	log(0, true, TEXT("Working with MDAPI plugins\n"));
+	log(0, true, 0, TEXT("Working with MDAPI plugins\n"));
 
 	// We look for plugins under "Plugins" directory of the CWD
 	_tfinddata_t fileInfo;
@@ -146,7 +146,7 @@ void MDAPIPluginsHandler::processEMMPacket(BYTE* packet)
 		// Process it
 		m_CurrentEmmCallback(m_CurrentEmmFilterId, PACKET_SIZE, packet);
 	else
-		log(4, true, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
+		log(4, true, 0, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
 }
 void MDAPIPluginsHandler::processPMTPacket(BYTE *packet)
 {
@@ -155,7 +155,7 @@ void MDAPIPluginsHandler::processPMTPacket(BYTE *packet)
 		// Process it
 		m_CurrentPmtCallback(m_CurrentPmtFilterId, PACKET_SIZE, packet);
 	else
-		log(4, true, TEXT("PMT callback hasn't been established yet, dropping the packet...\n"));
+		log(4, true, 0, TEXT("PMT callback hasn't been established yet, dropping the packet...\n"));
 }
 void MDAPIPluginsHandler::processCATPacket(BYTE *packet)
 {
@@ -164,7 +164,7 @@ void MDAPIPluginsHandler::processCATPacket(BYTE *packet)
 		// Process it
 		m_CurrentCatCallback(m_CurrentCatFilterId, PACKET_SIZE, packet);
 	else
-		log(4, true, TEXT("CAT callback hasn't been established yet, dropping the packet...\n"));
+		log(4, true, 0, TEXT("CAT callback hasn't been established yet, dropping the packet...\n"));
 }
 
 // Message handler
@@ -189,7 +189,7 @@ LRESULT MDAPIPluginsHandler::WindowProc(UINT message, WPARAM wParam, LPARAM lPar
 					strcpy_s((char*)lParam, sizeof(MDAPIVersion) / sizeof(MDAPIVersion[0]), MDAPIVersion);
 					break;
 				case MDAPI_CHANNELCHANGE:
-					log(2, true, TEXT("MDAPI_CHANNELCHANGE has been called\n"));
+					log(2, true, 0, TEXT("MDAPI_CHANNELCHANGE has been called\n"));
 					break;
 				case MDAPI_GET_PROGRAMM:
 				{
@@ -242,31 +242,31 @@ void MDAPIPluginsHandler::startFilter(LPARAM lParam)
 		{
 			m_CurrentEcmCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
 			m_CurrentEcmFilterId = startFilter->Filter_ID;
-			log(2, true, TEXT("Start ECM filter for SID=%hu received\n"), m_CurrentSid);
+			log(2, true, 0, TEXT("Start ECM filter for SID=%hu received\n"), m_CurrentSid);
 		}
 		else if(m_pCurrentClient->pmtPid == startFilter->Pid)
 		{
 			m_CurrentPmtCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
 			m_CurrentPmtFilterId = startFilter->Filter_ID;
-			log(2, true, TEXT("Start PMT filter for SID=%hu received\n"), m_CurrentSid);
+			log(2, true, 0, TEXT("Start PMT filter for SID=%hu received\n"), m_CurrentSid);
 		}
 		else if(startFilter->Pid == 1)
 		{
 			m_CurrentCatCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
 			m_CurrentCatFilterId = startFilter->Filter_ID;
-			log(2, true, TEXT("Start CAT filter for SID=%hu received\n"), m_CurrentSid);
+			log(2, true, 0, TEXT("Start CAT filter for SID=%hu received\n"), m_CurrentSid);
 		}
 		else if(m_pCurrentClient->emmCaids.hasPid(startFilter->Pid))
 		{
 			m_CurrentEmmCallback = (TMDAPIFilterProc)startFilter->Irq_Call_Adresse;
 			m_CurrentEmmFilterId = startFilter->Filter_ID;
-			log(2, true, TEXT("Start EMM filter for SID=%hu received\n"), m_CurrentSid);
+			log(2, true, 0, TEXT("Start EMM filter for SID=%hu received\n"), m_CurrentSid);
 		}
 		// Put the callback address into filter's running ID
 		startFilter->Running_ID = (UINT)(startFilter->Filter_ID);
 	}
 	else
-		log(0, true, TEXT("Catastrophic error, no current client for a filter!\n"));
+		log(0, true, 0, TEXT("Catastrophic error, no current client for a filter!\n"));
 }
 
 // This is the callback called for each filter about to be stopped
@@ -281,25 +281,25 @@ void MDAPIPluginsHandler::stopFilter(LPARAM lParam)
 	{
 		m_CurrentEcmFilterId = 0;
 		m_CurrentEcmCallback = NULL;
-		log(2, true, TEXT("Stop ECM filter received\n"));
+		log(2, true, 0, TEXT("Stop ECM filter received\n"));
 	}
 	else if(runningId == (UINT)m_CurrentEmmFilterId)
 	{
 		m_CurrentEmmCallback = NULL;
 		m_CurrentEmmFilterId = 0;
-		log(2, true, TEXT("Stop EMM filter received\n"));
+		log(2, true, 0, TEXT("Stop EMM filter received\n"));
 	}
 	else if(runningId == (UINT)m_CurrentPmtFilterId)
 	{
 		m_CurrentPmtCallback = NULL;
 		m_CurrentPmtFilterId = 0;
-		log(2, true, TEXT("Stop PMT filter received\n"));
+		log(2, true, 0, TEXT("Stop PMT filter received\n"));
 	}
 	else if(runningId == (UINT)m_CurrentCatFilterId)
 	{
 		m_CurrentCatCallback = NULL;
 		m_CurrentCatFilterId = 0;
-		log(2, true, TEXT("Stop CAT filter received\n"));
+		log(2, true, 0, TEXT("Stop CAT filter received\n"));
 	}
 }
 
@@ -330,23 +330,23 @@ void MDAPIPluginsHandler::dvbCommand(LPARAM lParam)
 		if(wrong(dcw) || !m_pCurrentClient->caller->setKey(isOddKey, dcw.key))
 		{
 			// Log the key
-			log(2, true, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+			log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 				(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7]);
 			return;
 		}
 		else
 			// Log the key
-			log(2, true, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - accepted!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+			log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX - accepted!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 				(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7]);
 
-		log(2, true, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
+		log(2, true, 0, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
 
 		// Indicate that ECM request has been completed
 		ECMRequestComplete();
 
 	}
 	else
-		log(0, true, TEXT("Key received but the client has already left\n"));
+		log(0, true, 0, TEXT("Key received but the client has already left\n"));
 
 }
 
@@ -416,11 +416,11 @@ void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)
 				tp->CA[i].wEMM = it1->pid;
 				break;
 			}
-		log(2, true, TEXT("Initialized plugin with ProviderID=%.08X, CAID=%.04hX, ECM=%.04hX, EMM=%.04hX\n"), tp->CA[i].dwProviderId, tp->CA[i].wCA_Type, tp->CA[i].wECM, tp->CA[i].wEMM);
+		log(2, true, 0, TEXT("Initialized plugin with ProviderID=%.08X, CAID=%.04hX, ECM=%.04hX, EMM=%.04hX\n"), tp->CA[i].dwProviderId, tp->CA[i].wCA_Type, tp->CA[i].wECM, tp->CA[i].wEMM);
 		if(tp->CA[i].wECM == m_pCurrentClient->ecmPid)
 			index = i;
 	}
-	log(2, true, TEXT("Number of CAIDs is %d\n"), i);
+	log(2, true, 0, TEXT("Number of CAIDs is %d\n"), i);
 	tp->byCA = (BYTE)index;
 	tp->wCACount = (WORD)i;
 	tp->wECM = m_pCurrentClient->ecmPid;

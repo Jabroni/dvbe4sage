@@ -17,7 +17,7 @@ Configuration::Configuration()
 	_tcscpy_s(&iniFileFullPath[iniFileFullPathLen], sizeof(iniFileFullPath) / sizeof(iniFileFullPath[0]) - iniFileFullPathLen - 1, INI_FILE_NAME);
 
 	// Log info
-	log(0, true, TEXT("Loading configuration info from \"%s\"\n"), iniFileFullPath);
+	log(0, true, 0, TEXT("Loading configuration info from \"%s\"\n"), iniFileFullPath);
 
 	m_LogLevel = GetPrivateProfileInt(TEXT("General"), TEXT("LogLevel"), 2, iniFileFullPath);
 	m_NumberOfVirtualTuners = (USHORT)GetPrivateProfileInt(TEXT("General"), TEXT("NumberOfVirtualTuners"), 3, iniFileFullPath);

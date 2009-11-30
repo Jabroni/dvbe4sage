@@ -17,13 +17,13 @@
 // Lock function with logging
 void DVBParser::lock()
 {
-	log(4, true, TEXT("Locking the parser\n"));
+	log(4, true, m_TunerOrdinal, TEXT("Locking the parser\n"));
 	m_cs.Lock();
 }
 
 void DVBParser::unlock()
 {
-	log(4, true, TEXT("Unlocking the parser\n"));
+	log(4, true, m_TunerOrdinal, TEXT("Unlocking the parser\n"));
 	m_cs.Unlock();
 }
 
@@ -77,13 +77,13 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 		// Sanity check - the sync byte!
 		if(header->sync_byte != '\x47')
 		{	
-			log(0, true, TEXT("Catastrophic error - TS packet has wrong sync_byte!\n"));
+			log(0, true, m_TunerOrdinal, TEXT("Catastrophic error - TS packet has wrong sync_byte!\n"));
 			break;
 		}
 
 		// Handle the packet only if it doesn't have an error
 		if(header->transport_error_indicator)
-			log(2, true, TEXT("Got an erroneous packet, skipping!\n"));
+			log(2, true, m_TunerOrdinal, TEXT("Got an erroneous packet, skipping!\n"));
 		else
 		{
 			// Get the pid of the current packet
@@ -215,7 +215,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 	// If duplicate buffer, skip it
 	if(sectionBuffer.lastContinuityCounter == packet->continuity_counter)
 	{
-		log(2, true, TEXT("Got duplicate packet...\n"));
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Got duplicate packet...\n"));
 		return;
 	}
 
@@ -245,7 +245,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 			if(sectionBuffer.expectedLength > pointer)
 			{
 				// If no, discard the previously saved buffer
-				log(2, true, TEXT("TS packet messed up, fixing...\n"));
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("TS packet messed up, fixing...\n"));
 				sectionBuffer.offset = 0;
 				sectionBuffer.expectedLength = 0;
 			}
@@ -320,7 +320,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 				// Make sure the remainder is just stuffing '\xFF' bytes
 				for(int i = lengthToCopy; i < remainingLength; i++)
 					if(inputBuffer[i] != (BYTE)'\xFF' && inputBuffer[i] != (BYTE)'\0')
-						log(3, true, TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
+						log(3, true, m_pParent->getTunerOrdinal(), TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
 			}
 		}
 }
@@ -371,7 +371,7 @@ void PSIParser::parseTable(const pat_t* const table,
 				parseUnknownTable(table, (short)tableLength);					// Parse the unknown table
 		}
 		else
-			log(2, true, TEXT("!!! CRC error!\n"));
+			log(2, true, m_pParent->getTunerOrdinal(), TEXT("PSI table CRC error, dropping the table...\n"));
 
 		// Amend input buffer pointer
 		inputBuffer += tableLength;
@@ -420,14 +420,14 @@ void PSIParser::parseCATTable(const cat_t* const table,
 			if(g_pConfiguration->isCAIDServed(caScheme.caId))
 			{
 				// Make the log entry
-				log(2, true, TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"), 
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"), 
 						caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 				// And add to the EMM PIDS map
 				m_EMMPids.insert(caScheme);
 			}
 			else
 				// Make the log entry
-				log(2, true, TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"), 
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"), 
 						caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 		}
 		// Adjust length and pointer
@@ -436,7 +436,7 @@ void PSIParser::parseCATTable(const cat_t* const table,
 	}
 	// Let's see if we had CA descriptors but none was actually used
 	if(m_EMMPids.empty() && hasCADescriptors)
-		log(0, true, TEXT("None of the existing CA descriptors are used, have you forgotten to specify \"ServedCAIDs\"?\n"));
+		log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used, have you forgotten to specify \"ServedCAIDs\"?\n"));
 }
 
 void PSIParser::parsePMTTable(const pmt_t* const table,
@@ -459,7 +459,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 
 	// Log warning message if EMMPid is still 0
 	if(m_EMMPids.empty())
-		log(2, true, TEXT("!!! Warning: no EMM PIDs have been discovered after %hu PMT packets, EMM data will not be passed to plugins!!!\n"), g_pConfiguration->getPMTThreshold());
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Warning: no EMM PIDs have been discovered after %hu PMT packets, EMM data will not be passed to plugins!!!\n"), g_pConfiguration->getPMTThreshold());
 
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + PMT_LEN;
@@ -507,12 +507,12 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 				// Add the ECM pid to the map of PIDs we need to listen to
 				m_CAPidsForSid[programNumber].insert(caScheme.pid);
 				// Log the descriptor data
-				log(2, true, TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"),
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"),
 							programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 			}
 			else
 				// Log the descriptor data
-				log(2, true, TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"),
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"),
 							programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 		}
 
@@ -524,7 +524,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 	
 	// Let's see if we had CA descriptors but none was actually used for this ES PID
 	if(caMap.empty() && hasCADescriptors)
-		log(0, true, TEXT("None of the existing CA descriptors are used for the entire SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), programNumber);
+		log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used for the entire SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), programNumber);
 
 	// Add the CA type into the map only if there were CA descriptors
 	if(hasCADescriptors)
@@ -585,12 +585,12 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 					// Add the ECM pid to the map of PIDs we need to listen to
 					m_CAPidsForSid[programNumber].insert(caScheme.pid);
 					// Log the descriptor data
-					log(2, true, TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"),
+					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served and will be passed to plugins\n"),
 								ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 				}
 				else
 					// Log the descriptor data
-					log(2, true, TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"),
+					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is NOT served and will NOT be passed to plugins\n"),
 								ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 			}
 
@@ -601,7 +601,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		}
 		// Let's see if we had CA descriptors but none was actually used for this ES PID
 		if(caMap.empty() && hasCADescriptors)
-			log(0, true, TEXT("None of the existing CA descriptors are used for PID=%hu, SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), ESPid, programNumber);
+			log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used for PID=%hu, SID=%hu, have you forgotten to specify \"ServedCAIDs\"?\n"), ESPid, programNumber);
 
 		// Add the CA type into the map only if there were CA descriptors
 		if(hasCADescriptors)
@@ -771,7 +771,7 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 						break;
 					}
 					default:
-						log(3, true, TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
+						log(3, true, m_pParent->getTunerOrdinal(), TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
 										(UINT)genericDescriptor->descriptor_tag); 
 						break;
 				}
@@ -830,11 +830,11 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			case 0x47:
 			{
 				bouquetName = string((const char*)inputBuffer + DESCR_BOUQUET_NAME_LEN, bouquetDescriptor->descriptor_length);
-				log(3, true, TEXT("### Found bouquet with name %s\n"), bouquetName.c_str());
+				log(3, true, m_pParent->getTunerOrdinal(), TEXT("### Found bouquet with name %s\n"), bouquetName.c_str());
 				break;
 			}
 			default:
-				log(3, true, TEXT("!!! Unknown bouquet descriptor, type=%02X\n"), (UINT)bouquetDescriptor->descriptor_tag); 
+				log(3, true, m_pParent->getTunerOrdinal(), TEXT("!!! Unknown bouquet descriptor, type=%02X\n"), (UINT)bouquetDescriptor->descriptor_tag); 
 				break;
 		}
 		// Adjust input buffer pointer
@@ -922,7 +922,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						// Do nothing
 						break;
 					default:
-						log(3, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+						log(3, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
 									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
 						break;
 				}
@@ -956,7 +956,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 	if(m_CurrentNid == 0)
 	{
 		m_CurrentNid = HILO(table->network_id);
-		log(2, true, TEXT("Current network NID is %hu\n"), m_CurrentNid);
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Current network NID is %hu\n"), m_CurrentNid);
 	}
 
 	// In the beginning we don't know which bouquet this is
@@ -973,11 +973,11 @@ void PSIParser::parseNITTable(const nit_t* const table,
 			case 0x40:
 			{
 				networkName = string((const char*)inputBuffer + DESCR_NETWORK_NAME_LEN, networkDescriptor->descriptor_length);
-				log(4, true, TEXT("### Found network with name %s\n"), networkName.c_str());
+				log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Found network with name %s\n"), networkName.c_str());
 				break;
 			}
 			default:
-				log(4, true, TEXT("!!! Unknown network descriptor, type=%02X\n"), (UINT)networkDescriptor->descriptor_tag);
+				log(4, true, m_pParent->getTunerOrdinal(), TEXT("!!! Unknown network descriptor, type=%02X\n"), (UINT)networkDescriptor->descriptor_tag);
 				break;
 		}
 		
@@ -1057,7 +1057,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 
 						// Prime transponder data
 						m_Transponders[tid] = transponder;
-						log(2, true, TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+						log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 							tid, transponder.frequency, transponder.symbolRate, printablePolarization(transponder.polarization),
 							printableModulation(transponder.modulation), printableFEC(transponder.fec));
 					}
@@ -1067,7 +1067,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					// Do nothing
 					break;
 				default:
-					log(3, true, TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+					log(3, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
 									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
 					break;
 			}
@@ -1088,7 +1088,7 @@ void PSIParser::parseUnknownTable(const pat_t* const table,
 								  const short remainingLength) const
 {
 	// Print diagnostics message
-	log(3, true, TEXT("$$$ Unknown table detected with TID=%02X, length=%u\n"), (UINT)table->table_id, remainingLength);
+	log(3, true, m_pParent->getTunerOrdinal(), TEXT("$$$ Unknown table detected with TID=%02X, length=%u\n"), (UINT)table->table_id, remainingLength);
 }
 
 // Query methods
@@ -1668,7 +1668,7 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 
 	// This really shoudn't happen!
 	if(currentBuffer->numberOfPackets >= g_pConfiguration->getTSPacketsPerOutputBuffer())
-		log(0, true, TEXT("Too many packets for decryption!\n"));
+		log(0, true, 0, TEXT("Too many packets for decryption!\n"));
 	else
 	{
 		// Copy the packet to the output buffer
@@ -1704,7 +1704,7 @@ void ESCAParser::decryptAndWritePending(bool immediately)
 			m_Decrypter.setKeys(currentBuffer->oddKey, currentBuffer->evenKey);
 
 			// Log how many packets are about to be written
-			log(3, true, TEXT("Writing %d pending packets..."), currentBuffer->numberOfPackets);
+			log(3, true, 0, TEXT("Writing %d pending packets..."), currentBuffer->numberOfPackets);
 			
 			// Decrypt multiple packets
 			m_Decrypter.decrypt(currentBuffer->buffer, currentBuffer->numberOfPackets);
@@ -1718,7 +1718,7 @@ void ESCAParser::decryptAndWritePending(bool immediately)
 				m_pRecorder->setBrokenPipe();
 
 			// Now all the packets are written
-			log(3, false, TEXT("Done!\n"));
+			log(3, false, 0, TEXT("Done!\n"));
 
 			// Let's see if we already have newer buffer
 			if(m_OutputBuffers.size() > 1)
@@ -1849,7 +1849,7 @@ bool ESCAParser::isCorrectKey(const OutputBuffer* const currentBuffer,
 			const ULONG offset = TS_LEN + ((packet->adaptation_field_control == 3) ? (ULONG)(copyPacket[TS_LEN] + 1) : 0);
 
 			// Log the offset value
-			log(4, true, TEXT("Offset = %lu\n"), offset);
+			log(4, true, 0, TEXT("Offset = %lu\n"), offset);
 
 			// Now let's see if we have a valid PES packet header
 			if(copyPacket[offset] == 0 && copyPacket[offset + 1] == 0 && copyPacket[offset + 2] == 1)

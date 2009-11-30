@@ -103,7 +103,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	currentClient.pmtPid = pmtPid;
 	if(packetType == TYPE_ECM)
 	{
-		log(2, true, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
+		log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
 		currentClient.ecmPid = caPid;
 	}
 	
@@ -133,7 +133,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 			processCATPacket(request.packet);
 			break;
 		default:
-			log(0, true, TEXT("Received unknown kind of packet, dropping...\n"));
+			log(0, true, 0, TEXT("Received unknown kind of packet, dropping...\n"));
 			break;
 	}
 }
@@ -152,7 +152,7 @@ void PluginsHandler::processECMPacketQueue()
 		// Calculate the differentce
 		if(difftime(now, m_Time) > g_pConfiguration->getDCWTimeout())
 		{
-			log(2, true, TEXT("Timeout for SID=%hu, resetting plugins...Do you have subscription for this channel?\n"), m_CurrentSid);
+			log(2, true, 0, TEXT("Timeout for SID=%hu, resetting plugins...Do you have subscription for this channel?\n"), m_CurrentSid);
 			// Reset the parser for this client
 			if(m_pCurrentClient != NULL && m_pCurrentClient->caller != NULL)
 				m_pCurrentClient->caller->reset();
@@ -187,7 +187,7 @@ void PluginsHandler::processECMPacketQueue()
 		{
 			if(!m_WaitingForResponse)
 			{
-				log(2, true, TEXT("A new ECM packet for SID=%hu received and sent to processing\n"), m_CurrentSid);
+				log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and sent to processing\n"), m_CurrentSid);
 				// Defer further tuning
 				m_DeferTuning = true;
 				// Process it
@@ -204,14 +204,14 @@ void PluginsHandler::processECMPacketQueue()
 				m_IsTuningTimeout = false;
 			}
 			else
-				log(2, true, TEXT("A new ECM packet for SID=%hu received while the previous packet for the same SID was being processed, waiting...\n"), m_CurrentSid);
+				log(2, true, 0, TEXT("A new ECM packet for SID=%hu received while the previous packet for the same SID was being processed, waiting...\n"), m_CurrentSid);
 		}
 		else
-			log(2, true, TEXT("ECM callback hasn't been established yet for SID=%hu, waiting...\n"), m_CurrentSid);
+			log(2, true, 0, TEXT("ECM callback hasn't been established yet for SID=%hu, waiting...\n"), m_CurrentSid);
 	}
 	else
 	{
-		log(2, true, TEXT("A tuning request came in for SID=%hu\n"), request.client->sid);
+		log(2, true, 0, TEXT("A tuning request came in for SID=%hu\n"), request.client->sid);
 		if(!m_DeferTuning)
 		{
 			// Defer further tuning
@@ -235,7 +235,7 @@ void PluginsHandler::processECMPacketQueue()
 			handleTuningRequest();
 		}
 		else
-			log(2, true, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
+			log(2, true, 0, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
 	}
 }
 

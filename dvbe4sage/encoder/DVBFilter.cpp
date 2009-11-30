@@ -5,8 +5,9 @@
 
 GUID CLSID_DVBFilter = { 0x36A5F770, 0xFE4C, 0x11CE, 0xA8, 0xED, 0x00, 0xAA, 0x00, 0x2F, 0xEC, 0xB0 };
 
-DVBFilter::DVBFilter() :
-    CBaseFilter(NAME("DVBFilter"), NULL, &m_Lock, CLSID_DVBFilter)
+DVBFilter::DVBFilter(UINT ordinal) :
+    CBaseFilter(NAME("DVBFilter"), NULL, &m_Lock, CLSID_DVBFilter),
+	m_Parser(ordinal)
 {
 	HRESULT hr = S_OK;
     m_pPin1 = new DVBFilterInputPin(this, &m_Lock, &hr);

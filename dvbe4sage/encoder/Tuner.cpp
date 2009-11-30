@@ -9,7 +9,7 @@ int Tuner::m_TTBudget2Tuners = 0;
 int Tuner::m_USB2Tuners = 0;
 
 Tuner::Tuner(Encoder* const pEncoder,
-			 int ordinal,
+			 UINT ordinal,
 			 ULONG initialFrequency,
 			 ULONG initialSymbolRate,
 			 Polarisation initialPolarization,
@@ -28,7 +28,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 	// Build the graph
 	if(FAILED(m_BDAFilterGraph.BuildGraph()))
 	{
-		log(0, true, TEXT("Error: Could not Build the DVB-S BDA filter graph\n"));
+		log(0, true, ordinal, TEXT("Error: Could not Build the DVB-S BDA filter graph\n"));
 		m_IsTunerOK = false;
 	}
 
@@ -50,14 +50,14 @@ Tuner::Tuner(Encoder* const pEncoder,
 						(UINT)DevInfo.MAC_ADDRESS[5]);
 
 		m_MAC = MAC;
-		log(0, true, TEXT("Device ordinal=%d, MAC=%s,  name=%s, type=%d\n"),
+		log(0, true, ordinal, TEXT("Device ordinal=%d, MAC=%s,  name=%s, type=%d\n"),
 						ordinal,
 						(LPCTSTR)CA2T(MAC),
 						(LPCTSTR)CA2T(DevInfo.Device_Name),
 						DevInfo.Device_TYPE);
 			
 					
-		log(0, true, TEXT("Driver Info: Company=%s, Version=%d.%d\n"),
+		log(0, true, ordinal, TEXT("Driver Info: Company=%s, Version=%d.%d\n"),
 						(LPCTSTR)CA2T(DrvInfo.Company),
 						DrvInfo.Version_Major,
 						DrvInfo.Version_Minor);
@@ -94,7 +94,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 			m_MAC = MAC;
 
 			// Print out the MAC address information
-			log(0, true, TEXT("Device ordinal=%d, MAC=%s,  type=%s\n"),
+			log(0, true, ordinal, TEXT("Device ordinal=%d, MAC=%s,  type=%s\n"),
 						ordinal,
 						(LPCTSTR)CA2T(MAC),
 						m_BDAFilterGraph.m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"));
@@ -152,7 +152,7 @@ bool Tuner::startRecording(bool ignoreSignalLock)
 	// Run the graph
 	if(FAILED(m_BDAFilterGraph.RunGraph()))
 	{
-		log(0, true, TEXT("Error: Could not play the filter graph.\n"));
+		log(0, true, m_BDAFilterGraph.getTunerOrdinal(), TEXT("Error: Could not play the filter graph.\n"));
 		return false;
 	}
 	else
@@ -175,7 +175,7 @@ bool Tuner::getLockStatus()
 		// If lock succeeded, print the log message and set the flag
 		if(bLocked)
 		{
-			log(0, true, TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
+			log(0, true, m_BDAFilterGraph.getTunerOrdinal(), TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
 			m_LockStatus = true;
 		}
 	}

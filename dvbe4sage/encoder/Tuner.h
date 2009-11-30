@@ -23,7 +23,7 @@ private:
 	Tuner();
 	Tuner(const Tuner&);
 public:
-	Tuner(Encoder* const pEncoder, int ordinal, ULONG initialFrequency, ULONG initialSymbolRate, Polarisation initialPolarization, ModulationType initialModulation, BinaryConvolutionCodeRate initialFecRate);
+	Tuner(Encoder* const pEncoder, UINT ordinal, ULONG initialFrequency, ULONG initialSymbolRate, Polarisation initialPolarization, ModulationType initialModulation, BinaryConvolutionCodeRate initialFecRate);
 	virtual ~Tuner(void);
 	void tune(ULONG frequency, ULONG symbolRate, Polarisation polarization, ModulationType modulation, BinaryConvolutionCodeRate fecRate);
 	bool startRecording(bool ignoreSignalLock);
