@@ -34,6 +34,7 @@ class Configuration
 	ULONG						m_LNBLOF2;
 	bool						m_UseNewTuningMethod;
 	hash_set<USHORT>			m_ServedCAIDs;
+	hash_set<USHORT>			m_IgnoredCAPids;
 	USHORT						m_MaxNumberOfResets;
 
 	// All advanced stuff goes here
@@ -50,6 +51,7 @@ public:
 	bool excludeTunersByMAC(const string mac) const	{ return m_ExcludedTunersMAC.count(mac) > 0 ; }
 	bool isDVBS2Tuner(int tunerOrdinal) const		{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
 	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
+	bool isIgnoredCAPid(USHORT caPid) const			{ return !m_IgnoredCAPids.empty() && m_IgnoredCAPids.count(caPid) > 0; }
 	bool isVGCam() const							{ return m_IsVGCam; };
 	UINT getLogLevel() const						{ return m_LogLevel; }
 	UINT getDCWTimeout() const						{ return m_DCWTimeout; }

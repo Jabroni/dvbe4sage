@@ -78,6 +78,16 @@ Configuration::Configuration()
 		// Default is YES
 		m_ServedCAIDs.insert(0x90D);*/
 
+	// Get the list of ignored PMT PIDs
+	GetPrivateProfileString(TEXT("Plugins"), TEXT("IgnoreCAPids"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	if(buffer[0] != TCHAR(0))
+		for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		{
+			USHORT caid;
+			_stscanf_s(token, TEXT("%hx"), &caid);
+			m_IgnoredCAPids.insert(caid);
+		}
+
 	// Get the initial polarization setting
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialPolarization"), TEXT("V"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
 	m_InitialPolarization = getPolarizationFromString(buffer);
