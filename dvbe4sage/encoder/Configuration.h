@@ -24,6 +24,7 @@ class Configuration
 	USHORT						m_NumberOfVirtualTuners;
 	hash_set<int>				m_ExcludedTuners;
 	hash_set<string>			m_ExcludedTunersMAC;
+	hash_set<string>			m_IncludedTunersMAC;
 
 	hash_set<int>				m_DVBS2Tuners;
 	string						m_DECSADllName;
@@ -49,6 +50,8 @@ public:
 	
 	bool excludeTuner(int tunerOrdinal) const		{ return m_ExcludedTuners.count(tunerOrdinal) > 0; }
 	bool excludeTunersByMAC(const string mac) const	{ return m_ExcludedTunersMAC.count(mac) > 0 ; }
+	bool includeTunersByMAC(const string mac) const	{ return m_IncludedTunersMAC.count(mac) > 0 ; }
+	bool includeTunersByMACPresent() const			{ return !m_IncludedTunersMAC.empty(); }
 	bool isDVBS2Tuner(int tunerOrdinal) const		{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
 	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
 	bool isIgnoredCAPid(USHORT caPid) const			{ return !m_IgnoredCAPids.empty() && m_IgnoredCAPids.count(caPid) > 0; }

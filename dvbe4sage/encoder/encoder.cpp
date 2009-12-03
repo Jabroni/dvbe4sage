@@ -46,6 +46,16 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 									 g_pConfiguration->getInitialModulation(),
 									 g_pConfiguration->getInitialFEC());
 
+			if (g_pConfiguration->includeTunersByMACPresent())
+			{
+				if (!g_pConfiguration->includeTunersByMAC(tuner->getTunerMac()))
+				{
+					log(0, true, 0, TEXT("Tuner ordinal=%d, MAC=%s, is NOT INCLUDED by MAC address\n"), i + 1, tuner->getTunerMac().c_str());
+					delete tuner;
+					continue;
+				}
+			}
+
 			// Let's see if we can use this tuner
 			if (g_pConfiguration->excludeTunersByMAC(tuner->getTunerMac()))
 			{
