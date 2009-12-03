@@ -51,15 +51,22 @@ Configuration::Configuration()
 	// Context for parsing
 	LPTSTR context;
 
-	// Get the list of tuners to exclude
+	// List of tuners to be excluded by ordinal
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("ExcludeTuners"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
 	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
 		m_ExcludedTuners.insert(_ttoi(token));
 
+	// List of tuners to be excluded by their MAC
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("ExcludeTunersMAC"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
 	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
 		m_ExcludedTunersMAC.insert(token);
 
+	// List of tuners to be included by ordinal
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("IncludeTuners"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		m_IncludedTuners.insert(_ttoi(token));
+
+	// List of tuners to be included by their MAC
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("IncludeTunersMAC"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
 	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
 		m_IncludedTunersMAC.insert(token);

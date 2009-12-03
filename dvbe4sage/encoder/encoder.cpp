@@ -34,32 +34,34 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	else
 		m_pPluginsHandler = new MDAPIPluginsHandler(hInstance, hWnd, hParentMenu);
 
-	// Initialize tuners
-	for(int i = 0; i < CBDAFilterGraph::getNumberOfTuners(); i++)
-		if(!g_pConfiguration->excludeTuner(i + 1))
+	// Initialize tuners, go from 1 trough N
+	for(int i = 1; i <= CBDAFilterGraph::getNumberOfTuners(); i++)
+		if(!g_pConfiguration->excludeTuner(i))
 		{
 			Tuner* tuner = new Tuner(this,
-									 i + 1,
+									 i,
 									 g_pConfiguration->getInitialFrequency(),
 									 g_pConfiguration->getInitialSymbolRate(),
 									 g_pConfiguration->getInitialPolarization(),
 									 g_pConfiguration->getInitialModulation(),
 									 g_pConfiguration->getInitialFEC());
 
-			if (g_pConfiguration->includeTunersByMACPresent())
+			// Let's see if we work by "included logic" first (rather than "anything is included by default")
+			if(g_pConfiguration->includeTuners())
 			{
-				if (!g_pConfiguration->includeTunersByMAC(tuner->getTunerMac()))
+				// Now, let's see if this tuner should be included, either by ordinal or by MAC
+				if(!g_pConfiguration->includeTuner(i) && !g_pConfiguration->includeTunersByMAC(tuner->getTunerMac()))
 				{
-					log(0, true, 0, TEXT("Tuner ordinal=%d, MAC=%s, is NOT INCLUDED by MAC address\n"), i + 1, tuner->getTunerMac().c_str());
+					log(0, true, i, TEXT("Tuner ordinal=%d, MAC=%s, is NOT INCLUDED either by the ordinal or by MAC address\n"), i, tuner->getTunerMac().c_str());
 					delete tuner;
 					continue;
 				}
 			}
 
-			// Let's see if we can use this tuner
+			// Let's see if we this tuner is excluded by its MAC
 			if (g_pConfiguration->excludeTunersByMAC(tuner->getTunerMac()))
 			{
-				log(0, true, 0, TEXT("Tuner ordinal=%d, MAC=%s, is excluded by MAC address\n"), i + 1, tuner->getTunerMac().c_str());
+				log(0, true, i, TEXT("Tuner ordinal=%d, MAC=%s, is excluded by MAC address\n"), i, tuner->getTunerMac().c_str());
 				delete tuner;
 				continue;
 			}
@@ -76,6 +78,8 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 				tuner->runIdle();
 			}
 		}
+		else
+			log(0, true, i, TEXT("Tuner ordinal=%d is excluded by the ordinal\n"), i);
 
 	// Initialize Winsock layer
 	WSAData wsaData;
