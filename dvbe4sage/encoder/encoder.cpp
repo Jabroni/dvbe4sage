@@ -66,7 +66,7 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 				continue;
 			}
 			
-			if(tuner->isTunerOK() && tuner->startRecording(true))
+			if(tuner->isTunerOK() && tuner->startRecording(false))
 			{
 				// Let's see if this is a DVB-S2 tuner and put it into the list accordingly
 				if(g_pConfiguration->isDVBS2Tuner(tuner->getTunerOrdinal()))
@@ -204,7 +204,7 @@ void Encoder::socketOperation(SOCKET socket,
 							source.c_str(), channelInt, durationInt, fileName.c_str());
 
 						// Start the recording itself
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, true);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, true, false);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
@@ -268,7 +268,7 @@ void Encoder::socketOperation(SOCKET socket,
 							source.c_str(), channelInt, sizeInt, fileName.c_str());
 
 						// Start the actual recording
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt, true);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt, true, false);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
@@ -406,7 +406,8 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 							 LPCWSTR outFileName,
 							 VirtualTuner* virtualTuner,
 							 __int64 size,
-							 bool bySage)
+							 bool bySage,
+							 bool startFullTransponderDump)
 {
 	// Use the internal parser
 	// Lock it
@@ -559,7 +560,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			tuner->tune(frequency, symbolRate, polarization, modulation, fecRate);
 
 			// Now, start the recording
-			if(tuner->startRecording(false))
+			if(tuner->startRecording(startFullTransponderDump))
 				// Set the TID if recording was started successfully
 				tuner->setTid(tid);
 			else

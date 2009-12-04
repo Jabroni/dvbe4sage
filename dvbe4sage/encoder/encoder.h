@@ -51,7 +51,8 @@ public:
 						LPCWSTR outFileName,
 						VirtualTuner* virtualTuner,
 						__int64 size,
-						bool bySage);
+						bool bySage,
+						bool startFullTransponderDump);
 	bool stopRecording(Recorder* recorder);
 	virtual ~Encoder();
 	int getNumberOfTuners() const;

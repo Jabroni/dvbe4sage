@@ -191,7 +191,8 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 					   newRecording.m_UseSID ? true : false,
 					   _ttoi64(newRecording.m_RecordingDuration),
 					   CT2CW(newRecording.m_OutputFileName),
-					   (__int64)-1);
+					   (__int64)-1,
+					   newRecording.m_DumpFullTransponder);
 								   
 	}
 }

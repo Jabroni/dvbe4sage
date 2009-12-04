@@ -313,13 +313,20 @@ private:
 	// Tuner ordinal number
 	const UINT	m_TunerOrdinal;
 
+	// Dump file (created only on request)
+	FILE* m_FullTransponderFile;
+
 	// Disallow default and copy constructor
 	DVBParser();
 	DVBParser(const DVBParser&);
 
 public:
-	// Default constructor
-	DVBParser(UINT ordinal) : m_PSIParser(this), m_HasConnectedClients(false), m_LeftoverLength(0), m_TunerOrdinal(ordinal) {}
+	// The only available constructor
+	DVBParser(UINT ordinal) :	
+	  m_PSIParser(this),	m_HasConnectedClients(false), m_LeftoverLength(0), m_TunerOrdinal(ordinal),	m_FullTransponderFile(NULL) {}
+	
+	// Destructor
+	virtual ~DVBParser()															{ stopTransponderDump(); }
 
 	// Tuner ordinal getter
 	UINT getTunerOrdinal() const													{ return m_TunerOrdinal; }
@@ -370,4 +377,10 @@ public:
 
 	// Set m_HasConnectedClients flag
 	void setHasConnectedClients()													{ m_HasConnectedClients = true; }
+
+	// Start dumping the full transponder
+	void startTransponderDump();
+
+	// Stop dumping the full transponder
+	void stopTransponderDump();
 };

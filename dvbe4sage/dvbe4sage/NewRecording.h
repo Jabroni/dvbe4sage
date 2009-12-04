@@ -48,4 +48,5 @@ public:
 	CComboBox m_ModulationCombo;
 	CComboBox m_FECCombo;
 	afx_msg void OnCbnSelendokTunerName();
+	bool m_DumpFullTransponder;
 };

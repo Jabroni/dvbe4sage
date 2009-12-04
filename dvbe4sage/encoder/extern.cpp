@@ -82,11 +82,12 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 										   bool useSid,
 										   __int64 duration,
 										   LPCWSTR outFileName,
-										   __int64 size)
+										   __int64 size,
+										   bool startFullTransponderDump)
 {
 	if(g_pEncoder != NULL)
 		return g_pEncoder->startRecording(autodiscoverTransponder, frequency, symbolRate, polarization, modulation, fecRate,
-											tunerOrdinal, false, channel, useSid, duration, outFileName, NULL, size, false);
+											tunerOrdinal, false, channel, useSid, duration, outFileName, NULL, size, false, startFullTransponderDump);
 	else
 		return false;
 }

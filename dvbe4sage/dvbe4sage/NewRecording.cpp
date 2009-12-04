@@ -27,6 +27,7 @@ NewRecording::NewRecording(CWnd* pParent /*=NULL*/)
 	, m_UseSID(FALSE)
 	, m_TransponderAutodiscovery(TRUE)
 	, m_bFirstTime(true)
+	, m_DumpFullTransponder(false)
 {
 }
 

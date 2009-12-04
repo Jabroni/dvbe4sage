@@ -14,6 +14,48 @@
 // Our message for communications
 #define WM_ALL_COMMUNICATIONS	WM_USER + 1
 
+
+// Start dumping the full transponder
+void DVBParser::startTransponderDump()
+{
+	lock();
+
+	// Do this only if we're not dumping already
+	if(m_FullTransponderFile == NULL)
+	{
+		// Get current time in local
+		SYSTEMTIME currentTime;
+		GetLocalTime(&currentTime);
+
+		// Create filename
+		TCHAR fullTransponderFileName[20];
+		_stprintf_s(fullTransponderFileName, TEXT("%hu%02hu%02hu%02hu%02hu%02hu.ts"), 
+											 currentTime.wYear,
+											 currentTime.wMonth,
+											 currentTime.wDay,
+											 currentTime.wHour,
+											 currentTime.wMinute,
+											 currentTime.wSecond);
+
+		// Open the full transponder dump file
+		m_FullTransponderFile = _tfsopen(fullTransponderFileName, TEXT("wb"),  _SH_DENYWR);
+	}
+
+	unlock();
+}
+
+// Stop dumping the full transponder
+void DVBParser::stopTransponderDump()
+{
+	lock();
+
+	// Close the dump file if needed
+	if(m_FullTransponderFile != NULL)
+		fclose(m_FullTransponderFile);
+
+	unlock();
+}
+
 // Lock function with logging
 void DVBParser::lock()
 {
@@ -33,6 +75,10 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 {
 	// Lock the parser
 	lock();
+
+	// Dump the buffur into the file if needed
+	if(m_FullTransponderFile != NULL)
+		fwrite(inputBuffer, sizeof(BYTE), inputBufferLength / sizeof(BYTE), m_FullTransponderFile);
 
 	// Get the TS header
 	while(inputBufferLength > 0)

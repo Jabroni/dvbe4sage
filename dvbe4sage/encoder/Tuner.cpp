@@ -138,7 +138,7 @@ void Tuner::tune(ULONG frequency,
 	m_LockStatus = false;
 }
 
-bool Tuner::startRecording(bool ignoreSignalLock)
+bool Tuner::startRecording(bool startFullTransponderDump)
 {
 	// Build the graph
 	m_BDAFilterGraph.BuildGraph();
@@ -148,6 +148,8 @@ bool Tuner::startRecording(bool ignoreSignalLock)
 
 	// Get lock status for the first time
 	//getLockStatus();
+	if(startFullTransponderDump)
+		m_BDAFilterGraph.getParser().startTransponderDump();
 
 	// Run the graph
 	if(FAILED(m_BDAFilterGraph.RunGraph()))
@@ -193,6 +195,9 @@ void Tuner::stopRecording()
 
 	// Destory the graph
 	m_BDAFilterGraph.TearDownGraph();
+
+	// Stop the full transponder dump
+	m_BDAFilterGraph.getParser().stopTransponderDump();
 }
 
 DWORD WINAPI RunIdleCallback(LPVOID vpTuner)

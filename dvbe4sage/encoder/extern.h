@@ -29,7 +29,8 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 										   bool useSid,
 										   __int64 duration,
 										   LPCWSTR outFileName,
-										   __int64 size);
+										   __int64 size,
+										   bool startFullTransponderDump);
 
 // DVB translation functions
 extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromDescriptor(USHORT descriptor);

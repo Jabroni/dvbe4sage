@@ -22,6 +22,8 @@
 #define IDC_TUNER_ORDINAL               1015
 #define IDC_DISCOVER_TRANSPONDER        1016
 #define IDC_USE_SID                     1017
+#define IDC_DUMP_FULL_TRANPONDER        1018
+#define IDC_DUMP_FULL_TRANSPONDER       1018
 #define ID_OPERATIONS_MINIMIZETOTRAY    32771
 #define ID_OPERATIONS_EXIT              32772
 #define ID_OPERATIONS_STARTRECORDING    32773
@@ -32,7 +34,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        136
 #define _APS_NEXT_COMMAND_VALUE         32774
-#define _APS_NEXT_CONTROL_VALUE         1018
+#define _APS_NEXT_CONTROL_VALUE         1019
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
