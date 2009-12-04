@@ -1,11 +1,10 @@
 #pragma once
 
 #include "mdapi.h"
+#include "ecmcache.h"
 
 using namespace std;
 using namespace stdext;
-
-#define PACKET_SIZE	184
 
 // CAID/PROVID structure
 struct CAScheme
@@ -75,12 +74,7 @@ protected:
 	bool									m_TimerInitialized;
 	time_t									m_Time;
 	bool									m_ExitWorkerThread;
-
-	union Dcw
-	{
-		BYTE key[8];
-		__int64 number;
-	};
+	ECMCache								m_ECMCache;
 
 	// Key checker
 	static bool wrong(const Dcw& dcw);
@@ -105,17 +99,8 @@ protected:
 		CloseHandle(m_WorkerThread);
 	}
 	
-	void ECMRequestComplete()
-	{
-		// Cancel deferred tuning
-		m_DeferTuning = false;
+	void ECMRequestComplete(const Dcw& dcw, bool isOddKey, bool addToCache);
 
-		// Indicate we're no longer waiting for response
-		m_WaitingForResponse = false;
-
-		// Indicate we're no longer waiting on timer
-		m_TimerInitialized = false;
-	}
 public:
 	// Constructor
 	PluginsHandler();

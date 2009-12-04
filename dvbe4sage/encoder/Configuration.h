@@ -46,6 +46,8 @@ class Configuration
 	USHORT						m_PSIMaturityTime;
 	bool						m_DontFixPMT;
 	bool						m_IsVGCam;
+	USHORT						m_MaxECMCacheSize;
+	USHORT						m_ECMCacheAutodeleteChunkSize;
 public:
 	Configuration();
 	
@@ -90,6 +92,8 @@ public:
 	USHORT getPMTThreshold() const					{ return m_PMTThreshold; }
 	USHORT getPSIMaturityTime() const				{ return m_PSIMaturityTime; }
 	bool getDontFixPMT() const						{ return m_DontFixPMT; }
+	USHORT getMaxECMCacheSize() const				{ return m_MaxECMCacheSize; }
+	USHORT getECMCacheAutodeleteChunkSize() const	{ return m_ECMCacheAutodeleteChunkSize; }
 };
 
 extern Configuration* g_pConfiguration;

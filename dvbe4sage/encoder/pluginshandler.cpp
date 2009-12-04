@@ -42,7 +42,8 @@ PluginsHandler::PluginsHandler() :
 	m_WaitingForResponse(false),
 	m_TimerInitialized(false),
 	m_IsTuningTimeout(false),
-	m_ExitWorkerThread(false)
+	m_ExitWorkerThread(false),
+	m_ECMCache(g_pConfiguration->getMaxECMCacheSize(), g_pConfiguration->getECMCacheAutodeleteChunkSize())
 {
 
 	// Create worker thread
@@ -224,15 +225,25 @@ void PluginsHandler::processECMPacketQueue()
 			// And current sid
 			m_CurrentSid = request.client->sid;
 			
-  			// Get the current time to handle timeouts
-	  		time(&m_Time);
-			// And mark the time is initialized
-			m_TimerInitialized = true;
-			// This is the tuning timeout
-			m_IsTuningTimeout = true;
- 
-			// Handle the tuning request
-			handleTuningRequest();
+			// Let's see if we already have a DCW for this very ECM in the cache
+			bool isOddKey = false;
+			const Dcw& dcw = m_ECMCache.find(request.packet, isOddKey);
+			if(dcw.number != 0)
+				// Mark ECM request as complete WITHOUT adding it to the cache
+				ECMRequestComplete(dcw, isOddKey, false);
+			else
+			{
+				// Retrieve new DCW using plugins
+  				// Get the current time to handle timeouts
+	  			time(&m_Time);
+				// And mark the time is initialized
+				m_TimerInitialized = true;
+				// This is the tuning timeout
+				m_IsTuningTimeout = true;
+	 
+				// Handle the tuning request
+				handleTuningRequest();
+			}
 		}
 		else
 			log(2, true, 0, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
@@ -269,4 +280,35 @@ bool EMMInfo::hasPid(USHORT pid) const
 		if(it->pid == pid)
 			return true;
 	return false;
+}
+
+void PluginsHandler::ECMRequestComplete(const Dcw& dcw,
+										bool isOddKey,
+										bool addToCache)
+{
+	// Set the key to the parser which called us
+	if(wrong(dcw) || !m_pCurrentClient->caller->setKey(isOddKey, dcw.key))
+	{
+		// Log the key
+		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
+			addToCache ? TEXT("plugin") : TEXT("cache"));
+		return;
+	}
+	else
+		// Log the key
+		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - accepted and %sadded to the cache!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
+			addToCache ? TEXT("plugin") : TEXT("cache"), addToCache ? TEXT("NOT ") : TEXT(""));
+
+	log(2, true, 0, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
+
+	// Cancel deferred tuning
+	m_DeferTuning = false;
+
+	// Indicate we're no longer waiting for response
+	m_WaitingForResponse = false;
+
+	// Indicate we're no longer waiting on timer
+	m_TimerInitialized = false;
 }

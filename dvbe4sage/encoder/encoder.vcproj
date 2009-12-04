@@ -384,6 +384,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ECMCache.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\encoder.cpp"
 				>
 			</File>
@@ -555,6 +559,10 @@
 			</File>
 			<File
 				RelativePath=".\DVBParser.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ECMCache.h"
 				>
 			</File>
 			<File
