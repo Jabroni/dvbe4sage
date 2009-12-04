@@ -70,6 +70,7 @@ void NewRecording::DoDataExchange(CDataExchange* pDX)
 	
 	DDX_Check(pDX, IDC_DISCOVER_TRANSPONDER, m_TransponderAutodiscovery);
 	DDX_Check(pDX, IDC_USE_SID, m_UseSID);
+	DDX_Check(pDX, IDC_DUMP_FULL_TRANSPONDER, m_DumpFullTransponder);
 }
 
 

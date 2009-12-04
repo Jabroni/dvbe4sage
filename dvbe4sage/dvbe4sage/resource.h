@@ -22,7 +22,6 @@
 #define IDC_TUNER_ORDINAL               1015
 #define IDC_DISCOVER_TRANSPONDER        1016
 #define IDC_USE_SID                     1017
-#define IDC_DUMP_FULL_TRANPONDER        1018
 #define IDC_DUMP_FULL_TRANSPONDER       1018
 #define ID_OPERATIONS_MINIMIZETOTRAY    32771
 #define ID_OPERATIONS_EXIT              32772

@@ -187,6 +187,9 @@ bool Tuner::getLockStatus()
 
 void Tuner::stopRecording()
 {
+	// Stop the full transponder dump
+	m_BDAFilterGraph.getParser().stopTransponderDump();
+
 	// Tell the parser to stop processing PSI packets
 	m_BDAFilterGraph.getParser().stopPSIPackets();
 
@@ -195,9 +198,6 @@ void Tuner::stopRecording()
 
 	// Destory the graph
 	m_BDAFilterGraph.TearDownGraph();
-
-	// Stop the full transponder dump
-	m_BDAFilterGraph.getParser().stopTransponderDump();
 }
 
 DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
