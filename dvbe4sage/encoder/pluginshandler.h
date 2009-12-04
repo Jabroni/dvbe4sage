@@ -51,6 +51,7 @@ protected:
 		USHORT							pmtPid;
 		hash_set<CAScheme>				ecmCaids;
 		EMMInfo							emmCaids;
+		BYTE							ecmPacket[PACKET_SIZE];
 		Client() : caller(NULL), sid(0), ecmPid(0xFFFF) {}
 	};
 
@@ -99,7 +100,10 @@ protected:
 		CloseHandle(m_WorkerThread);
 	}
 	
-	void ECMRequestComplete(const Dcw& dcw, bool isOddKey, bool addToCache);
+	void ECMRequestComplete(const BYTE* ecmPacket,
+							const Dcw& dcw,
+							bool isOddKey,
+							bool addToCache);
 
 public:
 	// Constructor

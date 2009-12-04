@@ -84,7 +84,7 @@ void WINAPI VGPluginsHandler::DCWHandler(int nParm,
 		dcw.key[7] = dcw.key[4] + dcw.key[5] + dcw.key[6];
 
 		// Indicate that ECM request has been completed and add it to the cache
-		ECMRequestComplete(dcw, isOddKey, true);
+		ECMRequestComplete(m_pCurrentClient->ecmPacket, dcw, isOddKey, true);
 	}
 	else
 		log(0, true, 0, TEXT("Key received but the client has already left\n"));

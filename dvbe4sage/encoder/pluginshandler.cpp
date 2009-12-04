@@ -106,6 +106,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	{
 		log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
 		currentClient.ecmPid = caPid;
+		memcpy(currentClient.ecmPacket, currentPacket, PACKET_SIZE);
 	}
 	
 	// Make a new request
@@ -229,8 +230,12 @@ void PluginsHandler::processECMPacketQueue()
 			bool isOddKey = false;
 			const Dcw& dcw = m_ECMCache.find(request.packet, isOddKey);
 			if(dcw.number != 0)
+			{
+				// Remove request from the queue
+				m_RequestQueue.pop_front();
 				// Mark ECM request as complete WITHOUT adding it to the cache
-				ECMRequestComplete(dcw, isOddKey, false);
+				ECMRequestComplete(NULL, dcw, isOddKey, false);
+			}
 			else
 			{
 				// Retrieve new DCW using plugins
@@ -282,7 +287,8 @@ bool EMMInfo::hasPid(USHORT pid) const
 	return false;
 }
 
-void PluginsHandler::ECMRequestComplete(const Dcw& dcw,
+void PluginsHandler::ECMRequestComplete(const BYTE* ecmPacket,
+										const Dcw& dcw,
 										bool isOddKey,
 										bool addToCache)
 {
@@ -296,10 +302,15 @@ void PluginsHandler::ECMRequestComplete(const Dcw& dcw,
 		return;
 	}
 	else
+	{
+		// Add the data to the cache, if needed
+		if(addToCache)
+			m_ECMCache.add(ecmPacket, dcw, isOddKey);
 		// Log the key
 		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - accepted and %sadded to the cache!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
-			addToCache ? TEXT("plugin") : TEXT("cache"), addToCache ? TEXT("NOT ") : TEXT(""));
+			addToCache ? TEXT("plugin") : TEXT("cache"), addToCache ? TEXT("") : TEXT("NOT "));
+	}
 
 	log(2, true, 0, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
 
