@@ -47,6 +47,7 @@ Configuration::Configuration()
 	m_MaxNumberOfResets = GetPrivateProfileInt(TEXT("Plugins"), TEXT("MaxNumberOfResets"), 10, iniFileFullPath) == 0 ? false : true;
 	m_MaxECMCacheSize = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("MaxECMCacheSize"), 3000, iniFileFullPath);
 	m_ECMCacheAutodeleteChunkSize = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("ECMCacheAutodeleteChunkSize"), 300, iniFileFullPath);
+	m_ScanAllTransponders = GetPrivateProfileInt(TEXT("Tuning"), TEXT("ScanAllTransponders"), 0, iniFileFullPath) == 0 ? false : true;
 
 	// Buffer
 	TCHAR buffer[1024];

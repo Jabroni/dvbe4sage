@@ -18,8 +18,7 @@
 
 Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pPluginsHandler(NULL),
-	m_hWnd(hWnd),
-	m_pParser(new DVBParser(0))
+	m_hWnd(hWnd)
 {
 	// Set the logger level
 	if(g_pLogger != NULL)
@@ -126,9 +125,6 @@ Encoder::~Encoder()
 		// And delete it
 		delete tuner;
 	}
-
-	// Delete the parser
-	delete m_pParser;
 
 	// Delete plugins handler
 	delete m_pPluginsHandler;	
@@ -411,7 +407,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 {
 	// Use the internal parser
 	// Lock it
-	m_pParser->lock();
+	m_Provider.lock();
 
 	// First, let's obtain the SID for the channel
 	USHORT sid = 0;
@@ -425,19 +421,19 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	{
 		sid = (USHORT)channel;
 		// Get the channel name
-		m_pParser->getServiceName(sid, channelName, sizeof(channelName) / sizeof(channelName[0]));
+		m_Provider.getServiceName(sid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 		
 		// Make a log entry
 		log(2, true, 0, TEXT("Service SID=%hu has Name=\"%s\"\n"), sid, channelName);
 	}
 	// Otherwise, find it from the mapping
-	else if(!m_pParser->getSidForChannel((USHORT)channel, sid))
+	else if(!m_Provider.getSidForChannel((USHORT)channel, sid))
 	{
 		// If not found, report an error
 		log(0, true, 0, TEXT("Cannot obtain SID number for the channel \"%d\", no recording done!\n"), channel);
 
 		// Unlock the parser
-		m_pParser->unlock();
+		m_Provider.unlock();
 
 		// And fail the recording
 		return false;
@@ -445,7 +441,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	else
 	{
 		// Get the channel name
-		m_pParser->getServiceName(sid, channelName, sizeof(channelName) / sizeof(channelName[0]));
+		m_Provider.getServiceName(sid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 		// Make a log entry
 		log(2, true, 0, TEXT("Channel=%d was successfully mapped to SID=%hu, Name=\"%s\"\n"), channel, sid, channelName);
@@ -462,7 +458,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	{
 		// Get the transponder
 		Transponder transponder;
-		if(m_pParser->getTransponderForSid(sid, transponder))
+		if(m_Provider.getTransponderForSid(sid, transponder))
 		{
 			// Override the tuning parameters
 			frequency = transponder.frequency;
@@ -487,7 +483,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			log(0, true, 0, TEXT("Autodiscovery requested, but cannot find the transponder for SID \"%hu\" (\"%s\"), no recording done!\n"), sid, channelName);
 
 			// Unlock the parser
-			m_pParser->unlock();
+			m_Provider.unlock();
 
 			// And fail the recording
 			return false;
@@ -498,7 +494,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		tuner = getTuner(tunerOrdinal, false, NULL);
 
 	// Unlock the parser
-	m_pParser->unlock();
+	m_Provider.unlock();
 
 	// Boil out if an appropriate tuner is not found
 	if(tuner == NULL)

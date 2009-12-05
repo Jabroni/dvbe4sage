@@ -212,15 +212,12 @@ void DVBParser::dropParser(TSPacketParser* parser)
 void PSIParser::clear()
 {
 	// Clear all the maps
-	m_Transponders.clear();
-	m_Services.clear();
-	m_Channels.clear();
+	m_Provider.clear();
 	m_PMTPids.clear();
 	m_ESPidsForSid.clear();
 	m_CAPidsForSid.clear();
 	m_EMMPids.clear();
 	m_BufferForPid.clear();
-	m_CurrentNid = 0;
 	m_CurrentTid = 0;
 	m_AllowParsing = true;
 	m_PMTCounter = 0;
@@ -795,7 +792,7 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 		const USHORT descriptorsLoopLength = HILO(serviceDescriptor->descriptors_loop_length);
 
 		// Only if encountered a new service
-		if(m_Services.find(serviceID) == m_Services.end())
+		if(m_Provider.m_Services.find(serviceID) == m_Provider.m_Services.end())
 		{
 			// Update timestamp
 			time(&m_TimeStamp);
@@ -883,7 +880,7 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 			}
 			
 			// Insert the new service to the map
-			m_Services[serviceID] = newService;
+			m_Provider.m_Services[serviceID] = newService;
 		}
 
 		// Adjust input buffer pointer
@@ -998,8 +995,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 							USHORT channelNumber = ntohs(*(USHORT*)(pointer + 2));
 
 							// See if service ID already initialized
-							hash_map<USHORT, Service>::iterator it = m_Services.find(serviceID);
-							if(it != m_Services.end() && it->second.channelNumber == 0)
+							hash_map<USHORT, Service>::iterator it = m_Provider.m_Services.find(serviceID);
+							if(it != m_Provider.m_Services.end() && it->second.channelNumber == 0)
 							{
 								// Update timestamp
 								time(&m_TimeStamp);
@@ -1009,7 +1006,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 								myService.channelNumber = channelNumber;
 
 								// And make the opposite mapping too
-								m_Channels[channelNumber] = serviceID;
+								m_Provider.m_Channels[channelNumber] = serviceID;
 							}
 						}
 
@@ -1052,10 +1049,10 @@ void PSIParser::parseNITTable(const nit_t* const table,
 	remainingLength -= CRC_LENGTH + NIT_LEN + networkDescriptorsLength;
 
 	// Get the current network NID
-	if(m_CurrentNid == 0)
+	if(m_Provider.m_CurrentNid == 0)
 	{
-		m_CurrentNid = HILO(table->network_id);
-		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Current network NID is %hu\n"), m_CurrentNid);
+		m_Provider.m_CurrentNid = HILO(table->network_id);
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Current network NID is %hu\n"), m_Provider.m_CurrentNid);
 	}
 
 	// In the beginning we don't know which bouquet this is
@@ -1148,14 +1145,14 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					transponder.polarization = getPolarizationFromDescriptor(satDescriptor->polarization);
 					
 					// Set the transponder info if not set yet
-					hash_map<USHORT, Transponder>::iterator it = m_Transponders.find(tid);
-					if(it == m_Transponders.end())
+					hash_map<USHORT, Transponder>::iterator it = m_Provider.m_Transponders.find(tid);
+					if(it == m_Provider.m_Transponders.end())
 					{
 						// Update timestamp
 						time(&m_TimeStamp);
 
 						// Prime transponder data
-						m_Transponders[tid] = transponder;
+						m_Provider.m_Transponders[tid] = transponder;
 						log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found transponder with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 							tid, transponder.frequency, transponder.symbolRate, printablePolarization(transponder.polarization),
 							printableModulation(transponder.modulation), printableFEC(transponder.fec));
@@ -1230,39 +1227,6 @@ bool PSIParser::getCAPidsForSid(USHORT sid,
 		return false;
 }
 
-bool PSIParser::getSidForChannel(USHORT channel,
-								 USHORT& sid) const
-{
-	hash_map<USHORT, USHORT>::const_iterator it = m_Channels.find(channel);
-	if(it != m_Channels.end())
-	{
-		sid = it->second;
-		return true;
-	}
-	else
-		return false;
-}
-
-bool PSIParser::getTransponderForSid(USHORT sid,
-									 Transponder& transponder) const
-{
-	hash_map<USHORT, Service>::const_iterator it1 = m_Services.find(sid);
-	if(it1 != m_Services.end())
-	{
-		USHORT tid = it1->second.TSID;
-		hash_map<USHORT, Transponder>::const_iterator it2 = m_Transponders.find(tid);
-		if(it2 != m_Transponders.end())
-		{
-			transponder = it2->second;
-			return true;
-		}
-		else
-			return false;
-	}
-	else
-		return false;
-}
-
 bool PSIParser::getECMCATypesForSid(USHORT sid,
 									hash_set<CAScheme>& ecmCATypes) const
 {
@@ -1271,34 +1235,6 @@ bool PSIParser::getECMCATypesForSid(USHORT sid,
 	{
 		ecmCATypes = it->second;
 		return true;
-	}
-	else
-		return false;
-}
-
-bool PSIParser::getServiceName(USHORT sid,
-							   LPTSTR output,
-							   int outputLength) const
-{
-	hash_map<USHORT, Service>::const_iterator it = m_Services.find(sid);
-	if(it != m_Services.end())
-	{
-		hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find(string("eng"));
-		if(it1 != it->second.serviceNames.end())
-		{
-			CA2T name(it1->second.c_str());
-			_tcscpy_s(output, outputLength, name);
-			return true;
-		}
-		it1 = it->second.serviceNames.begin();
-		if(it1 != it->second.serviceNames.end())
-		{
-			CA2T name(it1->second.c_str());
-			_tcscpy_s(output, outputLength, name);
-			return true;
-		}
-		else
-			return false;
 	}
 	else
 		return false;
@@ -1892,21 +1828,6 @@ bool ESCAParser::matchAudioLanguage(const BYTE* const buffer,
 			return true;
 	}
 	return false;
-}
-
-// Copy all the internal data
-void PSIParser::copy(const PSIParser& other)
-{
-	m_Transponders = other.m_Transponders;
-	m_Services = other.m_Services;	
-	m_Channels = other.m_Channels;	
-	m_PMTPids = other.m_PMTPids;	
-	m_CATypesForSid = other.m_CATypesForSid;
-	m_ESPidsForSid = other.m_ESPidsForSid;
-	m_CAPidsForSid = other.m_CAPidsForSid;
-	m_CurrentNid = other.m_CurrentNid;
-	m_CurrentTid = other.m_CurrentTid;
-	m_EMMPids = other.m_EMMPids;	
 }
 
 bool ESCAParser::isCorrectKey(const OutputBuffer* const currentBuffer,

@@ -26,6 +26,7 @@ class Configuration
 	hash_set<int>				m_IncludedTuners;
 	hash_set<string>			m_ExcludedTunersMAC;
 	hash_set<string>			m_IncludedTunersMAC;
+	bool						m_ScanAllTransponders;
 
 	hash_set<int>				m_DVBS2Tuners;
 	string						m_DECSADllName;
@@ -60,6 +61,7 @@ public:
 	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
 	bool isIgnoredCAPid(USHORT caPid) const			{ return m_IgnoredCAPids.count(caPid) > 0; }
 	bool isVGCam() const							{ return m_IsVGCam; };
+	bool scanAllTransponders() const				{ return m_ScanAllTransponders; }
 	UINT getLogLevel() const						{ return m_LogLevel; }
 	UINT getDCWTimeout() const						{ return m_DCWTimeout; }
 	UINT getTSPacketsPerBuffer() const				{ return m_TSPacketsPerBuffer; }

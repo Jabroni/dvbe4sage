@@ -200,6 +200,36 @@ void Tuner::stopRecording()
 	m_BDAFilterGraph.TearDownGraph();
 }
 
+void Tuner::copyProviderDataAndStopRecording()
+{
+	// Get the encoder network provider
+	NetworkProvider& encoderProvider = m_pEncoder->getNetworkProvider();
+
+	// Get the tuner parser
+	DVBParser* const pTunerParser = getParser();
+
+	// If the tuner parser is valid
+	if(pTunerParser != NULL && pTunerParser->getTimeStamp() != 0)
+	{
+		// Get the tuner network provider
+		const NetworkProvider& tunerNetworkProvider = pTunerParser->getNetworkProvider();
+
+		// Lock the encoder and the tuner parsers
+		encoderProvider.lock();
+		pTunerParser->lock();
+
+		// Copy the contents of the encoders parser from the current tuner's parser
+		encoderProvider.copy(tunerNetworkProvider);
+
+		// Unlock both parsers
+		pTunerParser->unlock();
+		encoderProvider.unlock();
+	}
+
+	// Tell the tuner to stop the recording
+	stopRecording();
+}
+
 DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 {
 	// Sleep for the initial running time
@@ -208,29 +238,30 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 	// Get the tuner
 	Tuner* pTuner = (Tuner*)vpTuner;
 
-	// Get the encoder parser
-	DVBParser* const pEncoderParser = pTuner->m_pEncoder->getParser();
+	// Copy provider data and stop recording, for the first time
+	pTuner->copyProviderDataAndStopRecording();
 
-	// Get the tuner parser
-	DVBParser* const pTunerParser = pTuner->getParser();
+	// Get current transponder TID
+	USHORT currentTid = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentTid() : 0;
 
-	// If both are valid, copy the info
-	if(pEncoderParser != NULL && pTunerParser != NULL && pTunerParser->getTimeStamp() != 0)
-	{
-		// Lock the encoder and the tuner parsers
-		pEncoderParser->lock();
-		pTunerParser->lock();
+	// Get the list of transponders from the encoder network providers
+	const hash_map<USHORT, Transponder> transponders = pTuner->m_pEncoder->getNetworkProvider().getTransponders();
 
-		// Copy the contents of the encoders parser from the current tuner's parser
-		pEncoderParser->copy(*pTunerParser);
-
-		// Unlock both parsers
-		pTunerParser->unlock();
-		pEncoderParser->unlock();
-	}
-
-	// Tell the tuner to stop the recording
-	pTuner->stopRecording();
+	// If asked for, loop through all the transponders
+	if(g_pConfiguration->scanAllTransponders())
+		for(hash_map<USHORT, Transponder>::const_iterator it = transponders.begin(); it != transponders.end(); it++)
+			// For any transponder other than the initial one
+			if(it->first != currentTid)
+			{
+				// Tune to its parameters
+				pTuner->tune(it->second.frequency, it->second.symbolRate, it->second.polarization, it->second.modulation, it->second.fec);
+				// Start the recording
+				pTuner->startRecording(false);
+				// Sleep for the same time as the initial running time
+				Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
+				// And, finally, copy the provider data and stop the recording
+				pTuner->copyProviderDataAndStopRecording();
+			}
 
 	// Now we can set the initialization event, as the initialization of the tuner is fully complete
 	SetEvent(pTuner->m_InitializationEvent);

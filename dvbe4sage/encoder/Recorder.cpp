@@ -61,23 +61,23 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 			DVBParser* const pParser = recorder->m_pTuner->getParser();
 
 			// Let's see if it's valid and can be used
-			if(pParser != NULL && pParser->canBeCopied() && !pParser->hasBeenCopied() && pParser->getTimeStamp() != 0 && 
+			if(pParser != NULL && pParser->getNetworkProvider().canBeCopied() && !pParser->providerInfoHasBeenCopied() && pParser->getTimeStamp() != 0 && 
 				(__int64)difftime(now, pParser->getTimeStamp()) > g_pConfiguration->getPSIMaturityTime())
 			{
-				// If yes, get the encoder's parser
-				DVBParser* const pEncoderParser = recorder->m_pEncoder->getParser();
+				// If yes, get the encoder's network provider
+				NetworkProvider& encoderNetworkProvider = recorder->m_pEncoder->getNetworkProvider();
 
-				// Lock both parsers
-				pEncoderParser->lock();
+				// Lock network provider
+				encoderNetworkProvider.lock();
 
-				// Copy the contents of the parser from the current tuner's parser
-				pEncoderParser->copy(*pParser);
+				// Copy the contents of the network provider
+				encoderNetworkProvider.copy(pParser->getNetworkProvider());
 
-				// And unlock it
-				pEncoderParser->unlock();
+				// And unlock the encoder provider
+				encoderNetworkProvider.unlock();
 
 				// Set "HasBeenCopied" flag to prevent multiple copy
-				pParser->setHasBeenCopied();
+				pParser->setProviderInfoHasBeenCopied();
 			}
 		}
 	}

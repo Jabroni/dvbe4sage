@@ -39,4 +39,5 @@ public:
 	void setTid(USHORT tid)					{ m_BDAFilterGraph.m_Tid = tid; }
 	HANDLE getInitializationEvent()			{ return m_InitializationEvent; }
 	bool getLockStatus();
+	void copyProviderDataAndStopRecording();
 };

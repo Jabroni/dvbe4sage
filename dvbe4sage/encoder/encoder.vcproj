@@ -412,6 +412,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\NetworkProvider.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\pluginshandler.cpp"
 				>
 			</File>
@@ -587,6 +591,10 @@
 			</File>
 			<File
 				RelativePath=".\MDAPIPluginHandler.h"
+				>
+			</File>
+			<File
+				RelativePath=".\NetworkProvider.h"
 				>
 			</File>
 			<File

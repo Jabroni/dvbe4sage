@@ -1,5 +1,7 @@
 #pragma once
 
+#include "NetworkProvider.h"
+
 using namespace std;
 using namespace stdext;
 
@@ -9,7 +11,6 @@ class DVBFilterToParserProxy;
 class Tuner;
 class Recorder;
 class VirtualTuner;
-class DVBParser;
 struct Transponder;
 
 class Encoder
@@ -29,7 +30,7 @@ class Encoder
 	CCritSec							m_cs;
 	hash_map<SOCKET, Client>			m_Clients;
 	const HWND							m_hWnd;
-	DVBParser*							m_pParser;				// DVBParser - to be copied from one of the tuners
+	NetworkProvider						m_Provider;				// Network Provider info - to be copied from one of the tuners
 
 	void socketOperation(SOCKET socket, WORD eventType, WORD error);
 	Tuner* getTuner(int tunerOrdinal, bool useLogicalTuner, const Transponder* const pTransponder);
@@ -58,6 +59,6 @@ public:
 	int getNumberOfTuners() const;
 	LPCTSTR getTunerFriendlyName(int i) const;
 	int getTunerOrdinal(int i) const;
-	DVBParser* getParser()								{ return m_pParser; }
+	NetworkProvider& getNetworkProvider()								{ return m_Provider; }
 	void waitForFullInitialization();
 };
