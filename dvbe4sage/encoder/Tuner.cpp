@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "configuration.h"
 #include "encoder.h"
+#include "extern.h"
 
 int Tuner::m_TTBudget2Tuners = 0;
 int Tuner::m_USB2Tuners = 0;
@@ -232,36 +233,64 @@ void Tuner::copyProviderDataAndStopRecording()
 
 DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 {
-	// Sleep for the initial running time
-	Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
-
 	// Get the tuner
 	Tuner* pTuner = (Tuner*)vpTuner;
 
-	// Copy provider data and stop recording, for the first time
-	pTuner->copyProviderDataAndStopRecording();
+	// Log entry
+	log(0, true, pTuner->getTunerOrdinal(), TEXT("Starting initial run for autodiscovery, transponder data: Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+		pTuner->getFrequency(), pTuner->getSymbolRate(), printablePolarization(pTuner->getPolarization()), printableModulation(pTuner->getModulation()), printableFEC(pTuner->getFECRate()));
+
+	// Sleep for the initial running time
+	Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
+
+	// Log entry
+	log(0, true, pTuner->getTunerOrdinal(), TEXT("The initial run for autodiscovery finished\n"));
+
+	// Log tuner lock status
+	if(!pTuner->getLockStatus())
+		log(0, true, pTuner->getTunerOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
 
 	// Get current transponder TID
 	USHORT currentTid = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentTid() : 0;
+
+	// Copy provider data and stop recording, for the first time
+	pTuner->copyProviderDataAndStopRecording();
 
 	// Get the list of transponders from the encoder network providers
 	const hash_map<USHORT, Transponder> transponders = pTuner->m_pEncoder->getNetworkProvider().getTransponders();
 
 	// If asked for, loop through all the transponders
 	if(g_pConfiguration->scanAllTransponders())
+	{
+		// Log entry
+		log(0, true, pTuner->getTunerOrdinal(), TEXT("Full transponder scan at initialization requested, starting...\n"));
+
 		for(hash_map<USHORT, Transponder>::const_iterator it = transponders.begin(); it != transponders.end(); it++)
+		{
+			// Log transponder data
+			log(0, true, pTuner->getTunerOrdinal(), TEXT("Transponder with TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s - %s"),
+				it->first, it->second.frequency, it->second.symbolRate, printablePolarization(it->second.polarization), printableModulation(it->second.modulation), printableFEC(it->second.fec),
+				it->first != currentTid ? TEXT("scanning started!\n") : TEXT("skipped, because it's the same transponder as the initial one!\n"));
 			// For any transponder other than the initial one
 			if(it->first != currentTid)
 			{
+				
 				// Tune to its parameters
 				pTuner->tune(it->second.frequency, it->second.symbolRate, it->second.polarization, it->second.modulation, it->second.fec);
 				// Start the recording
 				pTuner->startRecording(false);
 				// Sleep for the same time as the initial running time
 				Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
+				// Log tuner lock status
+				if(!pTuner->getLockStatus())
+					log(0, true, pTuner->getTunerOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
 				// And, finally, copy the provider data and stop the recording
 				pTuner->copyProviderDataAndStopRecording();
 			}
+		}
+		// Log entry
+		log(0, true, pTuner->getTunerOrdinal(), TEXT("Full transponder scan at initialization finished!\n"));
+	}
 
 	// Now we can set the initialization event, as the initialization of the tuner is fully complete
 	SetEvent(pTuner->m_InitializationEvent);

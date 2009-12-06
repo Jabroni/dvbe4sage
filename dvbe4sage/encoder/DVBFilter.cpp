@@ -72,7 +72,7 @@ HRESULT DVBFilterOutputPin::DecideBufferSize(IMemAllocator* pAlloc,
 	request.cbAlign = 1;
 	request.cbBuffer = 188;
 	request.cbPrefix = 0;
-	request.cBuffers = 100;
+	request.cBuffers = 1;
 	HRESULT hr = pAlloc->SetProperties(&request, &result);
 	return hr;
 }
@@ -139,6 +139,8 @@ STDMETHODIMP DVBFilterInputPin::GetAllocatorRequirements(ALLOCATOR_PROPERTIES *p
 {
 	pProps->cbBuffer = 188 * g_pConfiguration->getTSPacketsPerBuffer();
 	pProps->cBuffers = g_pConfiguration->getNumberOfBuffers();
+	pProps->cbAlign = 0;
+	pProps->cbPrefix = 0;
 	return S_OK;
 }
 

@@ -34,7 +34,7 @@ Configuration::Configuration()
 	m_InitialRunningTime = GetPrivateProfileInt(TEXT("Tuning"), TEXT("InitialRunningTime"), 20, iniFileFullPath);
 	m_UseSidForTuning = GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseSidForTuning"), 0, iniFileFullPath) == 0 ? false : true;
 	m_TSPacketsPerOutputBuffer = GetPrivateProfileInt(TEXT("Output"), TEXT("TSPacketsPerOutputBuffer"), 160000, iniFileFullPath);
-	m_TSPacketsOutputThreshold = GetPrivateProfileInt(TEXT("Output"), TEXT("TSPacketsOutputThreshold"), 70, iniFileFullPath);
+	m_TSPacketsOutputThreshold = GetPrivateProfileInt(TEXT("Output"), TEXT("TSPacketsOutputThreshold"), 135, iniFileFullPath);
 	m_DisableWriteBuffering = GetPrivateProfileInt(TEXT("Output"), TEXT("DisableWriteBuffering"), 0, iniFileFullPath) == 0 ? false : true;
 	m_ListeningPort = (USHORT)GetPrivateProfileInt(TEXT("Encoder"), TEXT("ListeningPort"), 6969, iniFileFullPath);
 	m_PATDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PATDilutionFactor"), 1, iniFileFullPath);
