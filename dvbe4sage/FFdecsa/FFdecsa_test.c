@@ -40,7 +40,7 @@ int compare(unsigned char *p1, unsigned char *p2, int n, int silently){
   for(i=0;i<n;i++){
     if(i==3) continue; // tolerate this
     if(p1[i]!=p2[i]){
-      fprintf(stderr,"at pos 0x%02x, got 0x%02x instead of 0x%02x\n",i,p1[i],p2[i]);
+//      fprintf(stderr,"at pos 0x%02x, got 0x%02x instead of 0x%02x\n",i,p1[i],p2[i]);
       ok=0;
     }
   }
@@ -73,6 +73,7 @@ int main(void){
   struct timeval tvs,tve;
 #endif
   void *keys=get_key_struct();
+  int ok=1;
 
   fprintf(stderr,"FFdecsa 1.0: testing correctness and speed\n");
 
@@ -82,31 +83,31 @@ int main(void){
   memcpy(onebuf,test_1_encrypted,188);
   cluster[0]=onebuf;cluster[1]=onebuf+188;cluster[2]=NULL;
   decrypt_packets(keys,cluster);
-  compare(onebuf,test_1_expected,188,0);
+  ok*=compare(onebuf,test_1_expected,188,0);
 
   set_control_words(keys,test_2_key,test_invalid_key);
   memcpy(onebuf,test_2_encrypted,188);
   cluster[0]=onebuf;cluster[1]=onebuf+188;cluster[2]=NULL;
   decrypt_packets(keys,cluster);
-  compare(onebuf,test_2_expected,188,0);
+  ok*=compare(onebuf,test_2_expected,188,0);
 
   set_control_words(keys,test_3_key,test_invalid_key);
   memcpy(onebuf,test_3_encrypted,188);
   cluster[0]=onebuf;cluster[1]=onebuf+188;cluster[2]=NULL;
   decrypt_packets(keys,cluster);
-  compare(onebuf,test_3_expected,188,0);
+  ok*=compare(onebuf,test_3_expected,188,0);
 
   set_control_words(keys,test_p_10_0_key,test_invalid_key);
   memcpy(onebuf,test_p_10_0_encrypted,188);
   cluster[0]=onebuf;cluster[1]=onebuf+188;cluster[2]=NULL;
   decrypt_packets(keys,cluster);
-  compare(onebuf,test_p_10_0_expected,188,0);
+  ok*=compare(onebuf,test_p_10_0_expected,188,0);
 
   set_control_words(keys,test_p_1_6_key,test_invalid_key);
   memcpy(onebuf,test_p_1_6_encrypted,188);
   cluster[0]=onebuf;cluster[1]=onebuf+188;cluster[2]=NULL;
   decrypt_packets(keys,cluster);
-  compare(onebuf,test_p_1_6_expected,188,0);
+  ok*=compare(onebuf,test_p_1_6_expected,188,0);
 
 /* begin speed testing */
 
@@ -174,8 +175,8 @@ int main(void){
   //end decryption
 
 #ifdef _WINDOWS
-  fprintf(stderr,"speed=%f Mbit/s\n",(184*TS_PKTS_FOR_TEST*8)/(((double)(fve.llt - fvs.llt))/1000000)/1024/1024);
-  fprintf(stderr,"speed=%f pkts/s\n",TS_PKTS_FOR_TEST/(((double)(fve.llt - fvs.llt))/1000000));
+  fprintf(stderr,"speed=%f Mbit/s\n",(184*TS_PKTS_FOR_TEST*8)/(((double)(fve.llt - fvs.llt))/10000000)/1000000);
+  fprintf(stderr,"speed=%f pkts/s\n",TS_PKTS_FOR_TEST/(((double)(fve.llt - fvs.llt))/10000000));
 #else
   fprintf(stderr,"speed=%f Mbit/s\n",(184*TS_PKTS_FOR_TEST*8)/((tve.tv_sec-tvs.tv_sec)+1e-6*(tve.tv_usec-tvs.tv_usec))/1000000);
   fprintf(stderr,"speed=%f pkts/s\n",TS_PKTS_FOR_TEST/((tve.tv_sec-tvs.tv_sec)+1e-6*(tve.tv_usec-tvs.tv_usec)));
@@ -183,20 +184,21 @@ int main(void){
 
   // this packet couldn't be decrypted correctly
 #ifdef ONE_POISONED_PACKET
-  compare(megabuf+188*(TS_PKTS_FOR_TEST*2/3),test_3_expected,188,0); /* will fail because we used a wrong key */
+  ok*=compare(megabuf+188*(TS_PKTS_FOR_TEST*2/3),test_3_expected,188,0); /* will fail because we used a wrong key */
 #endif
   // these should be ok
-  compare(megabuf,s_expected,188,0);
-  compare(megabuf+188*511,s_expected,188,0);
-  compare(megabuf+188*512,s_expected,188,0);
-  compare(megabuf+188*319,s_expected,188,0);
-  compare(megabuf+188*(TS_PKTS_FOR_TEST-1),s_expected,188,0);
+  ok*=compare(megabuf,s_expected,188,0);
+  ok*=compare(megabuf+188*511,s_expected,188,0);
+  ok*=compare(megabuf+188*512,s_expected,188,0);
+  ok*=compare(megabuf+188*319,s_expected,188,0);
+  ok*=compare(megabuf+188*(TS_PKTS_FOR_TEST-1),s_expected,188,0);
 
   for(i=0;i<TS_PKTS_FOR_TEST;i++){
     if(!compare(megabuf+188*i,s_expected,188,1)){
       fprintf(stderr,"FAILED COMPARISON OF PACKET %10i\n",i);
+	  ok=0;
     };
   }
 
-  return 0;
+  return ok ? 0 : 10;
 }
