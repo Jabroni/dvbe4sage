@@ -176,6 +176,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 			bool found = false;
 
 			// Do a little time arithmetics excercise
+			/* Removed - not used anyhow
 			__declspec(align(8)) union timeunion
 			{
 				__int64 longlong;
@@ -187,12 +188,13 @@ Recorder::Recorder(PluginsHandler* const plugins,
 			GetSystemTime(&systemTime);
 			// And convert it into file time
 			SystemTimeToFileTime(&systemTime, &st.fileTime);
-
+			*/
 			do
 			{
 				// Check time diff only if the file is 0 size
 				if(findData.nFileSizeHigh == 0 && findData.nFileSizeLow == 0)
 				{
+					/*
 					// Get a creation time of our file
 					ft.fileTime = findData.ftCreationTime;
 
@@ -201,7 +203,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 
 					// If the diff is less than 10 seconds, this is our file
 					// --- removed as not reliable enough
-					//if(diff < 100000000)
+					//if(diff < 100000000)*/
 						found = true;
 				}
 			}

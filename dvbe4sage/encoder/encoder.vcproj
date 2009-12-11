@@ -17,6 +17,9 @@
 		<ToolFile
 			RelativePath="..\3rdparty\xsd\rules\xsd-cxx-tree.rules"
 		/>
+		<ToolFile
+			RelativePath="..\3rdparty\xsd\rules\xsd-cxx-parser.rules"
+		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
@@ -30,10 +33,13 @@
 				Name="VCPreBuildEventTool"
 			/>
 			<Tool
+				Name="C++/Tree Mapping Rule"
+			/>
+			<Tool
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="C++/Tree Mapping Rule"
+				Name="C++/Parser Mapping Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -110,10 +116,13 @@
 				Name="VCPreBuildEventTool"
 			/>
 			<Tool
+				Name="C++/Tree Mapping Rule"
+			/>
+			<Tool
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="C++/Tree Mapping Rule"
+				Name="C++/Parser Mapping Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -384,8 +393,50 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ecmcache-pskel.cxx"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\ECMCache.cpp"
 				>
+			</File>
+			<File
+				RelativePath=".\ecmcache.xsd"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="C++/Parser Mapping Rule"
+						GenInline="true"
+						GenPolymorphic="true"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="C++/Parser Mapping Rule"
+						GenInline="true"
+						GenPolymorphic="true"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\encoder.cpp"
@@ -563,6 +614,14 @@
 			</File>
 			<File
 				RelativePath=".\DVBParser.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ecmcache-pskel.hxx"
+				>
+			</File>
+			<File
+				RelativePath=".\ecmcache-pskel.ixx"
 				>
 			</File>
 			<File

@@ -11,29 +11,29 @@ union Dcw
 	BYTE key[8];
 };
 
+// An auxiliaury structure defining the basic data piece to be store in the cache
+struct ECMDCWPair
+{
+	BYTE		ecm[PACKET_SIZE];		// The ECM packet content
+	Dcw			dcw;					// The corresponding DCW
+	bool		isOddKey;				// TRUE is the key is ODD, FALSE if EVEN
+	time_t		timeStamp;				// The time stamp - for size keeping
+};
+
 class ECMCache
 {
 private:
-	// An auxiliaury structure defining the basic data piece to be store in the cache
-	struct ECMDCWPair
-	{
-		BYTE		ecm[PACKET_SIZE];		// The ECM packet content
-		Dcw			dcw;					// The corresponding DCW
-		bool		isOddKey;				// TRUE is the key is ODD, FALSE if EVEN
-		time_t		timeStamp;				// The time stamp - for size keeping
-	};
-
 	// Here we keep all the cached data, the key is CRC32 of the ECM packet
-	hash_multimap<__int32, ECMDCWPair>	m_Data;
+	hash_multimap<unsigned __int32, ECMDCWPair>		m_Data;
 
 	// Here we keep the order in which the ECMs in questions came in, for size keeping
-	list<__int32>						m_OrderOfData;
+	list<unsigned __int32>							m_OrderOfData;
 
 	// Max cache size
-	USHORT								m_MaxCacheSize;
+	USHORT											m_MaxCacheSize;
 
 	// Autodelete chunk size
-	USHORT								m_AutodeleteChunkSize;
+	USHORT											m_AutodeleteChunkSize;
 
 	// We don't need either default or copy constructors
 	ECMCache();
@@ -48,4 +48,10 @@ public:
 
 	// Find if the packet is in the cache (if no, retrieve a reference to dummy Dcw)
 	const Dcw& find(const BYTE* ecmPacket, bool& isOddKey) const;
+
+	// Dump the content of the cache to a file
+	bool DumpToFile(LPCTSTR fileName) const;
+
+	// Read the content of the cache from a file
+	bool ReadFromFile(LPCTSTR fileName);
 };

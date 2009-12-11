@@ -2,6 +2,7 @@
 
 #include "ECMCache.h"
 #include "crc32.h"
+#include "ecmcache-pskel.hxx"
 
 const Dcw dummyDcw = { 0 };
 
@@ -17,17 +18,17 @@ void ECMCache::add(const BYTE* ecmPacket,
 		for(USHORT i = 0; i < m_AutodeleteChunkSize; i++)
 		{
 			// Find the first hash value to remove
-			__int32 hashToRemove = m_OrderOfData.front();
+			unsigned __int32 hashToRemove = m_OrderOfData.front();
 
 			// Get the current time stamp
 			time_t earliestTimeStamp = 0;
 			time(&earliestTimeStamp);
 
 			// Initialize iterator with the place for removal
-			hash_multimap<__int32, ECMDCWPair>::iterator removeIt = m_Data.end();
+			hash_multimap<unsigned __int32, ECMDCWPair>::iterator removeIt = m_Data.end();
 
 			// Find the entry with the matching hash and the earliest time stamp
-			for(hash_multimap<__int32, ECMDCWPair>::iterator it = m_Data.find(hashToRemove); it != m_Data.end(); it++)
+			for(hash_multimap<unsigned __int32, ECMDCWPair>::iterator it = m_Data.find(hashToRemove); it != m_Data.end(); it++)
 				if(difftime(it->second.timeStamp, earliestTimeStamp) < 0)
 				{
 					// If the earliest time stamp, remember it
@@ -54,14 +55,14 @@ void ECMCache::add(const BYTE* ecmPacket,
 	newPair.isOddKey = isOddKey;
 
 	// Compute the hash
-	__int32 newHash = _dvb_crc32(ecmPacket, PACKET_SIZE);
+	unsigned __int32 newHash = _dvb_crc32(ecmPacket, PACKET_SIZE);
 
 	// Get the current time stamp
 	time_t now = 0;
 	time(&now);
 
 	// And, finally, add the pair to the map
-	m_Data.insert(pair<__int32, ECMDCWPair>(newHash, newPair));
+	m_Data.insert(pair<unsigned __int32, ECMDCWPair>(newHash, newPair));
 }
 
 // Find if the packet is in the cache (if no, retrieve a reference to dummy Dcw)
@@ -72,7 +73,7 @@ const Dcw& ECMCache::find(const BYTE* ecmPacket,
 	__int32 hashInQuestion = _dvb_crc32(ecmPacket, PACKET_SIZE);
 
 	// Find the entry with the matching hash
-	for(hash_multimap<__int32, ECMDCWPair>::const_iterator it = m_Data.find(hashInQuestion); it != m_Data.end(); it++)
+	for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.find(hashInQuestion); it != m_Data.end(); it++)
 		// Now, check whether the actual packet really matches
 		if(memcmp(it->second.ecm, ecmPacket, PACKET_SIZE) == 0)
 			{
@@ -83,4 +84,159 @@ const Dcw& ECMCache::find(const BYTE* ecmPacket,
 
 	// We found nothing, return the dummy DCW
 	return dummyDcw;
+}
+
+// Dump the content of the cache to a file
+bool ECMCache::DumpToFile(LPCTSTR fileName) const
+{
+	// Try opening the file
+	FILE* outFile = NULL;
+	_tfopen_s(&outFile, fileName, TEXT("wt, ccs=UTF-8"));
+	if(outFile != NULL)
+	{
+		_ftprintf(outFile, TEXT("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"));
+		_ftprintf(outFile, TEXT("<cache>\n"));
+		for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.begin(); it != m_Data.end(); it++)
+		{
+			_ftprintf(outFile, TEXT("\t<keypair>\n"));
+			_ftprintf(outFile, TEXT("\t\t<ecm>"));
+			// Fixme : change it to the real ECM packet size!
+			for(int i = 0; i < PACKET_SIZE; i++)
+				_ftprintf(outFile, TEXT("%.02X"), (UINT)it->second.ecm[i]);
+			_ftprintf(outFile, TEXT("</ecm>\n"));
+			_ftprintf(outFile, TEXT("\t\t<dcw>\n"));
+			for(int i = 0; i < 8; i++)
+				_ftprintf(outFile, TEXT("%.02X"), (UINT)it->second.dcw.key[i]);
+			_ftprintf(outFile, TEXT("</dcw>\n"));
+			_ftprintf(outFile, TEXT("\t\t<parity>%c</parity>\n"), it->second.isOddKey ? TCHAR('O') : TCHAR('E'));
+			_ftprintf(outFile, TEXT("\t</keypair>\n"));
+		}
+		_ftprintf(outFile, TEXT("</cache>\n"));
+		fclose(outFile);
+	}
+}
+
+// Implementation classes for XML schema elements
+class ecm_pimpl : public ecm_pskel, public xml_schema::string_pimpl
+{
+private:
+	string	m_String;
+public:
+	virtual void post_ecm()				{ m_String = post_string(); }
+	const string& getString() const		{ return m_String; }
+};
+
+class dcw_pimpl : public dcw_pskel, public xml_schema::string_pimpl
+{
+private:
+	string	m_String;
+public:
+	virtual void post_dcw()				{ m_String = post_string(); }
+	const string& getString() const		{ return m_String; }
+};
+
+class parity_pimpl : public parity_pskel, public xml_schema::string_pimpl
+{
+private:
+	string	m_String;
+public:
+	virtual void post_parity()			{ m_String = post_string(); }
+	const string& getString() const		{ return m_String; }
+};
+
+class Keypair_pimpl : public Keypair_pskel
+{
+public:
+	Keypair_pimpl()
+	{
+		ecm_parser_ = new ecm_pimpl;
+		dcw_parser_ = new dcw_pimpl;
+		parity_parser_ = new parity_pimpl;
+	}
+	virtual ~Keypair_pimpl()
+	{
+		delete ecm_parser_;
+		delete dcw_parser_;
+		delete parity_parser_;
+	}
+	virtual void ecm()
+	{
+		const string& content = ((ecm_pimpl*)ecm_parser_)->getString();
+		for(UINT i = 0; i < content.length() - 1; i += 2)
+		{
+			UINT number;
+			static char buf[4] = { 0, 0 };
+			buf[2] = content[i];
+			buf[3] = content[i + 1];
+			sscanf_s(buf, "%X", &number);
+			m_Pair.ecm[i >> 1] = (BYTE)number;
+		}
+	}
+	virtual void dcw()
+	{
+		const string& content = ((dcw_pimpl*)dcw_parser_)->getString();
+		for(UINT i = 0; i < content.length() - 1; i += 2)
+		{
+			UINT number;
+			static char buf[4] = { 0, 0 };
+			buf[2] = content[i];
+			buf[3] = content[i + 1];
+			sscanf_s(buf, "%X", &number);
+			m_Pair.dcw.key[i >> 1] = (BYTE)number;
+		}
+	}
+	virtual void parity()
+	{
+		const string& content = ((parity_pimpl*)parity_parser_)->getString();
+		m_Pair.isOddKey = (content[0] == 'O');
+	}
+	const BYTE* const getEcm() const	{ return m_Pair.ecm; }
+	const Dcw& getDcw() const			{ return m_Pair.dcw; }
+	bool getIsOddKey() const			{ return m_Pair.isOddKey; } 
+private:
+	ECMDCWPair		m_Pair;
+};
+
+// Helper class for reading the saved XML cache file from the saved file
+class cache_pimpl : public cache_pskel
+{
+private:
+	ECMCache&		m_Cache;
+
+	// We don't need default and copy constructors
+	cache_pimpl();
+	cache_pimpl(const cache_pimpl&);
+public:
+	cache_pimpl(ECMCache& cache) : m_Cache(cache)
+	{
+		keypair_parser_ = new Keypair_pimpl;
+	}
+	virtual ~cache_pimpl()
+	{
+		delete keypair_parser_;
+	}
+	virtual void keypair()
+	{
+		m_Cache.add(((Keypair_pimpl*)keypair_parser_)->getEcm(),
+					((Keypair_pimpl*)keypair_parser_)->getDcw(),
+					((Keypair_pimpl*)keypair_parser_)->getIsOddKey());
+	}
+};
+
+// Read the content of the cache from a file
+bool ECMCache::ReadFromFile(LPCTSTR fileName)
+{
+	try
+	{
+		cache_pimpl cacheParser(*this);
+		xml_schema::document doc(cacheParser, "cache");
+		cacheParser.pre();
+		doc.parse(fileName);
+		cacheParser.post_cache();
+		return true;
+	}
+	catch(const xml_schema::exception& e)
+	{
+		return false;
+	}
 }

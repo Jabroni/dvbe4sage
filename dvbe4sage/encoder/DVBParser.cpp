@@ -386,7 +386,7 @@ void PSIParser::parseTable(const pat_t* const table,
 		const USHORT tableLength = HILO(table->section_length) + TABLE_PREFIX_LEN;
 
 		// Get the CRC
-		const UINT crc = ntohl(*(const UINT*)(inputBuffer + tableLength - CRC_LENGTH));
+		const unsigned __int32 crc = ntohl(*(const UINT*)(inputBuffer + tableLength - CRC_LENGTH));
 
 		// Do all the stuff below only if CRC matches
 		if(crc == _dvb_crc32(inputBuffer, tableLength - CRC_LENGTH))
