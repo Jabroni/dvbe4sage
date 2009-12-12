@@ -16,6 +16,8 @@
 
 #define UI_BACKLOG	20000
 
+#define MAX_ERROR_MESSAGE_SIZE	2048
+
 // This is the worker thread main function waits for events
 DWORD WINAPI logTabWorkerThreadRoutine(LPVOID param)
 {
@@ -85,6 +87,8 @@ BEGIN_MESSAGE_MAP(CDVBE4SageDlg, CTrayDialog)
 	//}}AFX_MSG_MAP
 	ON_COMMAND(ID_OPERATIONS_STARTRECORDING, &CDVBE4SageDlg::OnOperationsStartrecording)
 	ON_COMMAND(ID_OPERATIONS_EXIT, &CDVBE4SageDlg::OnOperationsExit)
+	ON_COMMAND(ID_OPERATIONS_DUMPCACHE, &CDVBE4SageDlg::OnDumpcache)
+	ON_COMMAND(ID_OPERATIONS_LOADCACHE, &CDVBE4SageDlg::OnLoadcache)
 END_MESSAGE_MAP()
 
 
@@ -205,4 +209,28 @@ void CDVBE4SageDlg::OnOperationsExit()
 void CDVBE4SageDlg::OnClose()
 {
 	CTrayDialog::OnSysCommand(SC_MINIMIZE, 0);
+}
+
+void CDVBE4SageDlg::OnDumpcache()
+{
+	CFileDialog dlg(FALSE, _T("xml"), _T("ecmdump"), OFN_OVERWRITEPROMPT, NULL, this);
+	if(dlg.DoModal() == IDOK)
+	{
+		std::string reason(MAX_ERROR_MESSAGE_SIZE, 'a');
+		if(!dumpECMCache(dlg.GetPathName(), reason))
+			MessageBox(reason.c_str(), TEXT("Error Dumping File"), MB_ICONERROR | MB_OK);
+
+			
+	}
+}
+
+void CDVBE4SageDlg::OnLoadcache()
+{
+	CFileDialog dlg(TRUE, _T("ts"), NULL, 0, NULL, this);
+	if(dlg.DoModal() == IDOK)
+	{
+		std::string reason(MAX_ERROR_MESSAGE_SIZE, 'a');
+		if(!loadECMCache(dlg.GetPathName(), reason))
+			MessageBox(reason.c_str(), TEXT("Error Loading File"), MB_ICONERROR | MB_OK);
+	}
 }

@@ -119,7 +119,7 @@ void NewRecording::OnBnClickedBrowse()
 {
 	UpdateData(TRUE);
 	CString fileName;
-	CFileDialog dlg(TRUE, _T("ts"), NULL, OFN_OVERWRITEPROMPT, NULL, this);
+	CFileDialog dlg(FALSE, _T("ts"), NULL, OFN_OVERWRITEPROMPT, NULL, this);
 	if(dlg.DoModal() == IDOK)
 	{
 		m_OutputFileName = dlg.GetPathName();

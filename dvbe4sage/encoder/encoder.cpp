@@ -657,3 +657,15 @@ void Encoder::waitForFullInitialization()
 	// Make a log entry that the setup is complete
 	log(0, true, 0, TEXT("Encoder initialization is complete\n"));
 }
+
+bool Encoder::dumpECMCache(LPCTSTR fileName,
+						   string& reason) const
+{
+	return m_pPluginsHandler != NULL ? m_pPluginsHandler->dumpECMCache(fileName, reason) : false;
+}
+
+bool Encoder::loadECMCache(LPCTSTR fileName,
+						   string& reason)
+{
+	return m_pPluginsHandler != NULL ? m_pPluginsHandler->loadECMCache(fileName, reason) : false;
+}

@@ -85,9 +85,18 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 										   __int64 size,
 										   bool startFullTransponderDump)
 {
-	if(g_pEncoder != NULL)
-		return g_pEncoder->startRecording(autodiscoverTransponder, frequency, symbolRate, polarization, modulation, fecRate,
-											tunerOrdinal, false, channel, useSid, duration, outFileName, NULL, size, false, startFullTransponderDump);
-	else
-		return false;
+	return g_pEncoder != NULL ? g_pEncoder->startRecording(autodiscoverTransponder, frequency, symbolRate, polarization, modulation, fecRate,
+		tunerOrdinal, false, channel, useSid, duration, outFileName, NULL, size, false, startFullTransponderDump) : false;
+}
+
+extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName,
+										 string& reason)
+{
+	return g_pEncoder != NULL ? g_pEncoder->dumpECMCache(fileName, reason) : false;
+}
+
+extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName,
+										 string& reason)
+{
+	return g_pEncoder != NULL ? g_pEncoder->loadECMCache(fileName, reason) : false;
 }

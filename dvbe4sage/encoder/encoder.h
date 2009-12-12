@@ -55,10 +55,12 @@ public:
 						bool bySage,
 						bool startFullTransponderDump);
 	bool stopRecording(Recorder* recorder);
+	bool dumpECMCache(LPCTSTR fileName, string& reason) const;
+	bool loadECMCache(LPCTSTR fileName, string& reason);
 	virtual ~Encoder();
 	int getNumberOfTuners() const;
 	LPCTSTR getTunerFriendlyName(int i) const;
 	int getTunerOrdinal(int i) const;
-	NetworkProvider& getNetworkProvider()								{ return m_Provider; }
+	NetworkProvider& getNetworkProvider()							{ return m_Provider; }
 	void waitForFullInitialization();
 };

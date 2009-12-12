@@ -31,6 +31,8 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 										   LPCWSTR outFileName,
 										   __int64 size,
 										   bool startFullTransponderDump);
+extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName, std::string& reason);
+extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName, std::string& reason);
 
 // DVB translation functions
 extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromDescriptor(USHORT descriptor);

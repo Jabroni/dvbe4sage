@@ -87,11 +87,12 @@ const Dcw& ECMCache::find(const BYTE* ecmPacket,
 }
 
 // Dump the content of the cache to a file
-bool ECMCache::DumpToFile(LPCTSTR fileName) const
+bool ECMCache::DumpToFile(LPCTSTR fileName,
+						  string& reason) const
 {
 	// Try opening the file
 	FILE* outFile = NULL;
-	_tfopen_s(&outFile, fileName, TEXT("wt, ccs=UTF-8"));
+	_tfopen_s(&outFile, fileName, TEXT("wt"));
 	if(outFile != NULL)
 	{
 		_ftprintf(outFile, TEXT("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"));
@@ -104,7 +105,7 @@ bool ECMCache::DumpToFile(LPCTSTR fileName) const
 			for(int i = 0; i < PACKET_SIZE; i++)
 				_ftprintf(outFile, TEXT("%.02X"), (UINT)it->second.ecm[i]);
 			_ftprintf(outFile, TEXT("</ecm>\n"));
-			_ftprintf(outFile, TEXT("\t\t<dcw>\n"));
+			_ftprintf(outFile, TEXT("\t\t<dcw>"));
 			for(int i = 0; i < 8; i++)
 				_ftprintf(outFile, TEXT("%.02X"), (UINT)it->second.dcw.key[i]);
 			_ftprintf(outFile, TEXT("</dcw>\n"));
@@ -113,6 +114,15 @@ bool ECMCache::DumpToFile(LPCTSTR fileName) const
 		}
 		_ftprintf(outFile, TEXT("</cache>\n"));
 		fclose(outFile);
+		return true;
+	}
+	else
+	{
+		// We get here if for some reason we're unable to open the file
+		stringstream result;
+		result << "Cannot open the output file \"" << fileName << "\", error code = " << errno;
+		reason = result.str();
+		return false;
 	}
 }
 
@@ -149,15 +159,9 @@ class Keypair_pimpl : public Keypair_pskel
 public:
 	Keypair_pimpl()
 	{
-		ecm_parser_ = new ecm_pimpl;
-		dcw_parser_ = new dcw_pimpl;
-		parity_parser_ = new parity_pimpl;
-	}
-	virtual ~Keypair_pimpl()
-	{
-		delete ecm_parser_;
-		delete dcw_parser_;
-		delete parity_parser_;
+		ecm_parser(m_EcmParser);
+		dcw_parser(m_DcwParser);
+		parity_parser(m_ParityParser);
 	}
 	virtual void ecm()
 	{
@@ -165,10 +169,10 @@ public:
 		for(UINT i = 0; i < content.length() - 1; i += 2)
 		{
 			UINT number;
-			static char buf[4] = { 0, 0 };
+			static char buf[5] = { '0', '0', '\0', '\0', '\0' };
 			buf[2] = content[i];
 			buf[3] = content[i + 1];
-			sscanf_s(buf, "%X", &number);
+			sscanf_s(buf, "%x", &number);
 			m_Pair.ecm[i >> 1] = (BYTE)number;
 		}
 	}
@@ -178,10 +182,10 @@ public:
 		for(UINT i = 0; i < content.length() - 1; i += 2)
 		{
 			UINT number;
-			static char buf[4] = { 0, 0 };
+			static char buf[5] = { '0', '0', '\0', '\0', '\0' };
 			buf[2] = content[i];
 			buf[3] = content[i + 1];
-			sscanf_s(buf, "%X", &number);
+			sscanf_s(buf, "%x", &number);
 			m_Pair.dcw.key[i >> 1] = (BYTE)number;
 		}
 	}
@@ -194,14 +198,18 @@ public:
 	const Dcw& getDcw() const			{ return m_Pair.dcw; }
 	bool getIsOddKey() const			{ return m_Pair.isOddKey; } 
 private:
+	ecm_pimpl		m_EcmParser;
+	dcw_pimpl		m_DcwParser;
+	parity_pimpl	m_ParityParser;
 	ECMDCWPair		m_Pair;
 };
 
-// Helper class for reading the saved XML cache file from the saved file
+// Helper class for reading the saved XML cache file
 class cache_pimpl : public cache_pskel
 {
 private:
 	ECMCache&		m_Cache;
+	Keypair_pimpl	m_KeypairParser;
 
 	// We don't need default and copy constructors
 	cache_pimpl();
@@ -209,11 +217,7 @@ private:
 public:
 	cache_pimpl(ECMCache& cache) : m_Cache(cache)
 	{
-		keypair_parser_ = new Keypair_pimpl;
-	}
-	virtual ~cache_pimpl()
-	{
-		delete keypair_parser_;
+		keypair_parser(m_KeypairParser);
 	}
 	virtual void keypair()
 	{
@@ -224,19 +228,36 @@ public:
 };
 
 // Read the content of the cache from a file
-bool ECMCache::ReadFromFile(LPCTSTR fileName)
+bool ECMCache::ReadFromFile(LPCTSTR fileName,
+							string& reason)
 {
 	try
 	{
+		// Cache parser implementation needs the ECMCache to add key pairs
 		cache_pimpl cacheParser(*this);
+		// The root element is supposed to be "<cache>"
 		xml_schema::document doc(cacheParser, "cache");
+		// Do the usual parser procedure
 		cacheParser.pre();
-		doc.parse(fileName);
+		// Now, make sure it uses the right schema file
+		xml_schema::properties props;
+		char path[MAXSHORT];
+		GetModuleFileNameA(NULL, path, sizeof(path) / sizeof(path[0]));
+		char* end = (char*)_mbsrchr((const unsigned char*)path, '\\');
+		end[0] = '\0';
+		props.no_namespace_schema_location(string(path) + "\\ecmcache.xsd");
+		// Do the parsing
+		doc.parse(fileName, 0, props);
+		// Final cleanup
 		cacheParser.post_cache();
 		return true;
 	}
 	catch(const xml_schema::exception& e)
 	{
+		// Get the error message from the exception
+		stringstream str;
+		str << e;
+		reason = str.str();
 		return false;
 	}
 }

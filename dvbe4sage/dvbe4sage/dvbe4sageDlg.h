@@ -49,4 +49,6 @@ public:
 	afx_msg void OnClose();
 
 	bool continueToRun() const { return m_ContinueToRun; }
+	afx_msg void OnDumpcache();
+	afx_msg void OnLoadcache();
 };

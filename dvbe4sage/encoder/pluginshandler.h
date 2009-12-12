@@ -130,4 +130,6 @@ public:
 	void processECMPacketQueue();
 	// Remove obsolete caller
 	void removeCaller(ESCAParser* caller);
+	bool dumpECMCache(LPCTSTR fileName, string& reason) const		{ return m_ECMCache.DumpToFile(fileName, reason); }
+	bool loadECMCache(LPCTSTR fileName, string& reason)				{ return m_ECMCache.ReadFromFile(fileName, reason); }
 };

@@ -201,6 +201,10 @@ BEGIN
     POPUP "&Operations"
     BEGIN
         MENUITEM "&Start Recording...",         ID_OPERATIONS_STARTRECORDING
+        MENUITEM SEPARATOR
+        MENUITEM "&Dump ECM Cache...",          ID_OPERATIONS_DUMPCACHE
+        MENUITEM "&Load ECM Cache...",          ID_OPERATIONS_LOADCACHE
+        MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_OPERATIONS_EXIT
     END
 END
