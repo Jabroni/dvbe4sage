@@ -6,7 +6,7 @@ using namespace std;
 using namespace stdext;
 
 class PluginsHandler;
-class CBDAFilterGraph;
+class DVBSFilterGraph;
 class DVBFilterToParserProxy;
 class Tuner;
 class Recorder;

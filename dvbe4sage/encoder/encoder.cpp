@@ -34,7 +34,7 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 		m_pPluginsHandler = new MDAPIPluginsHandler(hInstance, hWnd, hParentMenu);
 
 	// Initialize tuners, go from 1 trough N
-	for(int i = 1; i <= CBDAFilterGraph::getNumberOfTuners(); i++)
+	for(int i = 1; i <= DVBSFilterGraph::getNumberOfTuners(); i++)
 		if(!g_pConfiguration->excludeTuner(i))
 		{
 			Tuner* tuner = new Tuner(this,

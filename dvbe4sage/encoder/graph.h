@@ -3,7 +3,7 @@
 #include "THIOCtrl.h"
 #include "DVBFilter.h"
 
-class CBDAFilterGraph
+class DVBSFilterGraph
 {
 private:
     CComPtr<ITuningSpace>	m_pITuningSpace;			// The tuning space
@@ -52,16 +52,16 @@ private:
     HRESULT CreateTuningSpace();
 
 	// No default or copy constructor!
-	CBDAFilterGraph();
-	CBDAFilterGraph(const CBDAFilterGraph&);
+	DVBSFilterGraph();
+	DVBSFilterGraph(const DVBSFilterGraph&);
 
 public:
     bool m_fGraphBuilt;
     bool m_fGraphRunning;
     bool m_fGraphFailure;
 
-    CBDAFilterGraph(UINT ordinal);
-    ~CBDAFilterGraph();
+    DVBSFilterGraph(UINT ordinal);
+    ~DVBSFilterGraph();
 
 	HRESULT BuildGraph();
     HRESULT RunGraph();

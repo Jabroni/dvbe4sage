@@ -9,7 +9,7 @@
 
 // Constructor, initializes member variables
 // and calls InitializeGraphBuilder
-CBDAFilterGraph::CBDAFilterGraph(UINT ordinal):
+DVBSFilterGraph::DVBSFilterGraph(UINT ordinal):
 	m_fGraphBuilt(FALSE),
 	m_fGraphRunning(FALSE),
 	m_iTunerNumber(ordinal),
@@ -28,7 +28,7 @@ CBDAFilterGraph::CBDAFilterGraph(UINT ordinal):
 
 
 // Destructor
-CBDAFilterGraph::~CBDAFilterGraph()
+DVBSFilterGraph::~DVBSFilterGraph()
 {
 	StopGraph();
 
@@ -38,7 +38,7 @@ CBDAFilterGraph::~CBDAFilterGraph()
 }
 
 void
-CBDAFilterGraph::ReleaseInterfaces()
+DVBSFilterGraph::ReleaseInterfaces()
 {
 	if(m_pITuningSpace)
 		m_pITuningSpace = NULL;
@@ -69,7 +69,7 @@ CBDAFilterGraph::ReleaseInterfaces()
 }
 
 // Instantiate graph object for filter graph building
-HRESULT CBDAFilterGraph::InitializeGraphBuilder()
+HRESULT DVBSFilterGraph::InitializeGraphBuilder()
 {
 	HRESULT hr = S_OK;
 
@@ -89,7 +89,7 @@ HRESULT CBDAFilterGraph::InitializeGraphBuilder()
 }
 
 // BuildGraph sets up devices, adds and connects filters
-HRESULT CBDAFilterGraph::BuildGraph()
+HRESULT DVBSFilterGraph::BuildGraph()
 {
 	HRESULT hr = S_OK;
 
@@ -244,7 +244,7 @@ HRESULT CBDAFilterGraph::BuildGraph()
 }
 
 // Loads the demux into the FilterGraph
-HRESULT CBDAFilterGraph::LoadDemux()
+HRESULT DVBSFilterGraph::LoadDemux()
 {
 	HRESULT hr = S_OK;
 
@@ -268,7 +268,7 @@ HRESULT CBDAFilterGraph::LoadDemux()
 }
 
 // Renders demux output pins.
-HRESULT CBDAFilterGraph::RenderDemux()
+HRESULT DVBSFilterGraph::RenderDemux()
 {
 	HRESULT             hr = S_OK;
 	CComPtr <IPin>      pIPin;
@@ -339,7 +339,7 @@ HRESULT CBDAFilterGraph::RenderDemux()
 
 // Makes call to tear down the graph and sets graph failure
 // flag to true
-VOID CBDAFilterGraph::BuildGraphError()
+VOID DVBSFilterGraph::BuildGraphError()
 {
 	TearDownGraph();
 	m_fGraphFailure = true;
@@ -347,7 +347,7 @@ VOID CBDAFilterGraph::BuildGraphError()
 
 
 // This creates a new DVBS Tuning Space entry in the registry.
-HRESULT CBDAFilterGraph::CreateTuningSpace()
+HRESULT DVBSFilterGraph::CreateTuningSpace()
 {
 	// We're optimistic in the beginning
 	HRESULT hr = S_OK;
@@ -411,7 +411,7 @@ HRESULT CBDAFilterGraph::CreateTuningSpace()
 }
 
 // Creates an DVBT Tune Request
-HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
+HRESULT DVBSFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 {
 	HRESULT hr = S_OK;
 
@@ -498,7 +498,7 @@ HRESULT CBDAFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 
 
 // LoadNetworkProvider loads network provider
-HRESULT CBDAFilterGraph::LoadNetworkProvider()
+HRESULT DVBSFilterGraph::LoadNetworkProvider()
 {
 	HRESULT  hr = S_OK;
 	CLSID    CLSIDNetworkType;
@@ -545,7 +545,7 @@ HRESULT CBDAFilterGraph::LoadNetworkProvider()
 // used for tuner, capture, MPE Data Filters and decoders that
 // could have more than one filter object
 // if pUpstreamFilter is NULL don't bother connecting
-HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid, 
+HRESULT DVBSFilterGraph::LoadFilter(REFCLSID clsid, 
 									IBaseFilter** ppFilter,
 									IBaseFilter* pConnectFilter, 
 									BOOL fIsUpstream,
@@ -679,7 +679,7 @@ HRESULT CBDAFilterGraph::LoadFilter(REFCLSID clsid,
 
 // Removes each filter from the graph and un-registers
 // the filter.
-HRESULT CBDAFilterGraph::TearDownGraph()
+HRESULT DVBSFilterGraph::TearDownGraph()
 {
 	HRESULT hr = S_OK;
 	CComPtr <IBaseFilter> pFilter;
@@ -762,7 +762,7 @@ HRESULT CBDAFilterGraph::TearDownGraph()
 
 // ConnectFilters is called from BuildGraph
 // to enumerate and connect pins
-HRESULT CBDAFilterGraph::ConnectFilters(IBaseFilter* pFilterUpstream, 
+HRESULT DVBSFilterGraph::ConnectFilters(IBaseFilter* pFilterUpstream, 
 										IBaseFilter* pFilterDownstream)
 {
 	HRESULT         hr = E_FAIL;
@@ -858,7 +858,7 @@ HRESULT CBDAFilterGraph::ConnectFilters(IBaseFilter* pFilterUpstream,
 // RunGraph checks to see if a graph has been built
 // if not it calls BuildGraph
 // RunGraph then calls MediaCtrl-Run
-HRESULT CBDAFilterGraph::RunGraph()
+HRESULT DVBSFilterGraph::RunGraph()
 {
 	// check to see if the graph is already running
 	if(m_fGraphRunning)
@@ -900,7 +900,7 @@ HRESULT CBDAFilterGraph::RunGraph()
 
 
 // StopGraph calls MediaCtrl - Stop
-HRESULT CBDAFilterGraph::StopGraph()
+HRESULT DVBSFilterGraph::StopGraph()
 {
 	// check to see if the graph is already stopped
 	if(m_fGraphRunning == false)
@@ -934,7 +934,7 @@ HRESULT CBDAFilterGraph::StopGraph()
 	return hr;
 }
 
-bool CBDAFilterGraph::GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pStrength)
+bool DVBSFilterGraph::GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pStrength)
 {
 	bool bRet = false;
 	BOOLEAN locked=false;
@@ -962,7 +962,7 @@ bool CBDAFilterGraph::GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pSt
 	return bRet;
 }
 
-BOOL CBDAFilterGraph::ChangeSetting(void)
+BOOL DVBSFilterGraph::ChangeSetting(void)
 {
 	HRESULT hr = S_OK;
 
@@ -1145,7 +1145,7 @@ BOOL CBDAFilterGraph::ChangeSetting(void)
 	return TRUE;
 }
 
-int CBDAFilterGraph::getNumberOfTuners()
+int DVBSFilterGraph::getNumberOfTuners()
 {
 	// Get instance of device enumberator
 	CComPtr<ICreateDevEnum>	pICreateDevEnum;
@@ -1184,7 +1184,7 @@ int CBDAFilterGraph::getNumberOfTuners()
 // Demodulator (MPEG2 Transport) pins on the Tuner/Demod filter.
 // Then gets the IKsPropertySet interfaces for the pins.
 //
-BOOL CBDAFilterGraph::GetTunerDemodPropertySetInterfaces()
+BOOL DVBSFilterGraph::GetTunerDemodPropertySetInterfaces()
 {
     if (!m_pTunerDemodDevice) {
         return FALSE;
@@ -1227,7 +1227,7 @@ BOOL CBDAFilterGraph::GetTunerDemodPropertySetInterfaces()
 
 // Returns a pointer address of the name of a Pin on a 
 // filter.
-IPin* CBDAFilterGraph::FindPinOnFilter(IBaseFilter* pBaseFilter,
+IPin* DVBSFilterGraph::FindPinOnFilter(IBaseFilter* pBaseFilter,
 									   char* pPinName,
 									   BOOL bCheckPinName)
 {

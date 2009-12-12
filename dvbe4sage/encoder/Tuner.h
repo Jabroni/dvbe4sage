@@ -9,7 +9,7 @@ class Tuner
 	friend DWORD WINAPI RunIdleCallback(LPVOID vpTuner);
 private:
 	// DirectShow graph
-	CBDAFilterGraph			m_BDAFilterGraph;
+	DVBSFilterGraph			m_BDAFilterGraph;
 	HANDLE					m_WorkerThread;
 	bool					m_IsTunerOK;
 	string					m_MAC;
