@@ -447,6 +447,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GenericFilterGraph.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\graph.cpp"
 				>
 			</File>
@@ -634,6 +638,10 @@
 			</File>
 			<File
 				RelativePath=".\extern.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GenericFilterGraph.h"
 				>
 			</File>
 			<File

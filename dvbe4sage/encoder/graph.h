@@ -1,21 +1,16 @@
 #pragma once
 
+#include "GenericFilterGraph.h"
 #include "THIOCtrl.h"
-#include "DVBFilter.h"
 
-class DVBSFilterGraph
+class DVBSFilterGraph : public GenericFilterGraph
 {
 private:
     CComPtr<ITuningSpace>	m_pITuningSpace;			// The tuning space
     CComPtr<ITuner>			m_pITuner;					// The tuner
-    CComPtr<IGraphBuilder>	m_pFilterGraph;				// for current graph
-    CComPtr<IMediaControl>	m_pIMediaControl;			// for controlling graph state
-    CComPtr<ICreateDevEnum>	m_pICreateDevEnum;			// for enumerating system devices
     CComPtr<IBaseFilter>	m_pNetworkProvider;			// for network provider filter
     CComPtr<IBaseFilter>	m_pTunerDemodDevice;		// for tuner device filter
     CComPtr<IBaseFilter>	m_pCaptureDevice;			// for capture device filter
-	CComPtr<IBaseFilter>	m_pDemux;					// for demux filter
-    CComPtr<IBaseFilter>	m_pTIF;						// for transport information filter
 
     CComPtr<IKsPropertySet>	m_KsTunerPropSet;			// IKsPropertySet for tuner
     CComPtr<IKsPropertySet>	m_KsDemodPropSet;			// IKsPropertySet for demod
@@ -23,29 +18,14 @@ private:
     CComPtr<IPin>			m_pTunerPin;				// the tuner pin on the tuner/demod filter
     CComPtr<IPin>			m_pDemodPin;				// the demod pin on the tuner/demod filter
 
-	DVBFilter*				m_pDVBFilter;				// Our filter
-	DummyNetworkProvider	m_NetworkProvider;			// Our dummy network provider
+	//DummyNetworkProvider	m_NetworkProvider;			// Our dummy network provider
 
 	TCHAR					m_TunerName[100];			// Tuner friendly name
-	UINT					m_iTunerNumber;				// Tuner ordinal number
 	USHORT					m_pmtPid;					// Current PMT pid
 	LNB_DATA				m_LNB_Data;					// LNB data
 
-    HRESULT InitializeGraphBuilder();
     HRESULT LoadNetworkProvider();
-	HRESULT LoadDemux();
-    HRESULT RenderDemux();
-    void    BuildGraphError();
-    void    ReleaseInterfaces();
-
-    HRESULT LoadFilter(REFCLSID clsid, 
-					   IBaseFilter** ppFilter,
-					   IBaseFilter* pConnectFilter, 
-					   BOOL fIsUpstream,
-					   BOOL useCounter);
-
-    HRESULT ConnectFilters(IBaseFilter* pFilterUpstream, 
-						   IBaseFilter* pFilterDownstream);
+    virtual void ReleaseInterfaces();
 
     HRESULT CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest);
 
@@ -56,26 +36,17 @@ private:
 	DVBSFilterGraph(const DVBSFilterGraph&);
 
 public:
-    bool m_fGraphBuilt;
-    bool m_fGraphRunning;
-    bool m_fGraphFailure;
-
     DVBSFilterGraph(UINT ordinal);
-    ~DVBSFilterGraph();
 
-	HRESULT BuildGraph();
-    HRESULT RunGraph();
-    HRESULT StopGraph();
-    HRESULT TearDownGraph();
+	virtual HRESULT BuildGraph();
+	virtual HRESULT RunGraph();
+    virtual HRESULT StopGraph();
+    virtual HRESULT TearDownGraph();
   	
 	bool GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pStrength);	
 	BOOL ChangeSetting(void);
 
-	DVBParser& getParser() { return m_pDVBFilter->getParser(); }
-	bool startRecording();
-
 	LPCTSTR getTunerName() const { return m_TunerName; }
-	int getTunerOrdinal() const { return m_iTunerNumber; }
 
 	static int getNumberOfTuners();
 
@@ -91,7 +62,6 @@ public:
 	bool						m_IsTTUSB2;					// True if the device is a TechnoTrend USB 2.0
 
 	// Twinhan specific stuff
-	IPin* FindPinOnFilter(IBaseFilter *pBaseFilter, char *pPinName,BOOL bCheckPinName);	
 	BOOL GetTunerDemodPropertySetInterfaces();
 	BOOL BDAIOControl(DWORD  dwIoControlCode,
 					  LPVOID lpInBuffer,
