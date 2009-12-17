@@ -89,6 +89,14 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 		tunerOrdinal, false, channel, useSid, duration, outFileName, NULL, size, false, startFullTransponderDump) : false;
 }
 
+extern "C" ENCODER_API bool startRecordingFromFile(LPCWSTR inFileName,
+												   int sid,
+												   __int64 duration,
+												   LPCWSTR outFileName)
+{
+	return g_pEncoder != NULL ? g_pEncoder->startRecordingFromFile(inFileName, sid, duration, outFileName) : false;
+}
+
 extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName,
 										 string& reason)
 {

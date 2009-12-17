@@ -31,6 +31,10 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 										   LPCWSTR outFileName,
 										   __int64 size,
 										   bool startFullTransponderDump);
+extern "C" ENCODER_API bool startRecordingFromFile(LPCWSTR inFileName,
+												   int sid,
+												   __int64 duration,
+												   LPCWSTR outFileName);
 extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName, std::string& reason);
 extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName, std::string& reason);
 

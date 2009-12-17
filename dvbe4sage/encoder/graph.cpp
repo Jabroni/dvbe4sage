@@ -60,7 +60,7 @@ HRESULT DVBSFilterGraph::BuildGraph()
 	// filters, such as configuring the demux to sprout output pins.
 	// We also need to submit a tune request to the Network Provider so it will
 	// tune to a channel
-	if (FAILED(hr = LoadNetworkProvider()))
+	if(FAILED(hr = LoadNetworkProvider()))
 	{
 		log(0, true, m_iTunerNumber, TEXT("Cannot load network provider, error 0x%.08X\n"), hr);
 		BuildGraphError();
@@ -68,7 +68,7 @@ HRESULT DVBSFilterGraph::BuildGraph()
 	}
 
 	hr = m_pNetworkProvider->QueryInterface(__uuidof (ITuner), reinterpret_cast <void**> (&m_pITuner));
-	if (FAILED(hr)) {
+	if(FAILED(hr)) {
 		log(0, true, m_iTunerNumber, TEXT("pNetworkProvider->QI: Can't QI for ITuner, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
@@ -77,7 +77,7 @@ HRESULT DVBSFilterGraph::BuildGraph()
 	// create a tune request to initialize the network provider
 	// before connecting other filters
 	CComPtr <IDVBTuneRequest> pDVBSTuneRequest;
-	if (FAILED(hr = CreateDVBSTuneRequest(&pDVBSTuneRequest)))
+	if(FAILED(hr = CreateDVBSTuneRequest(&pDVBSTuneRequest)))
 	{
 		log(0, true, m_iTunerNumber, TEXT("Cannot create tune request, error 0x%.08X\n"), hr);
 		BuildGraphError();
@@ -86,23 +86,14 @@ HRESULT DVBSFilterGraph::BuildGraph()
 
 	//submit the tune request to the network provider
 	hr = m_pITuner->put_TuneRequest(pDVBSTuneRequest);
-	if (FAILED(hr)) {
+	if(FAILED(hr)) {
 		log(0, true, m_iTunerNumber, TEXT("Cannot submit the tune request, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
-/*
-	// Step1: load our dummy source filter
-	if(FAILED(hr = m_pFilterGraph->AddFilter(&m_NetworkProvider, L"Dummy Network Provider")))
-	{
-		log(0, true, TEXT("Cannot add dummy network provider filter to the graph, error 0x%.08X\n"), hr);
-		BuildGraphError();
-		return hr;
-	}
-*/
+
 	// STEP2: Load tuner device and connect to network provider
-//	if (FAILED(hr = LoadFilter(KSCATEGORY_BDA_NETWORK_TUNER, &m_pTunerDemodDevice, &m_NetworkProvider, TRUE, TRUE)) || !m_pTunerDemodDevice)
-	if (FAILED(hr = LoadFilter(KSCATEGORY_BDA_NETWORK_TUNER, &m_pTunerDemodDevice, m_pNetworkProvider, TRUE, TRUE)) || !m_pTunerDemodDevice)
+	if(FAILED(hr = LoadFilter(KSCATEGORY_BDA_NETWORK_TUNER, &m_pTunerDemodDevice, m_pNetworkProvider, TRUE, TRUE)) || !m_pTunerDemodDevice)
 	{
 		log(0, true, m_iTunerNumber, TEXT("Cannot load tuner device and connect network provider, error 0x%.08X\n"), hr);
 		BuildGraphError();
@@ -167,7 +158,7 @@ HRESULT DVBSFilterGraph::BuildGraph()
 	log(0, true, m_iTunerNumber, TEXT("Loaded our transport stream filter\n"));
 
 	// Step5: Load demux
-	if (FAILED(hr = LoadDemux()))
+	if(FAILED(hr = LoadDemux()))
 	{
 		log(0, true, m_iTunerNumber, TEXT("Cannot load demux, error 0x%.08X\n"), hr);
 		BuildGraphError();
@@ -175,21 +166,12 @@ HRESULT DVBSFilterGraph::BuildGraph()
 	}
 
 	// Step6: Render demux pins
-	if (FAILED(hr = RenderDemux()))
+	if(FAILED(hr = RenderDemux()))
 	{
-		log(0, true, m_iTunerNumber, TEXT("Cannot Rend demux, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("Cannot render demux, error 0x%.08X\n"), hr);
 		BuildGraphError();
 		return hr;
 	}
-	// Register my filter with network provider
-	/*CComQIPtr<IBDA_TIF_REGISTRATION> pTIFReg(m_pITuner);
-	if(pTIFReg != NULL)
-	{
-		ULONG ctx;
-		IUnknown* control;
-		if(FAILED(hr = pTIFReg->RegisterTIFEx(m_pDVBFilter->GetPin(0), &ctx, &control)))
-			log(0, true, TEXT("Cannot register our filter as TIF with network provider, error 0x%.08X\n"), hr);
-	}*/
 
 	m_fGraphBuilt = true;
 	m_fGraphFailure = false;

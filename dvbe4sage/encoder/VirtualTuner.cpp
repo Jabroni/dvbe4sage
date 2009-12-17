@@ -34,6 +34,4 @@ VirtualTuner::~VirtualTuner(void)
 void VirtualTuner::setRecorder(Recorder* recorder)
 {
 	m_pRecorder = recorder;
-	if(recorder != NULL)
-		recorder->setVirtualTuner(this);
 }

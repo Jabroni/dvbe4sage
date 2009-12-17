@@ -15,6 +15,7 @@
 #include "extern.h"
 #include "MDAPIPluginHandler.h"
 #include "VGPluginHandler.h"
+#include "FileSource.h"
 
 Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pPluginsHandler(NULL),
@@ -37,13 +38,13 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	for(int i = 1; i <= DVBSFilterGraph::getNumberOfTuners(); i++)
 		if(!g_pConfiguration->excludeTuner(i))
 		{
-			Tuner* tuner = new Tuner(this,
-									 i,
-									 g_pConfiguration->getInitialFrequency(),
-									 g_pConfiguration->getInitialSymbolRate(),
-									 g_pConfiguration->getInitialPolarization(),
-									 g_pConfiguration->getInitialModulation(),
-									 g_pConfiguration->getInitialFEC());
+			DVBSTuner* tuner = new DVBSTuner(this,
+											 i,
+											 g_pConfiguration->getInitialFrequency(),
+											 g_pConfiguration->getInitialSymbolRate(),
+											 g_pConfiguration->getInitialPolarization(),
+											 g_pConfiguration->getInitialModulation(),
+											 g_pConfiguration->getInitialFEC());
 
 			// Let's see if we work by "included logic" first (rather than "anything is included by default")
 			if(g_pConfiguration->includeTuners())
@@ -65,10 +66,10 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 				continue;
 			}
 			
-			if(tuner->isTunerOK() && tuner->startRecording(false))
+			if(tuner->isSourceOK() && tuner->startPlayback(false))
 			{
 				// Let's see if this is a DVB-S2 tuner and put it into the list accordingly
-				if(g_pConfiguration->isDVBS2Tuner(tuner->getTunerOrdinal()))
+				if(g_pConfiguration->isDVBS2Tuner(tuner->getSourceOrdinal()))
 					m_Tuners.push_back(tuner);
 				else
 					m_Tuners.insert(m_Tuners.begin(), tuner);
@@ -121,7 +122,7 @@ Encoder::~Encoder()
 	for(UINT i = 0; i < m_Tuners.size(); i++)
 	{
 		// Get the tuner pointer
-		Tuner* tuner = m_Tuners[i];
+		DVBSTuner* tuner = m_Tuners[i];
 		// And delete it
 		delete tuner;
 	}
@@ -168,7 +169,7 @@ void Encoder::socketOperation(SOCKET socket,
 					// Print the command received
 					log(1, true, 0, TEXT("Received command: \"%.*S\"\n"), fullCommand.length() - 2, fullCommand.c_str());
 
-					// Determine the command itsels
+					// Determine the command itself
 					wstring command(fullCommandUTF16, fullCommand.find_first_of(L" \r\n"));
 
 					// If the command is START
@@ -213,6 +214,8 @@ void Encoder::socketOperation(SOCKET socket,
 						if(recorder != NULL)
 						{
 							recorder->stopRecording();
+							// Nullify the recorder in the virtual tuner
+							virtualTuner->setRecorder(NULL);
 							// And delete the recorder
 							delete recorder;
 						}
@@ -343,12 +346,12 @@ LRESULT Encoder::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-Tuner* Encoder::getTuner(int tunerOrdinal,
+DVBSTuner* Encoder::getTuner(int tunerOrdinal,
 						 bool useLogicalTuner,
 						 const Transponder* const pTransponder)
 {
-	// Intialize with NULL
-	Tuner* tuner = NULL;
+	// Initialize with NULL
+	DVBSTuner* tuner = NULL;
 
 	// If TID == 0 we assume physical tuner
 	if(useLogicalTuner && pTransponder != NULL)
@@ -361,13 +364,13 @@ Tuner* Encoder::getTuner(int tunerOrdinal,
 				tuner = m_Tuners[i];
 				break;
 			}
-		// If there is no sutable tuner already in use
+		// If there is no suitable tuner already in use
 		if(tuner == NULL)
 			for(UINT i = 0; i < m_Tuners.size(); i++)
 				// The tuner we're looking for should be not running and if the program requires DVB-S2
 				// we should pick only a compatible tuner
 				if(!m_Tuners[i]->running() && (pTransponder->modulation == BDA_MOD_QPSK || 
-					g_pConfiguration->isDVBS2Tuner(m_Tuners[i]->getTunerOrdinal())))
+					g_pConfiguration->isDVBS2Tuner(m_Tuners[i]->getSourceOrdinal())))
 					{
 						tuner = m_Tuners[i];
 						break;
@@ -378,7 +381,7 @@ Tuner* Encoder::getTuner(int tunerOrdinal,
 		// Here we just pull the right physical tuner
 		for(UINT i = 0; i < m_Tuners.size(); i++)
 		{
-			if(m_Tuners[i]->getTunerOrdinal() == tunerOrdinal)
+			if(m_Tuners[i]->getSourceOrdinal() == tunerOrdinal)
 			{
 				tuner = m_Tuners[i];
 				break;
@@ -448,7 +451,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	}
 
 	// Now search for the tuner
-	Tuner* tuner = NULL;
+	DVBSTuner* tuner = NULL;
 
 	// TID of the transponder (will be initialized only if autodiscovery was requested)
 	USHORT tid = 0;
@@ -490,7 +493,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		}
 	}
 	else
-		// No autodiscovery is requested, tuner can only be physical
+		// No auto discovery is requested, tuner can only be physical
 		tuner = getTuner(tunerOrdinal, false, NULL);
 
 	// Unlock the parser
@@ -506,18 +509,18 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// Make a log entry
 	if(useSid)
 		log(0, true, 0, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu (\"%s\"), Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), sid, channelName, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), sid, channelName, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 	else
 		log(0, true, 0, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-			tuner->getTunerFriendlyName(), tuner->getTunerOrdinal(), channel, channelName, sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), channel, channelName, sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
 	// If we found the tuner
 	if(tuner != NULL)
 	{
 		// Create the recorder
-		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, (USHORT)tunerOrdinal, outFileName, useSid, channel, sid, channelName, duration, this, size, bySage);
+		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, outFileName, useSid, channel, sid, channelName, duration, this, size, bySage);
 
 		// Let's see if the recorder has an error, just delete it and exit
 		if(recorder->hasError())
@@ -527,20 +530,17 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			return false;
 		}
 
-		// Lock access to glbal structure
+		// Lock access to global structure
 		m_cs.Lock();
 
 		// Let's see if the tuner is already used
 		bool bTunerUsed = false;
 		for(hash_multimap<USHORT, Recorder*>::iterator it = m_Recorders.begin(); it != m_Recorders.end(); it++)
-			if(it->second->getTuner() == tuner)
+			if(it->second->getSource() == tuner)
 			{
 				bTunerUsed = true;
 				break;
 			}
-
-		// Add it to the list
-		m_Recorders.insert(pair<USHORT, Recorder*>((USHORT)tunerOrdinal, recorder));
 
 		// Assign this recorder to the virtual tuner if needed
 		if(virtualTuner != NULL)
@@ -556,29 +556,37 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			tuner->tune(frequency, symbolRate, polarization, modulation, fecRate);
 
 			// Now, start the recording
-			if(tuner->startRecording(startFullTransponderDump))
+			if(tuner->startPlayback(startFullTransponderDump))
+			{
 				// Set the TID if recording was started successfully
 				tuner->setTid(tid);
+				// And add the recorder to the global structure
+				m_Recorders.insert(pair<USHORT, Recorder*>((USHORT)tunerOrdinal, recorder));
+			}
 			else
+			{
 				// Unset succeeded flag
 				succeeded = false;
+				// And delete the recorder
+				delete recorder;
+			}
 		}
 
 		// Unlock access to the global structure
 		m_cs.Unlock();
 
-		// If succeded, try to start recording
-		if(succeeded && recorder->startRecording())
+		// If succeeded, try to start recording
+		if(succeeded)
+		{
+			// Start the recording
+			recorder->startRecording();
 			// All is good
 			return true;
+		}
 		else
 		{
-			// make the log entry
-			log(0, true, 0, TEXT("Cannot start recording, ")),
-			// If failed to start recording, stop it
-			recorder->stopRecording();
-			// Delete the recorder
-			delete recorder;
+			// Make the log entry
+			log(0, true, 0, TEXT("Cannot start recording!\n"));
 			// And return false
 			return false;
 		}
@@ -589,11 +597,11 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 
 bool Encoder::stopRecording(Recorder* recorder)
 {
-	// Lock access to glbal structure
+	// Lock access to global structure
 	CAutoLock lock(&m_cs);
 
-	// Get the tuner of the recorder
-	Tuner* tuner = recorder->getTuner();
+	// Get the source of the recorder
+	GenericSource* source = recorder->getSource();
 
 	// Remove the recorder
 	for(hash_map<USHORT, Recorder*>::iterator it = m_Recorders.begin(); it != m_Recorders.end(); it++)
@@ -606,18 +614,24 @@ bool Encoder::stopRecording(Recorder* recorder)
 	// Get the parser from the recorder and tell plugins handler to start ignoring it
 	m_pPluginsHandler->removeCaller(recorder->getParser());
 
-	// Let's see if the tuner is still used
-	bool bTunerUsed = false;
+	// Let's see if the source is still used
+	bool bSourceUsed = false;
 	for(hash_map<USHORT, Recorder*>::iterator it = m_Recorders.begin(); it != m_Recorders.end(); it++)
-		if(it->second->getTuner() == tuner)
+		if(it->second->getSource() == source)
 		{
-			bTunerUsed = true;
+			bSourceUsed = true;
 			break;
 		}
 
 	// If no, stop running graph on it
-	if(!bTunerUsed)
-		tuner->stopRecording();
+	if(!bSourceUsed)
+	{
+		source->stopPlayback();
+
+		// If this is a FileSource kind of source, also delete it
+		if(dynamic_cast<FileSource*>(source) != NULL)
+			delete source;
+	}
 
 	return true;
 }
@@ -629,12 +643,12 @@ int Encoder::getNumberOfTuners() const
 
 LPCTSTR Encoder::getTunerFriendlyName(int i) const
 {
-	return m_Tuners[i]->getTunerFriendlyName();
+	return m_Tuners[i]->getSourceFriendlyName();
 }
 
 int Encoder::getTunerOrdinal(int i) const
 {
-	return m_Tuners[i]->getTunerOrdinal();
+	return m_Tuners[i]->getSourceOrdinal();
 }
 
 void Encoder::waitForFullInitialization()
@@ -668,4 +682,59 @@ bool Encoder::loadECMCache(LPCTSTR fileName,
 						   string& reason)
 {
 	return m_pPluginsHandler != NULL ? m_pPluginsHandler->loadECMCache(fileName, reason) : false;
+}
+
+bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
+									 int sid,
+									 __int64 duration,
+									 LPCWSTR outFileName)
+{
+	// Create a file source
+	FileSource* source = new FileSource(inFileName);
+
+	// Create the recorder
+	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, 0, (USHORT)sid, TEXT(""), duration, this, -1, false);
+
+	// Let's see if the recorder has an error, just delete it and exit
+	if(recorder->hasError())
+	{
+		log(0, true, 0, TEXT("Cannot start recording!\n")),
+			delete recorder;
+		return false;
+	}
+
+	// Lock access to global structure
+	m_cs.Lock();
+
+	// Let's try to start playback
+	bool succeeded = true;
+	if(source->startPlayback(false))
+		// If succeeded, add the recorder to the global structure
+		m_Recorders.insert(pair<USHORT, Recorder*>(0, recorder));
+	else
+	{
+		// Otherwise, delete everything
+		succeeded = false;
+		delete recorder;
+		delete source;
+	}
+
+	// Unlock access to the global structure
+	m_cs.Unlock();
+
+	// If succeeded, try to start recording
+	if(succeeded)
+	{
+		// Start the recording
+		recorder->startRecording();
+		// All is good
+		return true;
+	}
+	else
+	{
+		// Make the log entry
+		log(0, true, 0, TEXT("Cannot start recording!\n"));
+		// And return false
+		return false;
+	}
 }

@@ -1,13 +1,13 @@
 #include "StdAfx.h"
 
 #include "Recorder.h"
-#include "tuner.h"
 #include "dvbfilter.h"
 #include "pluginshandler.h"
 #include "logger.h"
 #include "configuration.h"
 #include "virtualtuner.h"
 #include "encoder.h"
+#include "GenericSource.h"
 
 DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 {
@@ -25,7 +25,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 		time_t now = 0;
 		time(&now);
 
-		// Calculate the differentce
+		// Calculate the difference
 		if((__int64)difftime(now, recorder->m_Time) > recorder->m_Duration)
 		{
 			// Log stop recording message
@@ -57,12 +57,12 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 		else
 		{
 			// Here we update the encoder with the latest and greatest PSI parser info
-			// Get the parser from the tuner
-			DVBParser* const pParser = recorder->m_pTuner->getParser();
+			// Get the parser from the source
+			DVBParser& sourceParser = recorder->m_pSource->getParser();
 
 			// Let's see if it's valid and can be used
-			if(pParser != NULL && pParser->getNetworkProvider().canBeCopied() && !pParser->providerInfoHasBeenCopied() && pParser->getTimeStamp() != 0 && 
-				(__int64)difftime(now, pParser->getTimeStamp()) > g_pConfiguration->getPSIMaturityTime())
+			if(sourceParser.getNetworkProvider().canBeCopied() && !sourceParser.providerInfoHasBeenCopied() && sourceParser.getTimeStamp() != 0 && 
+				(__int64)difftime(now, sourceParser.getTimeStamp()) > g_pConfiguration->getPSIMaturityTime())
 			{
 				// If yes, get the encoder's network provider
 				NetworkProvider& encoderNetworkProvider = recorder->m_pEncoder->getNetworkProvider();
@@ -71,13 +71,13 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 				encoderNetworkProvider.lock();
 
 				// Copy the contents of the network provider
-				encoderNetworkProvider.copy(pParser->getNetworkProvider());
+				encoderNetworkProvider.copy(sourceParser.getNetworkProvider());
 
 				// And unlock the encoder provider
 				encoderNetworkProvider.unlock();
 
 				// Set "HasBeenCopied" flag to prevent multiple copy
-				pParser->setProviderInfoHasBeenCopied();
+				sourceParser.setProviderInfoHasBeenCopied();
 			}
 		}
 	}
@@ -93,7 +93,7 @@ DWORD WINAPI StartRecordingCallback(LPVOID vpRecorder)
 	// Loop while can exit
 	while(!recorder->m_StartRecordingThreadCanEnd)
 	{
-		// Sleep for 100 millisecs
+		// Sleep for 100 milliseconds
 		Sleep(100);
 
 		// Try to change the recorder state
@@ -109,8 +109,7 @@ DWORD WINAPI StartRecordingCallback(LPVOID vpRecorder)
 }
 
 Recorder::Recorder(PluginsHandler* const plugins,
-				   Tuner* const tuner,
-				   USHORT logicalTuner,
+				   GenericSource* const source,
 				   LPCWSTR outFileName,
 				   bool useSid,
 				   const int channel,
@@ -121,7 +120,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				   const __int64 size,
 				   bool bySage) :
 	m_pPluginsHandler(plugins),
-	m_pTuner(tuner),
+	m_pSource(source),
 	m_fout(NULL),
 	m_IsRecording(false),
 	m_HasError(false),
@@ -132,10 +131,8 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_IsBrokenPipe(false),
 	m_UseSid(useSid),
 	m_Sid(sid),
-	m_LogicalTuner(logicalTuner),
 	m_FileName(outFileName),
 	m_Size(size),
-	m_VirtualTuner(NULL),
 	m_StartRecordingThreadCanEnd(false),
 	m_StopRecordingThreadCanEnd(false),
 	m_StartRecordingThread(NULL),
@@ -174,38 +171,11 @@ Recorder::Recorder(PluginsHandler* const plugins,
 		{
 			// In the beginning the file is not found
 			bool found = false;
-
-			// Do a little time arithmetics excercise
-			/* Removed - not used anyhow
-			__declspec(align(8)) union timeunion
-			{
-				__int64 longlong;
-				FILETIME fileTime;
-			} st, ft;
-
-			// Get the current system time
-			SYSTEMTIME systemTime;
-			GetSystemTime(&systemTime);
-			// And convert it into file time
-			SystemTimeToFileTime(&systemTime, &st.fileTime);
-			*/
 			do
 			{
-				// Check time diff only if the file is 0 size
+				// Check time difference only if the file is 0 size
 				if(findData.nFileSizeHigh == 0 && findData.nFileSizeLow == 0)
-				{
-					/*
-					// Get a creation time of our file
-					ft.fileTime = findData.ftCreationTime;
-
-					// Now, calculate the diff
-					__int64 diff = st.longlong - ft.longlong;
-
-					// If the diff is less than 10 seconds, this is our file
-					// --- removed as not reliable enough
-					//if(diff < 100000000)*/
 						found = true;
-				}
 			}
 			// Loop while the file is found or the search is exhausted
 			while(!found && FindNextFileW(search, &findData));
@@ -249,10 +219,6 @@ Recorder::Recorder(PluginsHandler* const plugins,
 
 Recorder::~Recorder(void)
 {
-	// Nullify pointer to myself in my virtual tuner
-	if(m_VirtualTuner != NULL)
-		m_VirtualTuner->setRecorder(NULL);
-
 	// Delete the parser
 	delete m_pParser;
 
@@ -268,29 +234,19 @@ Recorder::~Recorder(void)
 		CloseHandle(m_StopRecordingThread);
 }
 
-bool Recorder::startRecording()
+void Recorder::startRecording()
 {
-	if(m_HasError)
-	{
-		log(0, true, 0, TEXT("Cannot start recording!\n"));
-		return false;
-	}
-	else
-	{
-		// Get the current time
-		time(&m_Time);
+	// Get the current time
+	time(&m_Time);
 
-		// Start the recording thread
-		m_StartRecordingThread = CreateThread(NULL, 0, StartRecordingCallback, this, 0, &m_StartRecordingThreadId);
-
-		return true;
-	}
+	// Start the recording thread
+	m_StartRecordingThread = CreateThread(NULL, 0, StartRecordingCallback, this, 0, &m_StartRecordingThreadId);
 }
 
 void Recorder::stopRecording()
 {
-	log(0, false, 0, TEXT("stopping recording of %s %d (\"%s\") on tuner=\"%s\", Ordinal=%d\n"),
-		!m_UseSid ? TEXT("channel") : TEXT("service"), m_ChannelNumber, m_ChannelName, m_pTuner->getTunerFriendlyName(), m_pTuner->getTunerOrdinal());
+	log(0, false, 0, TEXT("stopping recording of %s %d (\"%s\") on source=\"%s\", Ordinal=%d\n"),
+		!m_UseSid ? TEXT("channel") : TEXT("service"), m_ChannelNumber, m_ChannelName, m_pSource->getSourceFriendlyName(), m_pSource->getSourceOrdinal());
 
 	// Make sure start recording test is finished
 	m_StartRecordingThreadCanEnd = true;
@@ -307,16 +263,16 @@ void Recorder::stopRecording()
 		WaitForSingleObject(m_StopRecordingThread, INFINITE);
 
 	// Get the main parser
-	DVBParser* const pParser = m_pTuner->getParser();
+	DVBParser& sourceParser = m_pSource->getParser();
 
 	// Lock the parser
-	pParser->lock();
+	sourceParser.lock();
 
 	// Make the main parser stop sending packets to recorder's parser
-	pParser->dropParser(m_pParser);
+	sourceParser.dropParser(m_pParser);
 
 	// Unlock the parser
-	pParser->unlock();
+	sourceParser.unlock();
 
 	// Tell the encoder to stop recording on this recorder
 	m_pEncoder->stopRecording(this);
@@ -325,26 +281,26 @@ void Recorder::stopRecording()
 bool Recorder::changeState()
 {
 	// Get the parser
-	DVBParser* const pParser = m_pTuner->getParser();
+	DVBParser& sourceParser = m_pSource->getParser();
 	
 	// Lock the parser
-	pParser->lock();
+	sourceParser.lock();
 
-	// We make progress on this tuner only if its graph is running
-	if(m_pTuner->running())
+	// We make progress on this source only if its graph is running
+	if(m_pSource->running())
 	{
 		// Get the current time
 		time_t now = 0;
 		time(&now);
 
-		// Calculate the differentce
+		// Calculate the difference
 		if(difftime(now, m_Time) > g_pConfiguration->getTuningTimeout())
 		{
 			// Log stop recording message
 			log(0, true, 0, TEXT("Could not start recording after %u seconds, "), g_pConfiguration->getTuningTimeout());
 
 			// Unlock the parser
-			pParser->unlock();
+			sourceParser.unlock();
 
 			// Stop recording without locking the parser
 			stopRecording();
@@ -353,14 +309,14 @@ bool Recorder::changeState()
 			return false;
 		}
 
-		// Check for tuner lock timeout
-		if(!m_pTuner->getLockStatus() && difftime(now, m_Time) > g_pConfiguration->getTuningLockTimeout())
+		// Check for source lock timeout (any source other than physical tuner should return immediate success)
+		if(!m_pSource->getLockStatus() && difftime(now, m_Time) > g_pConfiguration->getTuningLockTimeout())
 		{
 			// Log stop recording message
 			log(0, true, 0, TEXT("Could not lock signal after %u seconds, "), g_pConfiguration->getTuningLockTimeout());
 
 			// Unlock the parser
-			pParser->unlock();
+			sourceParser.unlock();
 
 			// Stop recording without locking the parser
 			stopRecording();
@@ -372,47 +328,47 @@ bool Recorder::changeState()
 		// Allow it to start the actual recording
 		// Get the PMT PID for the recorder SID
 		USHORT pmtPid = 0;
-		if(pParser->getPMTPidForSid(m_Sid, pmtPid))
+		if(sourceParser.getPMTPidForSid(m_Sid, pmtPid))
 		{
 			// Get the ES PIDs for the recorder SID
 			hash_set<USHORT> esPids;
-			if(pParser->getESPidsForSid(m_Sid, esPids))
+			if(sourceParser.getESPidsForSid(m_Sid, esPids))
 			{
 				// Get the CA PIDs for the recorder SID
 				hash_set<USHORT> caPids;
-				if(pParser->getCAPidsForSid(m_Sid, caPids))
+				if(sourceParser.getCAPidsForSid(m_Sid, caPids))
 				{
 					// Get ECM CA Types (might be empty)
 					hash_set<CAScheme> ecmCATypes;
-					pParser->getECMCATypesForSid(m_Sid, ecmCATypes);
+					sourceParser.getECMCATypesForSid(m_Sid, ecmCATypes);
 					// Get EMM CA Types (might be empty)
 					EMMInfo emmCATypes;
-					pParser->getEMMCATypes(emmCATypes);
+					sourceParser.getEMMCATypes(emmCATypes);
 					// Create the parser
 					m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_ChannelName, m_Sid, pmtPid, ecmCATypes, emmCATypes, m_Size);
 					// Assign recorder's parser to PAT PID
-					pParser->assignParserToPid(0, m_pParser);
+					sourceParser.assignParserToPid(0, m_pParser);
 					m_pParser->setESPid(0, true);
 					// Assign recorder's parser to PMT PID
-					pParser->assignParserToPid(pmtPid, m_pParser);
+					sourceParser.assignParserToPid(pmtPid, m_pParser);
 					m_pParser->setESPid(pmtPid, true);
 					// Assign recorder's parser to every relevant ES PID
 					for(hash_set<USHORT>::const_iterator it = esPids.begin(); it != esPids.end(); it++)
 					{
-						pParser->assignParserToPid(*it, m_pParser);
+						sourceParser.assignParserToPid(*it, m_pParser);
 						m_pParser->setESPid(*it, true);
 					}
 					// Assign recorder's parser to every relevant CA PID
 					for(hash_set<USHORT>::const_iterator it = caPids.begin(); it != caPids.end(); it++)
 					{
-						pParser->assignParserToPid(*it, m_pParser);
+						sourceParser.assignParserToPid(*it, m_pParser);
 						m_pParser->setESPid(*it, false);
 					}
 					// Add CAT to the parser as well, saying it's not an ES type
-					pParser->assignParserToPid(1, m_pParser);
+					sourceParser.assignParserToPid(1, m_pParser);
 					m_pParser->setESPid(1, false);
 					// Finally, tell the parser it has connected clients
-					pParser->setHasConnectedClients();
+					sourceParser.setHasConnectedClients();
 
 					// Indicate start recording thread can end
 					m_StartRecordingThreadCanEnd = true;
@@ -427,12 +383,17 @@ bool Recorder::changeState()
 		}
 	}
 	else
-		// The tuner's graph is not running, so we can indicate that the start recording thread can end
+		// The source's graph is not running, so we can indicate that the start recording thread can end
 		m_StartRecordingThreadCanEnd = true;
 
 	// Unlock the parser
-	pParser->unlock();
+	sourceParser.unlock();
 
 	// Everything is OK
 	return true;
+}
+
+__int64 Recorder::getFileLength() const
+{
+	return m_pParser != NULL ? m_pParser->getFileLength() : (__int64)0;
 }

@@ -447,7 +447,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\FileFilterGraph.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\FileSource.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GenericFilterGraph.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GenericSource.cpp"
 				>
 			</File>
 			<File
@@ -641,7 +653,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\FileFilterGraph.h"
+				>
+			</File>
+			<File
+				RelativePath=".\FileSource.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GenericFilterGraph.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GenericSource.h"
 				>
 			</File>
 			<File

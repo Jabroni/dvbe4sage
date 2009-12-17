@@ -6,31 +6,32 @@
 #include "encoder.h"
 #include "extern.h"
 
-int Tuner::m_TTBudget2Tuners = 0;
-int Tuner::m_USB2Tuners = 0;
+int DVBSTuner::m_TTBudget2Tuners = 0;
+int DVBSTuner::m_USB2Tuners = 0;
 
-Tuner::Tuner(Encoder* const pEncoder,
-			 UINT ordinal,
-			 ULONG initialFrequency,
-			 ULONG initialSymbolRate,
-			 Polarisation initialPolarization,
-			 ModulationType initialModulation,
-			 BinaryConvolutionCodeRate initialFec) :
+DVBSTuner::DVBSTuner(Encoder* const pEncoder,
+					 UINT ordinal,
+					 ULONG initialFrequency,
+					 ULONG initialSymbolRate,
+					 Polarisation initialPolarization,
+					 ModulationType initialModulation,
+					 BinaryConvolutionCodeRate initialFec) :
 	m_pEncoder(pEncoder),
-	m_BDAFilterGraph(ordinal),
 	m_WorkerThread(NULL),
-	m_IsTunerOK(true),
 	m_InitializationEvent(NULL),
 	m_LockStatus(false)
 {
+	// Create the right filter graph
+	m_pFilterGraph = new DVBSFilterGraph(ordinal);
+
 	// Tune to the initial parameters
 	tune(initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec);
 
 	// Build the graph
-	if(FAILED(m_BDAFilterGraph.BuildGraph()))
+	if(FAILED(m_pFilterGraph->BuildGraph()))
 	{
 		log(0, true, ordinal, TEXT("Error: Could not Build the DVB-S BDA filter graph\n"));
-		m_IsTunerOK = false;
+		m_IsSourceOK = false;
 	}
 
 	// Get driver and device info and print it - works only for Twinhan cards
@@ -38,7 +39,7 @@ Tuner::Tuner(Encoder* const pEncoder,
 	memset(&DevInfo, 0, sizeof(DEVICE_INFO));
 	DriverInfo  DrvInfo;
 	memset(&DrvInfo, 0, sizeof(DriverInfo));
-	if(m_BDAFilterGraph.THBDA_IOCTL_GET_DEVICE_INFO_Fun(&DevInfo) && m_BDAFilterGraph.THBDA_IOCTL_GET_DRIVER_INFO_Fun(&DrvInfo))
+	if(((DVBSFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_GET_DEVICE_INFO_Fun(&DevInfo) && ((DVBSFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_GET_DRIVER_INFO_Fun(&DrvInfo))
 	{
 		// Let's get the MAC in a textual form - for Twinhan
 		char MAC[100];
@@ -64,15 +65,15 @@ Tuner::Tuner(Encoder* const pEncoder,
 						DrvInfo.Version_Minor);
 
 		// Set the LNB data
-		m_BDAFilterGraph.THBDA_IOCTL_SET_LNB_DATA_Fun(g_pConfiguration->getLNBLOF1(), g_pConfiguration->getLNBLOF2(), g_pConfiguration->getLNBSW());
+		((DVBSFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_SET_LNB_DATA_Fun(g_pConfiguration->getLNBLOF1(), g_pConfiguration->getLNBLOF2(), g_pConfiguration->getLNBSW());
 	}
 	// If our device if one of the TechnoTrend kind
-	if(m_BDAFilterGraph.m_IsTTBDG2 || m_BDAFilterGraph.m_IsTTUSB2)
+	if(((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 || ((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTUSB2)
 	{
 		// Determine whether it's budget or USB 2.0
-		DEVICE_CAT deviceCategory = m_BDAFilterGraph.m_IsTTBDG2 ? BUDGET_2 : USB_2;
+		DEVICE_CAT deviceCategory = ((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? BUDGET_2 : USB_2;
 		// Get device handle from TT BDA API
-		HANDLE hTT = bdaapiOpen(deviceCategory, m_BDAFilterGraph.m_IsTTBDG2 ? m_TTBudget2Tuners++ : m_USB2Tuners++);
+		HANDLE hTT = bdaapiOpen(deviceCategory, ((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? m_TTBudget2Tuners++ : m_USB2Tuners++);
 		// If the handle is not bogus
 		if(hTT != INVALID_HANDLE_VALUE)
 		{
@@ -98,71 +99,65 @@ Tuner::Tuner(Encoder* const pEncoder,
 			log(0, true, ordinal, TEXT("Device ordinal=%d, MAC=%s,  type=%s\n"),
 						ordinal,
 						(LPCTSTR)CA2T(MAC),
-						m_BDAFilterGraph.m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"));
+						((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"));
 		}
 	}
 }
 
-Tuner::~Tuner(void)
+DVBSTuner::~DVBSTuner(void)
 {
-	// Wait for the running idle thread to return (in most cases should return immediately
+	// Wait for the running idle thread to return (in most cases should return immediately)
 	WaitForSingleObject(m_WorkerThread, INFINITE);
 
 	// Close working thread handle
 	CloseHandle(m_WorkerThread);
-
-	// Stop the graph if it's running
-	if(m_BDAFilterGraph.m_fGraphRunning)
-		m_BDAFilterGraph.StopGraph();
-
-	// Destory the graph
-	m_BDAFilterGraph.TearDownGraph();
 }
 
-void Tuner::tune(ULONG frequency,
-				 ULONG symbolRate,
-				 Polarisation polarization,
-				 ModulationType modulation,
-				 BinaryConvolutionCodeRate fecRate)
+void DVBSTuner::tune(ULONG frequency,
+					 ULONG symbolRate,
+					 Polarisation polarization,
+					 ModulationType modulation,
+					 BinaryConvolutionCodeRate fecRate)
 {
 	// Set the parameters
-	m_BDAFilterGraph.m_ulCarrierFrequency = frequency;
-	m_BDAFilterGraph.m_ulSymbolRate = symbolRate;
-	m_BDAFilterGraph.m_SignalPolarisation = polarization;
-	m_BDAFilterGraph.m_Modulation = modulation;
-	m_BDAFilterGraph.m_FECRate = fecRate;
+	((DVBSFilterGraph*)m_pFilterGraph)->m_ulCarrierFrequency = frequency;
+	((DVBSFilterGraph*)m_pFilterGraph)->m_ulSymbolRate = symbolRate;
+	((DVBSFilterGraph*)m_pFilterGraph)->m_SignalPolarisation = polarization;
+	((DVBSFilterGraph*)m_pFilterGraph)->m_Modulation = modulation;
+	((DVBSFilterGraph*)m_pFilterGraph)->m_FECRate = fecRate;
 
 	// Fix the modulation type for S2 tuning of Hauppauge devices
-	if(!m_BDAFilterGraph.m_IsHauppauge && !m_BDAFilterGraph.m_IsFireDTV && (modulation == BDA_MOD_8PSK || modulation == BDA_MOD_NBC_QPSK))
-		m_BDAFilterGraph.m_Modulation = BDA_MOD_8VSB;
+	if(!((DVBSFilterGraph*)m_pFilterGraph)->m_IsHauppauge && !((DVBSFilterGraph*)m_pFilterGraph)->m_IsFireDTV && (modulation == BDA_MOD_8PSK || modulation == BDA_MOD_NBC_QPSK))
+		((DVBSFilterGraph*)m_pFilterGraph)->m_Modulation = BDA_MOD_8VSB;
 
 	m_LockStatus = false;
 }
 
-bool Tuner::startRecording(bool startFullTransponderDump)
+bool DVBSTuner::startPlayback(bool startFullTransponderDump)
 {
-	// Build the graph
-	m_BDAFilterGraph.BuildGraph();
+	// Build the graph, but only if needed
+	if(!m_pFilterGraph->m_fGraphBuilt)
+		m_pFilterGraph->BuildGraph();
 
 	// Perform the tuning
-	m_BDAFilterGraph.ChangeSetting();
+	((DVBSFilterGraph*)m_pFilterGraph)->ChangeSetting();
 
-	// Get lock status for the first time
-	//getLockStatus();
-	if(startFullTransponderDump)
-		m_BDAFilterGraph.getParser().startTransponderDump();
+	// Start full transponder dump if requested
+ 	if(startFullTransponderDump)
+		m_pFilterGraph->getParser().startTransponderDump();
 
 	// Run the graph
-	if(FAILED(m_BDAFilterGraph.RunGraph()))
+	HRESULT hr = S_OK;
+	if(FAILED(hr = m_pFilterGraph->RunGraph()))
 	{
-		log(0, true, m_BDAFilterGraph.getTunerOrdinal(), TEXT("Error: Could not play the filter graph.\n"));
+		log(0, true, m_pFilterGraph->getTunerOrdinal(), TEXT("Error: Could not play the DVB-S filter graph, error 0x%.08X\n"), hr);
 		return false;
 	}
 	else
 		return true;
 }
 
-bool Tuner::getLockStatus()
+bool DVBSTuner::getLockStatus()
 {
 	// Get the lock status from the tuner only if not locked yet
 	if(!m_LockStatus)
@@ -173,12 +168,12 @@ bool Tuner::getLockStatus()
 		LONG lSignalStrength = 0;
 
 		// Get the tuner status
-		m_BDAFilterGraph.GetTunerStatus(&bLocked, &lSignalQuality, &lSignalStrength);
+		((DVBSFilterGraph*)m_pFilterGraph)->GetTunerStatus(&bLocked, &lSignalQuality, &lSignalStrength);
 
 		// If lock succeeded, print the log message and set the flag
 		if(bLocked)
 		{
-			log(0, true, m_BDAFilterGraph.getTunerOrdinal(), TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
+			log(0, true, m_pFilterGraph->getTunerOrdinal(), TEXT("Signal locked, quality=%d, strength=%d\n"), lSignalQuality, lSignalStrength);
 			m_LockStatus = true;
 		}
 	}
@@ -186,72 +181,57 @@ bool Tuner::getLockStatus()
 	return m_LockStatus;
 }
 
-void Tuner::stopRecording()
-{
-	// Stop the full transponder dump
-	m_BDAFilterGraph.getParser().stopTransponderDump();
-
-	// Tell the parser to stop processing PSI packets
-	m_BDAFilterGraph.getParser().stopPSIPackets();
-
-	// The tuner stops the running graph
-	m_BDAFilterGraph.StopGraph();
-
-	// Destory the graph
-	m_BDAFilterGraph.TearDownGraph();
-}
-
-void Tuner::copyProviderDataAndStopRecording()
+void DVBSTuner::copyProviderDataAndStopRecording()
 {
 	// Get the encoder network provider
 	NetworkProvider& encoderProvider = m_pEncoder->getNetworkProvider();
 
 	// Get the tuner parser
-	DVBParser* const pTunerParser = getParser();
+	DVBParser& tunerParser = getParser();
 
 	// If the tuner parser is valid
-	if(pTunerParser != NULL && pTunerParser->getTimeStamp() != 0)
+	if(tunerParser.getTimeStamp() != 0)
 	{
 		// Get the tuner network provider
-		const NetworkProvider& tunerNetworkProvider = pTunerParser->getNetworkProvider();
+		const NetworkProvider& tunerNetworkProvider = tunerParser.getNetworkProvider();
 
 		// Lock the encoder and the tuner parsers
 		encoderProvider.lock();
-		pTunerParser->lock();
+		tunerParser.lock();
 
 		// Copy the contents of the encoders parser from the current tuner's parser
 		encoderProvider.copy(tunerNetworkProvider);
 
 		// Unlock both parsers
-		pTunerParser->unlock();
+		tunerParser.unlock();
 		encoderProvider.unlock();
 	}
 
 	// Tell the tuner to stop the recording
-	stopRecording();
+	stopPlayback();
 }
 
 DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 {
 	// Get the tuner
-	Tuner* pTuner = (Tuner*)vpTuner;
+	DVBSTuner* pTuner = (DVBSTuner*)vpTuner;
 
 	// Log entry
-	log(0, true, pTuner->getTunerOrdinal(), TEXT("Starting initial run for autodiscovery, transponder data: Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+	log(0, true, pTuner->getSourceOrdinal(), TEXT("Starting initial run for autodiscovery, transponder data: Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 		pTuner->getFrequency(), pTuner->getSymbolRate(), printablePolarization(pTuner->getPolarization()), printableModulation(pTuner->getModulation()), printableFEC(pTuner->getFECRate()));
 
 	// Sleep for the initial running time
 	Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
 
 	// Log entry
-	log(0, true, pTuner->getTunerOrdinal(), TEXT("The initial run for autodiscovery finished\n"));
+	log(0, true, pTuner->getSourceOrdinal(), TEXT("The initial run for autodiscovery finished\n"));
 
 	// Log tuner lock status
 	if(!pTuner->getLockStatus())
-		log(0, true, pTuner->getTunerOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
+		log(0, true, pTuner->getSourceOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
 
 	// Get current transponder TID
-	USHORT currentTid = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentTid() : 0;
+	USHORT currentTid = pTuner->getParser().getCurrentTid();
 
 	// Copy provider data and stop recording, for the first time
 	pTuner->copyProviderDataAndStopRecording();
@@ -263,12 +243,12 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 	if(g_pConfiguration->scanAllTransponders())
 	{
 		// Log entry
-		log(0, true, pTuner->getTunerOrdinal(), TEXT("Full transponder scan at initialization requested, starting...\n"));
+		log(0, true, pTuner->getSourceOrdinal(), TEXT("Full transponder scan at initialization requested, starting...\n"));
 
 		for(hash_map<USHORT, Transponder>::const_iterator it = transponders.begin(); it != transponders.end(); it++)
 		{
 			// Log transponder data
-			log(0, true, pTuner->getTunerOrdinal(), TEXT("Transponder with TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s - %s"),
+			log(0, true, pTuner->getSourceOrdinal(), TEXT("Transponder with TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s - %s"),
 				it->first, it->second.frequency, it->second.symbolRate, printablePolarization(it->second.polarization), printableModulation(it->second.modulation), printableFEC(it->second.fec),
 				it->first != currentTid ? TEXT("scanning started!\n") : TEXT("skipped, because it's the same transponder as the initial one!\n"));
 			// For any transponder other than the initial one
@@ -278,18 +258,18 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 				// Tune to its parameters
 				pTuner->tune(it->second.frequency, it->second.symbolRate, it->second.polarization, it->second.modulation, it->second.fec);
 				// Start the recording
-				pTuner->startRecording(false);
+				pTuner->startPlayback(false);
 				// Sleep for the same time as the initial running time
 				Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
 				// Log tuner lock status
 				if(!pTuner->getLockStatus())
-					log(0, true, pTuner->getTunerOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
+					log(0, true, pTuner->getSourceOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
 				// And, finally, copy the provider data and stop the recording
 				pTuner->copyProviderDataAndStopRecording();
 			}
 		}
 		// Log entry
-		log(0, true, pTuner->getTunerOrdinal(), TEXT("Full transponder scan at initialization finished!\n"));
+		log(0, true, pTuner->getSourceOrdinal(), TEXT("Full transponder scan at initialization finished!\n"));
 	}
 
 	// Now we can set the initialization event, as the initialization of the tuner is fully complete
@@ -298,7 +278,7 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 	return 0;
 }
 
-void Tuner::runIdle()
+void DVBSTuner::runIdle()
 {
 	// Create the initialization event that need to be waited on to be sure the initialization is complete
 	m_InitializationEvent = CreateEvent(NULL, FALSE, FALSE, NULL);

@@ -8,7 +8,7 @@ using namespace stdext;
 class PluginsHandler;
 class DVBSFilterGraph;
 class DVBFilterToParserProxy;
-class Tuner;
+class DVBSTuner;
 class Recorder;
 class VirtualTuner;
 struct Transponder;
@@ -23,7 +23,7 @@ class Encoder
 	};
 
 	PluginsHandler*						m_pPluginsHandler;
-	vector<Tuner*>						m_Tuners;
+	vector<DVBSTuner*>						m_Tuners;
 	vector<VirtualTuner*>				m_VirtualTuners;
 	hash_map<SOCKET, VirtualTuner*>		m_VirtualTunersMap;
 	hash_multimap<USHORT, Recorder*>	m_Recorders;			// Map from logical tuner to recorder
@@ -33,7 +33,7 @@ class Encoder
 	NetworkProvider						m_Provider;				// Network Provider info - to be copied from one of the tuners
 
 	void socketOperation(SOCKET socket, WORD eventType, WORD error);
-	Tuner* getTuner(int tunerOrdinal, bool useLogicalTuner, const Transponder* const pTransponder);
+	DVBSTuner* getTuner(int tunerOrdinal, bool useLogicalTuner, const Transponder* const pTransponder);
 
 public:
 	Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu);
@@ -63,4 +63,8 @@ public:
 	int getTunerOrdinal(int i) const;
 	NetworkProvider& getNetworkProvider()							{ return m_Provider; }
 	void waitForFullInitialization();
+	bool startRecordingFromFile(LPCWSTR inFileName,
+								int sid,
+								__int64 duration,
+								LPCWSTR outFileName);
 };
