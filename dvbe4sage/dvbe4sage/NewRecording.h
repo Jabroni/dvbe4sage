@@ -49,4 +49,14 @@ public:
 	CComboBox m_FECCombo;
 	afx_msg void OnCbnSelendokTunerName();
 	BOOL m_DumpFullTransponder;
+	BOOL m_bIsInputFile;
+	CString m_InputFileName;
+	CEdit m_InputFileNameField;
+	CButton m_BrowseInputFileButton;
+	CButton m_UseSidCheckBox;
+	CButton m_DumpFullTransponderCheckbox;
+	CButton m_AutodiscoverTransponderButton;
+	afx_msg void OnBnSelectedFullTransponderDump();
+	afx_msg void OnBnSelectedPhysicalTuner();
+	afx_msg void OnBnClickedBrowseInputFile();
 };

@@ -183,22 +183,26 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 {
 	static NewRecording newRecording(this);
 	if(newRecording.DoModal() == IDOK)
-	{
-		startRecording(newRecording.m_TransponderAutodiscovery ? true : false,
-					   _ttol(newRecording.m_TunerFrequency),
-					   _ttol(newRecording.m_TunerSymbolRate),
-					   getPolarizationFromString(newRecording.m_TunerPolarization.Left(1)),
-					   getModulationFromString(newRecording.m_TunerModulation),
-					   getFECFromString(newRecording.m_TunerFEC),
-					   _ttoi(newRecording.m_RecordingTunerOrdinal),
-					   _ttoi(newRecording.m_RecordingChannelNumber),
-					   newRecording.m_UseSID ? true : false,
-					   _ttoi64(newRecording.m_RecordingDuration),
-					   CT2CW(newRecording.m_OutputFileName),
-					   (__int64)-1,
-					   newRecording.m_DumpFullTransponder ? true : false);
+		if(!newRecording.m_bIsInputFile)
+			startRecording(newRecording.m_TransponderAutodiscovery ? true : false,
+						   _ttol(newRecording.m_TunerFrequency),
+						   _ttol(newRecording.m_TunerSymbolRate),
+						   getPolarizationFromString(newRecording.m_TunerPolarization.Left(1)),
+						   getModulationFromString(newRecording.m_TunerModulation),
+						   getFECFromString(newRecording.m_TunerFEC),
+						   _ttoi(newRecording.m_RecordingTunerOrdinal),
+						   _ttoi(newRecording.m_RecordingChannelNumber),
+						   newRecording.m_UseSID ? true : false,
+						   _ttoi64(newRecording.m_RecordingDuration),
+						   CT2CW(newRecording.m_OutputFileName),
+						   (__int64)-1,
+						   newRecording.m_DumpFullTransponder ? true : false);
+		else
+			startRecordingFromFile(CT2CW(newRecording.m_InputFileName),
+								   _ttol(newRecording.m_RecordingChannelNumber),
+								   (__int64)-1,
+								   CT2CW(newRecording.m_OutputFileName));
 								   
-	}
 }
 
 void CDVBE4SageDlg::OnOperationsExit()

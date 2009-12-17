@@ -23,6 +23,11 @@
 #define IDC_DISCOVER_TRANSPONDER        1016
 #define IDC_USE_SID                     1017
 #define IDC_DUMP_FULL_TRANSPONDER       1018
+#define IDC_PHYSICAL_TUNER              1019
+#define IDC_FULL_TRANSPONDER_DUMP       1020
+#define IDC_INPUT_FILE_NAME             1021
+#define IDC_BUTTON2                     1022
+#define IDC_BROWSE_INPUT_FILE_BUTTON    1022
 #define ID_OPERATIONS_MINIMIZETOTRAY    32771
 #define ID_OPERATIONS_EXIT              32772
 #define ID_OPERATIONS_STARTRECORDING    32773
@@ -35,7 +40,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        136
 #define _APS_NEXT_COMMAND_VALUE         32776
-#define _APS_NEXT_CONTROL_VALUE         1019
+#define _APS_NEXT_CONTROL_VALUE         1021
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

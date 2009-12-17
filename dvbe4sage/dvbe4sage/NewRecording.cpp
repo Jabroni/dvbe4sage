@@ -27,7 +27,9 @@ NewRecording::NewRecording(CWnd* pParent /*=NULL*/)
 	, m_UseSID(FALSE)
 	, m_TransponderAutodiscovery(TRUE)
 	, m_bFirstTime(true)
-	, m_DumpFullTransponder(false)
+	, m_DumpFullTransponder(FALSE)
+	, m_bIsInputFile(FALSE)
+	, m_InputFileName(_T(""))
 {
 }
 
@@ -63,14 +65,27 @@ void NewRecording::DoDataExchange(CDataExchange* pDX)
 	DDV_MaxChars(pDX, m_RecordingChannelNumber, 5);
 
 	DDX_Text(pDX, IDC_DURATION, m_RecordingDuration);
+
 	DDX_Text(pDX, IDC_OUTPUT_FILE_NAME, m_OutputFileName);
-	
+
 	DDX_Control(pDX, IDC_TUNER_NAME, m_TunerNameBox);
 	DDX_CBString(pDX, IDC_TUNER_NAME, m_TunerName);
-	
+
 	DDX_Check(pDX, IDC_DISCOVER_TRANSPONDER, m_TransponderAutodiscovery);
+	DDX_Control(pDX, IDC_DISCOVER_TRANSPONDER, m_AutodiscoverTransponderButton);
+
+	DDX_Radio(pDX, IDC_PHYSICAL_TUNER, m_bIsInputFile);
+
 	DDX_Check(pDX, IDC_USE_SID, m_UseSID);
+	DDX_Control(pDX, IDC_USE_SID, m_UseSidCheckBox);
+
 	DDX_Check(pDX, IDC_DUMP_FULL_TRANSPONDER, m_DumpFullTransponder);
+	DDX_Control(pDX, IDC_DUMP_FULL_TRANSPONDER, m_DumpFullTransponderCheckbox);
+
+	DDX_Control(pDX, IDC_BROWSE_INPUT_FILE_BUTTON, m_BrowseInputFileButton);
+
+	DDX_Text(pDX, IDC_INPUT_FILE_NAME, m_InputFileName);
+	DDX_Control(pDX, IDC_INPUT_FILE_NAME, m_InputFileNameField);
 }
 
 
@@ -79,6 +94,9 @@ BEGIN_MESSAGE_MAP(NewRecording, CDialog)
 	ON_EN_KILLFOCUS(IDC_CHANNEL, &NewRecording::OnEnKillfocusChannel)
 	ON_BN_CLICKED(IDC_DISCOVER_TRANSPONDER, &NewRecording::OnBnClickedDiscoverTransponder)
 	ON_CBN_SELENDOK(IDC_TUNER_NAME, &NewRecording::OnCbnSelendokTunerName)
+	ON_BN_CLICKED(IDC_FULL_TRANSPONDER_DUMP, &NewRecording::OnBnSelectedFullTransponderDump)
+	ON_BN_CLICKED(IDC_PHYSICAL_TUNER, &NewRecording::OnBnSelectedPhysicalTuner)
+	ON_BN_CLICKED(IDC_BUTTON2, &NewRecording::OnBnClickedBrowseInputFile)
 END_MESSAGE_MAP()
 
 
@@ -93,6 +111,8 @@ BOOL NewRecording::OnInitDialog()
 	m_PolarizationCombo.EnableWindow(!m_TransponderAutodiscovery);
 	m_ModulationCombo.EnableWindow(!m_TransponderAutodiscovery);
 	m_FECCombo.EnableWindow(!m_TransponderAutodiscovery);
+	m_InputFileNameField.EnableWindow(FALSE);
+	m_BrowseInputFileButton.EnableWindow(FALSE);
 
 	for(int i = 0; i < getNumberOfTuners(); i++)
 	{
@@ -154,4 +174,51 @@ void NewRecording::OnCbnSelendokTunerName()
 	_itot_s(m_TunerNameBox.GetItemData(curSel), buffer, sizeof(buffer) / sizeof(buffer[0]), 10);
 	m_RecordingTunerOrdinal = buffer;
 	UpdateData(FALSE);
+}
+
+void NewRecording::OnBnSelectedFullTransponderDump()
+{
+	UpdateData(TRUE);
+	m_FrequencyEdit.EnableWindow(FALSE);
+	m_SymbolRateEdit.EnableWindow(FALSE);
+	m_PolarizationCombo.EnableWindow(FALSE);
+	m_ModulationCombo.EnableWindow(FALSE);
+	m_FECCombo.EnableWindow(FALSE);
+	m_AutodiscoverTransponderButton.EnableWindow(FALSE);
+	m_TunerNameBox.EnableWindow(FALSE);
+	m_UseSidCheckBox.EnableWindow(FALSE);
+	m_UseSID = TRUE;
+	m_DumpFullTransponderCheckbox.EnableWindow(FALSE);
+	m_InputFileNameField.EnableWindow(TRUE);
+	m_BrowseInputFileButton.EnableWindow(TRUE);
+	UpdateData(FALSE);
+}
+
+void NewRecording::OnBnSelectedPhysicalTuner()
+{
+	UpdateData(TRUE);
+	m_FrequencyEdit.EnableWindow(!m_TransponderAutodiscovery);
+	m_SymbolRateEdit.EnableWindow(!m_TransponderAutodiscovery);
+	m_PolarizationCombo.EnableWindow(!m_TransponderAutodiscovery);
+	m_ModulationCombo.EnableWindow(!m_TransponderAutodiscovery);
+	m_FECCombo.EnableWindow(!m_TransponderAutodiscovery);
+	m_AutodiscoverTransponderButton.EnableWindow(TRUE);
+	m_TunerNameBox.EnableWindow(TRUE);
+	m_UseSidCheckBox.EnableWindow(TRUE);
+	m_DumpFullTransponderCheckbox.EnableWindow(TRUE);
+	m_InputFileNameField.EnableWindow(FALSE);
+	m_BrowseInputFileButton.EnableWindow(FALSE);
+	UpdateData(FALSE);
+}
+
+void NewRecording::OnBnClickedBrowseInputFile()
+{
+	UpdateData(TRUE);
+	CString fileName;
+	CFileDialog dlg(TRUE, _T("ts"), NULL, 0, NULL, this);
+	if(dlg.DoModal() == IDOK)
+	{
+		m_InputFileName = dlg.GetPathName();
+		UpdateData(FALSE);
+	}
 }
