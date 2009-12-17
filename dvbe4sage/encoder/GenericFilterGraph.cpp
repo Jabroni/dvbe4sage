@@ -93,7 +93,7 @@ HRESULT GenericFilterGraph::ConnectFilters(IBaseFilter* pFilterUpstream,
 
 					if ((PINDIR_INPUT == PinInfoDownstream.dir) && (pPinUp == NULL))
 					{
-						if (SUCCEEDED(m_pFilterGraph->Connect(pIPinUpstream, pIPinDownstream)))
+						if (SUCCEEDED(hr = m_pFilterGraph->ConnectDirect(pIPinUpstream, pIPinDownstream, NULL)))
 						{
 							PinInfoDownstream.pFilter->Release();
 							PinInfoUpstream.pFilter->Release();

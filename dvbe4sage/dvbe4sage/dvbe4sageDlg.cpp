@@ -199,8 +199,8 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 						   newRecording.m_DumpFullTransponder ? true : false);
 		else
 			startRecordingFromFile(CT2CW(newRecording.m_InputFileName),
-								   _ttol(newRecording.m_RecordingChannelNumber),
-								   (__int64)-1,
+								   _ttoi(newRecording.m_RecordingChannelNumber),
+								   _ttoi64(newRecording.m_RecordingDuration),
 								   CT2CW(newRecording.m_OutputFileName));
 								   
 }

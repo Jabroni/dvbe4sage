@@ -26,7 +26,6 @@
 #define IDC_PHYSICAL_TUNER              1019
 #define IDC_FULL_TRANSPONDER_DUMP       1020
 #define IDC_INPUT_FILE_NAME             1021
-#define IDC_BUTTON2                     1022
 #define IDC_BROWSE_INPUT_FILE_BUTTON    1022
 #define ID_OPERATIONS_MINIMIZETOTRAY    32771
 #define ID_OPERATIONS_EXIT              32772

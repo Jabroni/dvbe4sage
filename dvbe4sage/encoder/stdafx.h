@@ -43,6 +43,10 @@
 #include <bdaiface.h>
 #include <bdatif.h>
 #include <tuner.h>
+#include <mmsystem.h>
+#include <wxdebug.h>
+#include <wxutil.h>
+#include <pullpin.h>
 #include <uuids.h>
 #include <control.h>
 #include <commctrl.h>

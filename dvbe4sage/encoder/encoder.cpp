@@ -693,7 +693,7 @@ bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 	FileSource* source = new FileSource(inFileName);
 
 	// Create the recorder
-	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, 0, (USHORT)sid, TEXT(""), duration, this, -1, false);
+	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, sid, (USHORT)sid, TEXT(""), duration, this, -1, false);
 
 	// Let's see if the recorder has an error, just delete it and exit
 	if(recorder->hasError())

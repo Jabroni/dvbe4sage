@@ -6,9 +6,44 @@
 
 class DVBFilter;
 
+class DVBPullPin : public CPullPin
+{
+private:
+	DVBFilter* const		m_pFilter;
+
+	// Disallow default and copy constructors
+	DVBPullPin();
+	DVBPullPin(const DVBPullPin&);
+
+public:
+	// The only valid constructor
+	DVBPullPin(DVBFilter* pFilter) : m_pFilter(pFilter) {}
+
+	 // override this to handle data arrival
+    // return value other than S_OK will stop data
+    virtual HRESULT Receive(IMediaSample* sample);
+
+    // override this to handle end-of-stream
+    virtual HRESULT EndOfStream();
+
+    // called on runtime errors that will have caused pulling
+    // to stop
+    // these errors are all returned from the upstream filter, who
+    // will have already reported any errors to the filtergraph.
+    virtual void OnError(HRESULT hr);
+
+    // flush this pin and all downstream
+    virtual HRESULT BeginFlush();
+    virtual HRESULT EndFlush();
+
+	virtual HRESULT DecideAllocator(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* pProps);
+};
+
 class DVBFilterInputPin : public CRenderedInputPin
 {
 private:
+	DVBPullPin			m_PullPin;
+
 	// Disallow default and copy constructors
 	DVBFilterInputPin();
 	DVBFilterInputPin(const DVBFilterInputPin&);
@@ -31,10 +66,19 @@ public:
 
 	// We need to override this method in order to handle synchronization issues
 	STDMETHODIMP EndOfStream(void);
+
+	virtual HRESULT CheckConnect(IPin* pPin);
+	virtual HRESULT BreakConnect();
+	virtual HRESULT Active();
+	virtual HRESULT Inactive();
 };
 
 class DVBFilterOutputPin : public CBaseOutputPin
 {
+private:
+	// Disallow default and copy constructors
+	DVBFilterOutputPin();
+	DVBFilterOutputPin(const DVBFilterOutputPin&);
 protected:
 	HRESULT GetMediaType(int iPosition, CMediaType* pMediaType);
 	HRESULT CheckMediaType(const CMediaType* pMediaType);
@@ -43,10 +87,7 @@ public:
 	DVBFilterOutputPin(CBaseFilter* pFilter, CCritSec* pLock, HRESULT* phr);
 };
 
-class DVBFilter : public CBaseFilter/*,
-				  public ITuneRequestInfo,
-				  public IFrequencyMap,
-				  public IConnectionPointContainer*/
+class DVBFilter : public CBaseFilter
 {
 private:
 	// Data members
@@ -58,10 +99,7 @@ private:
 	// Disallow default and copy constructors
 	DVBFilter();
 	DVBFilter(const DVBFilter&);
-
 public:
-	//DECLARE_IUNKNOWN
-
 	// Constructor
     DVBFilter(UINT ordinal);
 	// Destructor
@@ -73,67 +111,4 @@ public:
 
 	// Provide access to the parser object
 	DVBParser& getParser() { return m_Parser; }
-
-	/*STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void **ppv);
-
-	STDMETHODIMP GetLocatorData(ITuneRequest *Request) { return E_NOTIMPL; }
-	STDMETHODIMP GetComponentData(ITuneRequest *CurrentRequest)  { return E_NOTIMPL; }
-	STDMETHODIMP CreateComponentList(ITuneRequest *CurrentRequest)  { return E_NOTIMPL; }
-	STDMETHODIMP GetNextProgram(ITuneRequest *CurrentRequest, ITuneRequest **TuneRequest)  { return E_NOTIMPL; }
-	STDMETHODIMP GetPreviousProgram(ITuneRequest *CurrentRequest, ITuneRequest **TuneRequest)  { return E_NOTIMPL; }
-	STDMETHODIMP GetNextLocator(ITuneRequest *CurrentRequest, ITuneRequest **TuneRequest)  { return E_NOTIMPL; }
-	STDMETHODIMP GetPreviousLocator(ITuneRequest *CurrentRequest, ITuneRequest **TuneRequest)  { return E_NOTIMPL; }
-
-	STDMETHODIMP get_FrequencyMapping(ULONG *ulCount, ULONG **ppulList) { return E_NOTIMPL; }
-	STDMETHODIMP put_FrequencyMapping(ULONG ulCount, ULONG pList[]) { return E_NOTIMPL; }
-	STDMETHODIMP get_CountryCode(ULONG *pulCountryCode) { return E_NOTIMPL; }
-	STDMETHODIMP put_CountryCode(ULONG ulCountryCode) { return E_NOTIMPL; }
-	STDMETHODIMP get_DefaultFrequencyMapping(ULONG ulCountryCode, ULONG *pulCount, ULONG **ppulList) { return E_NOTIMPL; }
-	STDMETHODIMP get_CountryCodeList(ULONG *pulCount, ULONG **ppulList) { return E_NOTIMPL; }
-
-	STDMETHODIMP EnumConnectionPoints(IEnumConnectionPoints **ppEnum) { return E_NOTIMPL; }
-	STDMETHODIMP FindConnectionPoint(REFIID riid, IConnectionPoint **ppCP) { return E_NOTIMPL; }*/
-};
-
-class DummyNetworkProvider;
-
-class DummyNetworkProviderOutputPin : public CBaseOutputPin
-{
-protected:
-	HRESULT GetMediaType(CMediaType* pMediaType);
-	HRESULT CheckMediaType(const CMediaType*) { return S_OK; }
-	HRESULT DecideBufferSize(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* ppropInputRequest) { return S_OK; }
-public:
-	DummyNetworkProviderOutputPin(CBaseFilter* pFilter, CCritSec* pLock, HRESULT* phr);
-};
-
-class DummyNetworkProvider : public CBaseFilter,
-							 public IBDA_NetworkProvider
-{
-private:
-	// Data members
-    DummyNetworkProviderOutputPin*	m_pPin;							// This is out only input pin
-	CCritSec						m_Lock;							// Main renderer critical section
-
-	GUID							m_guidTuningSpace;
-	ULONG							m_ulSignalSource;
-public:
-	DECLARE_IUNKNOWN
-
-	DummyNetworkProvider();
-	virtual ~DummyNetworkProvider();
-
-	// Pin enumeration
-	CBasePin* GetPin(int n) { return n == 0 ? m_pPin : NULL; }
-	int GetPinCount() { return 1; }
-
-	STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void **ppv);
-
-	STDMETHODIMP PutSignalSource(ULONG ulSignalSource);
-	STDMETHODIMP GetSignalSource(ULONG *pulSignalSource);
-	STDMETHODIMP GetNetworkType(GUID *pguidNetworkType);
-	STDMETHODIMP PutTuningSpace(REFGUID guidTuningSpace);
-	STDMETHODIMP GetTuningSpace(GUID *pguidTuingSpace);
-	STDMETHODIMP RegisterDeviceFilter(IUnknown *pUnkFilterControl,ULONG *ppvRegisitrationContext);
-	STDMETHODIMP UnRegisterDeviceFilter(ULONG pvRegistrationContext);
 };

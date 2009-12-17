@@ -28,13 +28,11 @@ DVBFilter::~DVBFilter()
 {
 	if(m_pPin1 && m_pPin1->IsConnected())
 	{
-		//m_pPin1->GetConnected()->Disconnect();
 		m_pPin1->Disconnect();
 	}
 	delete m_pPin1;
 	if(m_pPin2 && m_pPin2->IsConnected())
 	{
-		//m_pPin2->GetConnected()->Disconnect();
 		m_pPin2->Disconnect();
 	}
 	delete m_pPin2;
@@ -77,57 +75,60 @@ HRESULT DVBFilterOutputPin::DecideBufferSize(IMemAllocator* pAlloc,
 	return hr;
 }
 
-/*STDMETHODIMP DVBFilter::NonDelegatingQueryInterface(REFIID riid,
-													void **ppv)
-{
-    CheckPointer(ppv,E_POINTER);
-	IID un1 = { 0xABBA0018, 0x3075, 0x11D6, 0x88, 0xA4, 0x00, 0xB0, 0xD0, 0x20, 0x0F, 0x88};
-	IID un2 = { 0xD749E960, 0x0C9F, 0x11D3, 0x8F, 0xF2, 0x00, 0xA0, 0xC9, 0x22, 0x4C, 0xF4};
-
-	if(riid == __uuidof(ITuneRequestInfo))
-		return GetInterface((ITuneRequestInfo *) this, ppv);
-
-	if(riid == __uuidof(IFrequencyMap))
-		return GetInterface((IFrequencyMap *) this, ppv);
-
-	if(riid == __uuidof(IConnectionPointContainer))
-		return GetInterface((IConnectionPointContainer *) this, ppv);
-
-	if(riid == un1 || riid == un2)
-		return S_OK;
-
-    return CBaseFilter::NonDelegatingQueryInterface(riid, ppv);
-} // NonDelegatingQueryInterface
-*/
-
 DVBFilterInputPin::DVBFilterInputPin(DVBFilter* pDVBFilter,
 									 CCritSec* pLock,
 									 HRESULT* phr) :
-    CRenderedInputPin(NAME("DVBFilterInputPin"), pDVBFilter, pLock, phr, L"Input")
+    CRenderedInputPin(NAME("DVBFilterInputPin"), pDVBFilter, pLock, phr, L"Input"),
+	m_PullPin(pDVBFilter)
 {
 }
 
 HRESULT DVBFilterInputPin::CheckMediaType(const CMediaType* pMediaType)
 {
-	return S_OK;
-	/*if(*pMediaType->Type() == MEDIATYPE_Stream && *pMediaType->Subtype() == KSDATAFORMAT_SUBTYPE_BDA_MPEG2_TRANSPORT)
+	//if(*pMediaType->Type() == MEDIATYPE_Stream && *pMediaType->Subtype() == KSDATAFORMAT_SUBTYPE_BDA_MPEG2_TRANSPORT)
 		return S_OK;
-	else
-		return VFW_E_INVALIDMEDIATYPE;*/
+	//else
+	//	return VFW_E_INVALIDMEDIATYPE;
 }
 
 /*HRESULT DVBFilterInputPin::GetMediaType(int iPosition,
 										CMediaType* pMediaType)
 {
+	static GUID subtype = { 0x49952F4C, 0x3EDC, 0x4A9B, 0x89, 0x06, 0x1D, 0xE0, 0x2A, 0x3D, 0x4B, 0xC2 };
+
 	if(iPosition == 0)
 	{
 		pMediaType->SetType(&MEDIATYPE_Stream);
-		pMediaType->SetSubtype(&KSDATAFORMAT_SUBTYPE_BDA_MPEG2_TRANSPORT);
+		pMediaType->SetSubtype(&MEDIASUBTYPE_None);
+		pMediaType->SetFormat((BYTE*)&GUID_NULL, sizeof(GUID_NULL));
 		return S_OK;
 	}
 	else
 		return VFW_S_NO_MORE_ITEMS;
 }*/
+
+HRESULT DVBFilterInputPin::CheckConnect(IPin* pPin)
+{
+	HRESULT hr = m_PullPin.Connect(pPin, NULL, FALSE);
+	return SUCCEEDED(hr) && CRenderedInputPin::CheckConnect(pPin);
+}
+
+HRESULT DVBFilterInputPin::BreakConnect()
+{
+	return m_PullPin.Disconnect();
+}
+
+HRESULT DVBFilterInputPin::Active()
+{
+	HRESULT hr = m_PullPin.Active();
+	return SUCCEEDED(hr) && CRenderedInputPin::Active();
+}
+
+HRESULT DVBFilterInputPin::Inactive()
+{
+	HRESULT hr = m_PullPin.Inactive();
+	return SUCCEEDED(hr) && CRenderedInputPin::Inactive();
+}
 
 STDMETHODIMP DVBFilterInputPin::ReceiveCanBlock()
 {
@@ -167,89 +168,43 @@ STDMETHODIMP DVBFilterInputPin::EndOfStream(void)
 	return CRenderedInputPin::EndOfStream();
 }
 
-DummyNetworkProviderOutputPin::DummyNetworkProviderOutputPin(CBaseFilter* pFilter,
-															 CCritSec* pLock,
-															 HRESULT* phr) :
-	CBaseOutputPin(NAME("Antenna Pin"), pFilter, pLock, phr, L"Antenna")
+HRESULT DVBPullPin::Receive(IMediaSample* sample)
+{
+	return ((DVBFilterInputPin*)m_pFilter->GetPin(0))->Receive(sample);
+}
+
+HRESULT DVBPullPin::EndOfStream()
+{
+	return m_pFilter->GetPin(0)->EndOfStream();
+}
+
+void DVBPullPin::OnError(HRESULT hr)
 {
 }
 
-HRESULT DummyNetworkProviderOutputPin::GetMediaType(CMediaType* pMediaType)
+HRESULT DVBPullPin::BeginFlush()
 {
-	pMediaType->majortype = KSDATAFORMAT_TYPE_BDA_ANTENNA;
-	//pMediaType->subtype = STATIC_KSDATAFORMAT_SUBTYPE_BDA_MPEG2_TRANSPORT;
-	return S_OK;
+	return m_pFilter->GetPin(0)->BeginFlush();
 }
 
-// {A9BE14D7-479B-4b61-A834-2FFB73D3340D}
-static const GUID CLSID_DummyNetworkProvider = 
-{ 0xa9be14d7, 0x479b, 0x4b61, { 0xa8, 0x34, 0x2f, 0xfb, 0x73, 0xd3, 0x34, 0xd } };
-
-DummyNetworkProvider::DummyNetworkProvider() :
-	CBaseFilter(NAME("DummyNetworkProvider"), NULL, &m_Lock, CLSID_DummyNetworkProvider)
+HRESULT DVBPullPin::EndFlush()
 {
-	HRESULT hr = S_OK;
-    m_pPin = new DummyNetworkProviderOutputPin(this, &m_Lock, &hr);
+	return m_pFilter->GetPin(0)->EndFlush();
 }
 
-DummyNetworkProvider::~DummyNetworkProvider()
+HRESULT DVBPullPin::DecideAllocator(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* pProps)
 {
-	if(m_pPin && m_pPin->IsConnected())
+    ALLOCATOR_PROPERTIES *pRequest;
+    ALLOCATOR_PROPERTIES Request;
+    if(pProps == NULL)
 	{
-		m_pPin->GetConnected()->Disconnect();
-		m_pPin->Disconnect();
-		delete m_pPin;
-	}
-}
-
-STDMETHODIMP DummyNetworkProvider::NonDelegatingQueryInterface(REFIID riid,
-															   void **ppv)
-{
-    CheckPointer(ppv,E_POINTER);
-
-	if(riid == __uuidof(IBDA_NetworkProvider))
-		return GetInterface((IBDA_NetworkProvider *) this, ppv);
-
-    return CBaseFilter::NonDelegatingQueryInterface(riid, ppv);
-} // NonDelegatingQueryInterface
-
-STDMETHODIMP DummyNetworkProvider::PutSignalSource(ULONG ulSignalSource)
-{
-	m_ulSignalSource = ulSignalSource;
-	return S_OK;
-}
-
-STDMETHODIMP DummyNetworkProvider::GetSignalSource(ULONG *pulSignalSource)
-{
-	*pulSignalSource = m_ulSignalSource;
-	return S_OK;
-}
-
-STDMETHODIMP DummyNetworkProvider::GetNetworkType(GUID *pguidNetworkType)
-{
-	*pguidNetworkType = CLSID_DVBSNetworkProvider;
-	return S_OK;
-}
-
-STDMETHODIMP DummyNetworkProvider::PutTuningSpace(REFGUID guidTuningSpace)
-{
-	m_guidTuningSpace = guidTuningSpace;
-	return S_OK;
-}
-
-STDMETHODIMP DummyNetworkProvider::GetTuningSpace(GUID *pguidTuingSpace)
-{
-	*pguidTuingSpace = m_guidTuningSpace;
-	return S_OK;
-}
-
-STDMETHODIMP DummyNetworkProvider::RegisterDeviceFilter(IUnknown *pUnkFilterControl,
-														ULONG *ppvRegisitrationContext)
-{
-	return S_OK;
-}
-
-STDMETHODIMP DummyNetworkProvider::UnRegisterDeviceFilter(ULONG pvRegistrationContext)
-{
-	return S_OK;
+		Request.cBuffers = g_pConfiguration->getNumberOfBuffers() / 2;
+		Request.cbBuffer = 188 * g_pConfiguration->getTSPacketsPerBuffer() / 2;
+		Request.cbAlign = 0;
+		Request.cbPrefix = 0;
+		pRequest = &Request;
+    }
+	else
+		pRequest = pProps;
+	return CPullPin::DecideAllocator(pAlloc, pRequest);
 }

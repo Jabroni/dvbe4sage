@@ -51,7 +51,10 @@ void DVBParser::stopTransponderDump()
 
 	// Close the dump file if needed
 	if(m_FullTransponderFile != NULL)
+	{
 		fclose(m_FullTransponderFile);
+		m_FullTransponderFile = NULL;
+	}
 
 	unlock();
 }
@@ -78,7 +81,8 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 
 	// Dump the buffur into the file if needed
 	if(m_FullTransponderFile != NULL)
-		fwrite(inputBuffer, sizeof(BYTE), inputBufferLength / sizeof(BYTE), m_FullTransponderFile);
+		if(fwrite(inputBuffer, sizeof(BYTE), inputBufferLength / sizeof(BYTE), m_FullTransponderFile) != inputBufferLength / sizeof(BYTE))
+			log(2, true, m_TunerOrdinal, TEXT("Error while dumping full transponder, some data lost!\n"));
 
 	// Get the TS header
 	while(inputBufferLength > 0)

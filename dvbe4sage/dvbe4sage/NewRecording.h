@@ -13,6 +13,7 @@ private:
 	DECLARE_DYNAMIC(NewRecording)
 
 	bool			m_bFirstTime;
+	BOOL			m_SaveUseSid;
 public:
 	NewRecording(CWnd* pParent = NULL);   // standard constructor
 	virtual ~NewRecording();
@@ -59,4 +60,5 @@ public:
 	afx_msg void OnBnSelectedFullTransponderDump();
 	afx_msg void OnBnSelectedPhysicalTuner();
 	afx_msg void OnBnClickedBrowseInputFile();
+	afx_msg void OnBnClickedUseSid();
 };

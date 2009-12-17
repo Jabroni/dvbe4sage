@@ -25,6 +25,7 @@ NewRecording::NewRecording(CWnd* pParent /*=NULL*/)
 	, m_OutputFileName(_T("Channel1.ts"))
 	, m_TunerName(_T(""))
 	, m_UseSID(FALSE)
+	, m_SaveUseSid(FALSE)
 	, m_TransponderAutodiscovery(TRUE)
 	, m_bFirstTime(true)
 	, m_DumpFullTransponder(FALSE)
@@ -96,7 +97,8 @@ BEGIN_MESSAGE_MAP(NewRecording, CDialog)
 	ON_CBN_SELENDOK(IDC_TUNER_NAME, &NewRecording::OnCbnSelendokTunerName)
 	ON_BN_CLICKED(IDC_FULL_TRANSPONDER_DUMP, &NewRecording::OnBnSelectedFullTransponderDump)
 	ON_BN_CLICKED(IDC_PHYSICAL_TUNER, &NewRecording::OnBnSelectedPhysicalTuner)
-	ON_BN_CLICKED(IDC_BUTTON2, &NewRecording::OnBnClickedBrowseInputFile)
+	ON_BN_CLICKED(IDC_BROWSE_INPUT_FILE_BUTTON, &NewRecording::OnBnClickedBrowseInputFile)
+	ON_BN_CLICKED(IDC_USE_SID, &NewRecording::OnBnClickedUseSid)
 END_MESSAGE_MAP()
 
 
@@ -111,8 +113,11 @@ BOOL NewRecording::OnInitDialog()
 	m_PolarizationCombo.EnableWindow(!m_TransponderAutodiscovery);
 	m_ModulationCombo.EnableWindow(!m_TransponderAutodiscovery);
 	m_FECCombo.EnableWindow(!m_TransponderAutodiscovery);
-	m_InputFileNameField.EnableWindow(FALSE);
-	m_BrowseInputFileButton.EnableWindow(FALSE);
+	m_TunerNameBox.EnableWindow(!m_bIsInputFile);
+	m_UseSidCheckBox.EnableWindow(!m_bIsInputFile);
+	m_DumpFullTransponderCheckbox.EnableWindow(!m_bIsInputFile);
+	m_InputFileNameField.EnableWindow(m_bIsInputFile);
+	m_BrowseInputFileButton.EnableWindow(m_bIsInputFile);
 
 	for(int i = 0; i < getNumberOfTuners(); i++)
 	{
@@ -187,6 +192,7 @@ void NewRecording::OnBnSelectedFullTransponderDump()
 	m_AutodiscoverTransponderButton.EnableWindow(FALSE);
 	m_TunerNameBox.EnableWindow(FALSE);
 	m_UseSidCheckBox.EnableWindow(FALSE);
+	m_SaveUseSid = m_UseSID;
 	m_UseSID = TRUE;
 	m_DumpFullTransponderCheckbox.EnableWindow(FALSE);
 	m_InputFileNameField.EnableWindow(TRUE);
@@ -208,6 +214,7 @@ void NewRecording::OnBnSelectedPhysicalTuner()
 	m_DumpFullTransponderCheckbox.EnableWindow(TRUE);
 	m_InputFileNameField.EnableWindow(FALSE);
 	m_BrowseInputFileButton.EnableWindow(FALSE);
+	m_UseSID = m_SaveUseSid;
 	UpdateData(FALSE);
 }
 
@@ -221,4 +228,10 @@ void NewRecording::OnBnClickedBrowseInputFile()
 		m_InputFileName = dlg.GetPathName();
 		UpdateData(FALSE);
 	}
+}
+
+void NewRecording::OnBnClickedUseSid()
+{
+	UpdateData(TRUE);
+	m_SaveUseSid = m_UseSID;
 }
