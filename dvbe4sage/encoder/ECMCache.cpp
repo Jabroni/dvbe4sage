@@ -57,6 +57,13 @@ void ECMCache::add(const BYTE* ecmPacket,
 	// Compute the hash
 	unsigned __int32 newHash = _dvb_crc32(ecmPacket, PACKET_SIZE);
 
+	// Let's see if we don't already have this ECM packet
+	for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.find(newHash); it != m_Data.end(); it++)
+		// Now, check whether the actual packet really matches
+		if(memcmp(it->second.ecm, ecmPacket, PACKET_SIZE) == 0)
+			return;
+
+	// Now we're sure the pair is indeed new
 	// Get the current time stamp
 	time_t now = 0;
 	time(&now);

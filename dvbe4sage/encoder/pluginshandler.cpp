@@ -180,64 +180,67 @@ void PluginsHandler::processECMPacketQueue()
 
 	// Get the first request from the queue
 	Request& request = m_RequestQueue.front();
-	
-	// If we have the same client and same SID
-	if(m_pCurrentClient == request.client && m_CurrentSid == request.client->sid)
+
+	// Let's see if we already have a DCW for this very ECM in the cache
+	bool isOddKey = false;
+	const Dcw& dcw = m_ECMCache.find(request.packet, isOddKey);
+	if(dcw.number != 0)
 	{
-		// If we can process the packet
-		if(canProcessECM())
-		{
-			if(!m_WaitingForResponse)
-			{
-				log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and sent to processing\n"), m_CurrentSid);
-				// Defer further tuning
-				m_DeferTuning = true;
-				// Process it
-				processECMPacket(request.packet);
-				// Remove request from the queue
-				m_RequestQueue.pop_front();
-				// Indicate we're waiting for response
-				m_WaitingForResponse = true;
-				// Get the current time to handle timeouts
-				time(&m_Time);
-				// And mark the time is initialized
-				m_TimerInitialized = true;
-				// This is packet processing timeout
-				m_IsTuningTimeout = false;
-			}
-			else
-				log(2, true, 0, TEXT("A new ECM packet for SID=%hu received while the previous packet for the same SID was being processed, waiting...\n"), m_CurrentSid);
-		}
-		else
-			log(2, true, 0, TEXT("ECM callback hasn't been established yet for SID=%hu, waiting...\n"), m_CurrentSid);
+		// Update current client
+		m_pCurrentClient = request.client;
+		// And current sid
+		m_CurrentSid = request.client->sid;
+		// Remove request from the queue
+		m_RequestQueue.pop_front();
+		// Mark ECM request as complete WITHOUT adding it to the cache
+		ECMRequestComplete(NULL, dcw, isOddKey, false);
 	}
 	else
 	{
-		log(2, true, 0, TEXT("A tuning request came in for SID=%hu\n"), request.client->sid);
-		if(!m_DeferTuning)
+		// If we have the same client and same SID
+		if(m_pCurrentClient == request.client && m_CurrentSid == request.client->sid)
 		{
-			// Defer further tuning
-			m_DeferTuning = true;
-			// Here The client or the SID are different
-			// Very important: we don't send the packet to the filter yet (the filter hasn't started yet)
-			// and don't remove it from the queue!
-			// Update current client
-			m_pCurrentClient = request.client;
-			// And current sid
-			m_CurrentSid = request.client->sid;
-			
-			// Let's see if we already have a DCW for this very ECM in the cache
-			bool isOddKey = false;
-			const Dcw& dcw = m_ECMCache.find(request.packet, isOddKey);
-			if(dcw.number != 0)
+			// If we can process the packet
+			if(canProcessECM())
 			{
-				// Remove request from the queue
-				m_RequestQueue.pop_front();
-				// Mark ECM request as complete WITHOUT adding it to the cache
-				ECMRequestComplete(NULL, dcw, isOddKey, false);
+				if(!m_WaitingForResponse)
+				{
+					log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and sent to processing\n"), m_CurrentSid);
+					// Defer further tuning
+					m_DeferTuning = true;
+					// Process it
+					processECMPacket(request.packet);
+					// Remove request from the queue
+					m_RequestQueue.pop_front();
+					// Indicate we're waiting for response
+					m_WaitingForResponse = true;
+					// Get the current time to handle timeouts
+					time(&m_Time);
+					// And mark the time is initialized
+					m_TimerInitialized = true;
+					// This is packet processing timeout
+					m_IsTuningTimeout = false;
+				}
+				else
+					log(2, true, 0, TEXT("A new ECM packet for SID=%hu received while the previous packet for the same SID was being processed, waiting...\n"), m_CurrentSid);
 			}
 			else
+				log(2, true, 0, TEXT("ECM callback hasn't been established yet for SID=%hu, waiting...\n"), m_CurrentSid);
+		}
+		else
+		{
+			log(2, true, 0, TEXT("A tuning request came in for SID=%hu\n"), request.client->sid);
+			if(!m_DeferTuning)
 			{
+				// Defer further tuning
+				m_DeferTuning = true;
+				// Here The client or the SID are different
+				// Very important: we don't send the packet to the filter yet (the filter hasn't started yet)
+				// and don't remove it from the queue!
+				// Update current client
+				m_pCurrentClient = request.client;
+				// And current sid
+				m_CurrentSid = request.client->sid;
 				// Retrieve new DCW using plugins
   				// Get the current time to handle timeouts
 	  			time(&m_Time);
@@ -245,13 +248,12 @@ void PluginsHandler::processECMPacketQueue()
 				m_TimerInitialized = true;
 				// This is the tuning timeout
 				m_IsTuningTimeout = true;
-	 
-				// Handle the tuning request
+		 		// Handle the tuning request
 				handleTuningRequest();
 			}
+			else
+				log(2, true, 0, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
 		}
-		else
-			log(2, true, 0, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
 	}
 }
 
