@@ -1497,7 +1497,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			OutputBuffer* const lastBuffer = m_OutputBuffers.back();
 
 			// If the last buffer is empty, we don't need a new one
-			if(!m_NoECMPacketsYet && lastBuffer->numberOfPackets != 0)
+			if(lastBuffer->numberOfPackets != 0)
 			{
 				// Create a new output buffer
 				OutputBuffer* const newBuffer = new OutputBuffer;
@@ -1509,12 +1509,6 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 				// Put the new buffer at the end of the queue
 				m_OutputBuffers.push_back(newBuffer);
 			}
-			else
-				// For an empty buffer, we do need to invalidate the key
-				lastBuffer->hasKey = false;
-
-			// We now have recevied an ECM packet
-			m_NoECMPacketsYet = false;
 		}
 	}
 }
@@ -1525,78 +1519,66 @@ bool ESCAParser::setKey(bool isOddKey,
 	// Output buffer manipulations in the critical section
 	CAutoLock lock(&m_csOutputBuffer);
 
+	// The key matched at least one of the buffers
+	bool foundMatchingBuffer = false;
+
 	// Let's find where we need to set the key
-	for(UINT i = 0; i < m_OutputBuffers.size(); i++)
+	for(deque<OutputBuffer* const>::iterator it = m_OutputBuffers.begin(); it != m_OutputBuffers.end();)
 	{
 		// Get the buffer from the queue
-		OutputBuffer* const currentBuffer = m_OutputBuffers[i];
+		OutputBuffer* const currentBuffer = *it;
 
-		// Try to use the key only if the buffer doesn't have one or if it's the last buffer
-		if(!currentBuffer->hasKey || i + 1 == m_OutputBuffers.size())
+		// Try to use the key only if the buffer doesn't have one
+		if(!currentBuffer->hasKey)
 		{
-			// Usually, hasKey flag can be set
-			bool setHasKey = true;
-
 			// Let's see if the key can decrypt the current buffer
 			if(!isCorrectKey(currentBuffer, isOddKey, key))
-				// If this is not for the first packet, boil out
-				if(!m_NoDCWYet)
-					return false;
+				// If this is not the last buffer, delete it
+				if(it + 1 != m_OutputBuffers.end())
+				{
+					// Delete the buffer from the queue
+					it = m_OutputBuffers.erase(it);
+					// And delete the buffer itself
+					delete currentBuffer;
+				}
 				else
-					// Otherwise postpone, just indicate that the hasKey flag cannot be set yet
-					setHasKey = false;
-			else
-				m_NoDCWYet = false;
-
-			// If no, set it
-			// If it's the odd key
-			if(isOddKey)
-			{
-				// See if this is a new key
-				if(memcmp(currentBuffer->oddKey, key, sizeof(currentBuffer->oddKey)) == 0)
-					// If no, boil out
-					return false;
-				// Copy it
-				memcpy(currentBuffer->oddKey, key, sizeof(currentBuffer->oddKey));
-			}
+					// Move the iterator one step forward
+					it++;
 			else
 			{
-				// See if this is a new key
-				if(memcmp(currentBuffer->evenKey, key, sizeof(currentBuffer->evenKey)) == 0)
-					// If no, boil out
-					return false;
-				// Copy it
-				memcpy(currentBuffer->evenKey, key, sizeof(currentBuffer->evenKey));
+				// We get here if the key is correct
+				// Copy the key
+				memcpy(isOddKey ? currentBuffer->oddKey : currentBuffer->evenKey, key, sizeof(currentBuffer->oddKey));
+
+				// Now this buffer has its key
+				currentBuffer->hasKey = true;
+
+				// Let's see if we need to update a key to its successor
+				if(it + 1 != m_OutputBuffers.end())
+				{
+					// Get the next buffer
+					OutputBuffer* const nextBuffer = *(it + 1);
+
+					// Copy the key
+					memcpy(isOddKey ? nextBuffer->oddKey : nextBuffer->evenKey, key, sizeof(nextBuffer->oddKey));
+				}
+
+				// Signal the work thread we've got a new key
+				SetEvent(m_SignallingEvent);
+
+				// Indicate we found and least one matching buffer
+				foundMatchingBuffer = true;
+
+				// Move the iterator one step forward
+				it++;
 			}
-
-			// Now this buffer has its key
-			currentBuffer->hasKey = setHasKey;
-
-			// Let's see if we need to update a key to its successor
-			if(i + 1 < m_OutputBuffers.size())
-			{
-				// Get the next buffer
-				OutputBuffer* const nextBuffer = m_OutputBuffers[i + 1];
-
-				// If this is odd key
-				if(isOddKey)
-					// Copy it
-					memcpy(nextBuffer->oddKey, key, sizeof(nextBuffer->oddKey));
-				else
-					// Copy it
-					memcpy(nextBuffer->evenKey, key, sizeof(nextBuffer->evenKey));
-			}
-
-			// Signal the work thread we've got a new key
-			SetEvent(m_SignallingEvent);
-
-			// Boil out
-			return true;
 		}
+		else
+			// If the buffer already has a key, just move the iterator one step forward
+			it++;
 	}
 
-	// If nothing found, return false
-	return false;
+	return foundMatchingBuffer;
 }
 
 void ESCAParser::reset()
@@ -1613,10 +1595,6 @@ void ESCAParser::reset()
 			delete m_OutputBuffers.front();
 			m_OutputBuffers.pop_front();
 		}
-
-		// Reset the ECM and DCW flags
-		m_NoECMPacketsYet = true;
-		m_NoDCWYet = true;
 	}
 
 	// Add a single buffer to the end of the output queue
@@ -1652,8 +1630,6 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_PATContinuityCounter(0),
 	m_PMTCounter(0),
 	m_PMTContinuityCounter(0),
-	m_NoECMPacketsYet(true),
-	m_NoDCWYet(true),
 	m_ResetCounter(0)
 {
 	// Make sure last ECM packet is zeroed out
@@ -1665,7 +1641,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	// Create worker thread
 	m_WorkerThread = CreateThread(NULL, 0, parserWorkerThreadRoutine, this, 0, NULL);
 
-	// Create signalling event
+	// Create signaling event
 	m_SignallingEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
@@ -1705,7 +1681,7 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 	// Get the last buffer from the queue
 	OutputBuffer* const currentBuffer = m_OutputBuffers.back();
 
-	// This really shoudn't happen!
+	// This really shouldn't happen!
 	if(currentBuffer->numberOfPackets >= g_pConfiguration->getTSPacketsPerOutputBuffer())
 		log(0, true, 0, TEXT("Too many packets for decryption!\n"));
 	else

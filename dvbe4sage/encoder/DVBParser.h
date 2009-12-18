@@ -147,14 +147,8 @@ class ESCAParser : public TSPacketParser
 			hasKey(false)
 		{
 			// Set the initial values for keys
-			oddKey[0] = evenKey[0] = 0x14;
-			oddKey[1] = evenKey[1] = 0x89;
-			oddKey[2] = evenKey[2] = 0x5E;
-			oddKey[3] = evenKey[3] = 0xFB;
-			oddKey[4] = evenKey[4] = 0x61;
-			oddKey[5] = evenKey[5] = 0xB5;
-			oddKey[6] = evenKey[6] = 0x31;
-			oddKey[7] = evenKey[7] = 0x47;
+			ZeroMemory(oddKey, sizeof(oddKey));
+			ZeroMemory(evenKey, sizeof(evenKey));
 		}
 
 		// Copy constructor
@@ -194,8 +188,6 @@ private:
 	Decrypter						m_Decrypter;						// Decrypter object
 	PluginsHandler*	const			m_pPluginsHandler;					// Plugins handler object
 	BYTE							m_LastECMPacket[PACKET_SIZE];		// Last new ECM packet
-	bool							m_NoECMPacketsYet;					// True as long as no ECM packets have been received
-	bool							m_NoDCWYet;							// True as long as no DCW has been received
 
 	// Output buffer stuff
 	deque<OutputBuffer* const>		m_OutputBuffers;					// Vector of output buffers (one per distinct ECM packet)
