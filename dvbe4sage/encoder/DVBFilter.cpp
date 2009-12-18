@@ -85,27 +85,8 @@ DVBFilterInputPin::DVBFilterInputPin(DVBFilter* pDVBFilter,
 
 HRESULT DVBFilterInputPin::CheckMediaType(const CMediaType* pMediaType)
 {
-	//if(*pMediaType->Type() == MEDIATYPE_Stream && *pMediaType->Subtype() == KSDATAFORMAT_SUBTYPE_BDA_MPEG2_TRANSPORT)
-		return S_OK;
-	//else
-	//	return VFW_E_INVALIDMEDIATYPE;
+	return S_OK;
 }
-
-/*HRESULT DVBFilterInputPin::GetMediaType(int iPosition,
-										CMediaType* pMediaType)
-{
-	static GUID subtype = { 0x49952F4C, 0x3EDC, 0x4A9B, 0x89, 0x06, 0x1D, 0xE0, 0x2A, 0x3D, 0x4B, 0xC2 };
-
-	if(iPosition == 0)
-	{
-		pMediaType->SetType(&MEDIATYPE_Stream);
-		pMediaType->SetSubtype(&MEDIASUBTYPE_None);
-		pMediaType->SetFormat((BYTE*)&GUID_NULL, sizeof(GUID_NULL));
-		return S_OK;
-	}
-	else
-		return VFW_S_NO_MORE_ITEMS;
-}*/
 
 HRESULT DVBFilterInputPin::CheckConnect(IPin* pPin)
 {
@@ -135,7 +116,7 @@ STDMETHODIMP DVBFilterInputPin::ReceiveCanBlock()
     return S_OK;
 }
 
-// We have very spicific requirement for the buffer size, it must be devisible by 188!
+// We have very specific requirement for the buffer size, it must be divisible by 188!
 STDMETHODIMP DVBFilterInputPin::GetAllocatorRequirements(ALLOCATOR_PROPERTIES *pProps)
 {
 	pProps->cbBuffer = 188 * g_pConfiguration->getTSPacketsPerBuffer();
@@ -147,7 +128,7 @@ STDMETHODIMP DVBFilterInputPin::GetAllocatorRequirements(ALLOCATOR_PROPERTIES *p
 
 STDMETHODIMP DVBFilterInputPin::Receive(IMediaSample *pSample)
 {
-	// Autolock
+	// Auto lock
 	CAutoLock lock(m_pLock);
 
 	// Copy the data to the file
@@ -162,7 +143,7 @@ STDMETHODIMP DVBFilterInputPin::Receive(IMediaSample *pSample)
 
 STDMETHODIMP DVBFilterInputPin::EndOfStream(void)
 {
-	// Autolock
+	// Auto lock
 	CAutoLock lock(m_pLock);
 
 	return CRenderedInputPin::EndOfStream();
@@ -192,6 +173,7 @@ HRESULT DVBPullPin::EndFlush()
 	return m_pFilter->GetPin(0)->EndFlush();
 }
 
+// We have very specific requirement for the buffer size, it must be divisible by 188!
 HRESULT DVBPullPin::DecideAllocator(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* pProps)
 {
     ALLOCATOR_PROPERTIES *pRequest;
@@ -206,5 +188,6 @@ HRESULT DVBPullPin::DecideAllocator(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES*
     }
 	else
 		pRequest = pProps;
+
 	return CPullPin::DecideAllocator(pAlloc, pRequest);
 }

@@ -59,7 +59,6 @@ public:
 
     // Check if the pin can support this specific proposed type and format (we support everything)
 	HRESULT CheckMediaType(const CMediaType*);
-	//HRESULT GetMediaType(int iPosition, CMediaType* pMediaType);
 
 	// We override this method since our buffer must be mod(188) == 0!
 	STDMETHODIMP GetAllocatorRequirements(ALLOCATOR_PROPERTIES* pProps);
