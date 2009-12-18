@@ -5,11 +5,12 @@
 #include "DVBParser.h"
 
 class DVBFilter;
+class DVBFilterInputPin;
 
 class DVBPullPin : public CPullPin
 {
 private:
-	DVBFilter* const		m_pFilter;
+	DVBFilterInputPin* const		m_pParentPin;
 
 	// Disallow default and copy constructors
 	DVBPullPin();
@@ -17,7 +18,7 @@ private:
 
 public:
 	// The only valid constructor
-	DVBPullPin(DVBFilter* pFilter) : m_pFilter(pFilter) {}
+	DVBPullPin(DVBFilterInputPin* pParentPin) : m_pParentPin(pParentPin) {}
 
 	 // override this to handle data arrival
     // return value other than S_OK will stop data

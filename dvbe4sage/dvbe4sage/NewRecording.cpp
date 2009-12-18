@@ -192,7 +192,6 @@ void NewRecording::OnBnSelectedFullTransponderDump()
 	m_AutodiscoverTransponderButton.EnableWindow(FALSE);
 	m_TunerNameBox.EnableWindow(FALSE);
 	m_UseSidCheckBox.EnableWindow(FALSE);
-	m_SaveUseSid = m_UseSID;
 	m_UseSID = TRUE;
 	m_DumpFullTransponderCheckbox.EnableWindow(FALSE);
 	m_InputFileNameField.EnableWindow(TRUE);

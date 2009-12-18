@@ -79,7 +79,7 @@ DVBFilterInputPin::DVBFilterInputPin(DVBFilter* pDVBFilter,
 									 CCritSec* pLock,
 									 HRESULT* phr) :
     CRenderedInputPin(NAME("DVBFilterInputPin"), pDVBFilter, pLock, phr, L"Input"),
-	m_PullPin(pDVBFilter)
+	m_PullPin(this)
 {
 }
 
@@ -151,12 +151,12 @@ STDMETHODIMP DVBFilterInputPin::EndOfStream(void)
 
 HRESULT DVBPullPin::Receive(IMediaSample* sample)
 {
-	return ((DVBFilterInputPin*)m_pFilter->GetPin(0))->Receive(sample);
+	return m_pParentPin->Receive(sample);
 }
 
 HRESULT DVBPullPin::EndOfStream()
 {
-	return m_pFilter->GetPin(0)->EndOfStream();
+	return m_pParentPin->EndOfStream();
 }
 
 void DVBPullPin::OnError(HRESULT hr)
@@ -165,12 +165,12 @@ void DVBPullPin::OnError(HRESULT hr)
 
 HRESULT DVBPullPin::BeginFlush()
 {
-	return m_pFilter->GetPin(0)->BeginFlush();
+	return m_pParentPin->BeginFlush();
 }
 
 HRESULT DVBPullPin::EndFlush()
 {
-	return m_pFilter->GetPin(0)->EndFlush();
+	return m_pParentPin->EndFlush();
 }
 
 // We have very specific requirement for the buffer size, it must be divisible by 188!
