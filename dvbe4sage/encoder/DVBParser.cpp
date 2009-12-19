@@ -1483,8 +1483,8 @@ bool ESCAParser::setKey(bool isOddKey,
 		// Get the buffer from the queue
 		OutputBuffer* const currentBuffer = *it;
 
-		// Try to use the key only if the buffer doesn't have one
-		if(!currentBuffer->hasKey)
+		// Try to use the key only if the buffer doesn't have one or if this is the last buffer
+		if(!currentBuffer->hasKey || it + 1 == m_OutputBuffers.end())
 		{
 			// Let's see if the key can decrypt the current buffer
 			if(!isCorrectKey(currentBuffer, isOddKey, key))
@@ -1503,7 +1503,7 @@ bool ESCAParser::setKey(bool isOddKey,
 					// Move the iterator one step forward
 					it++;
 					// Log the fact the key didn't match the last available buffer
-					log(2, true, 0, TEXT("Key doesn't match, maybe the next one will...\n"), currentBuffer->numberOfPackets);
+					log(2, true, 0, TEXT("Key doesn't match, maybe the next one will...\n"));
 				}
 			else
 			{
@@ -1778,6 +1778,9 @@ bool ESCAParser::isCorrectKey(const OutputBuffer* const currentBuffer,
 	// Flag indicating any PES packets have been found
 	bool anyPESPacketsFound = false;
 
+	// Set the decrypter keys
+	m_Decrypter.setKeys(isOddKey ? key : currentBuffer->oddKey, !isOddKey ? key : currentBuffer->evenKey);
+
 	// Go through all the packets
 	for(ULONG i = 0; i < currentBuffer->numberOfPackets; i++)
 	{
@@ -1799,9 +1802,6 @@ bool ESCAParser::isCorrectKey(const OutputBuffer* const currentBuffer,
 			// Copy the packet in question aside
 			BYTE copyPacket[TS_PACKET_LEN];
 			memcpy(copyPacket, (void*)packet, sizeof(copyPacket));
-
-			// Set the decrypter keys
-			m_Decrypter.setKeys(isOddKey ? key : currentBuffer->oddKey, !isOddKey ? key : currentBuffer->evenKey);
 
 			// Decrypt the packet
 			m_Decrypter.decrypt(copyPacket, 1);
