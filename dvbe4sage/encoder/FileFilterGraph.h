@@ -2,10 +2,12 @@
 
 #include "genericfiltergraph.h"
 
+class FileReaderFilter;
+
 class FileFilterGraph :	public GenericFilterGraph
 {
 private:
-	CComPtr<IBaseFilter>	m_pFileReader;
+	FileReaderFilter*		m_pFileReaderFilter;				// Our file reader filter
 	wstring					m_FileName;
 
 	HRESULT AddFileSource();

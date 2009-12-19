@@ -43,8 +43,6 @@ public:
 class DVBFilterInputPin : public CRenderedInputPin
 {
 private:
-	DVBPullPin			m_PullPin;
-
 	// Disallow default and copy constructors
 	DVBFilterInputPin();
 	DVBFilterInputPin(const DVBFilterInputPin&);
@@ -66,11 +64,6 @@ public:
 
 	// We need to override this method in order to handle synchronization issues
 	STDMETHODIMP EndOfStream(void);
-
-	virtual HRESULT CheckConnect(IPin* pPin);
-	virtual HRESULT BreakConnect();
-	virtual HRESULT Active();
-	virtual HRESULT Inactive();
 };
 
 class DVBFilterOutputPin : public CBaseOutputPin
@@ -111,4 +104,38 @@ public:
 
 	// Provide access to the parser object
 	DVBParser& getParser() { return m_Parser; }
+};
+
+class FileReaderOutputPin : public CSourceStream
+{
+private:
+	FILE* const					m_InFile;						// The file handle
+
+	// Disallow default and copy constructors
+	FileReaderOutputPin();
+	FileReaderOutputPin(const FileReaderOutputPin&);
+protected:
+	HRESULT GetMediaType(int iPosition, CMediaType* pMediaType);
+	HRESULT CheckMediaType(const CMediaType* pMediaType);
+	HRESULT DecideBufferSize(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* ppropInputRequest);
+	HRESULT FillBuffer(IMediaSample* pSample);
+public:
+	FileReaderOutputPin(CSource* pFilter, HRESULT* phr, TCHAR* debugName, LPCWSTR fileName, bool& isOK);
+	~FileReaderOutputPin();
+};
+
+class FileReaderFilter : public CSource
+{
+private:
+	FileReaderOutputPin*		m_pPin1;						// This is out only output pin
+
+	// Disallow default and copy constructors
+	FileReaderFilter();
+	FileReaderFilter(const FileReaderFilter&);
+
+public:
+	// Constructor
+    FileReaderFilter(LPCWSTR fileName, bool& isOK);
+	// Destructor
+	virtual ~FileReaderFilter();
 };

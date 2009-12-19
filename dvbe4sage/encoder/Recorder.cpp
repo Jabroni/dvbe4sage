@@ -140,6 +140,12 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_StopRecordingThreadId(0),
 	m_StartRecordingThreadId(0)
 {
+	// If the source is not OK, boil out first
+	if(!source->isSourceOK())
+	{
+		m_HasError = true;
+		return;
+	}
 	// Copy the channel name
 	_tcscpy_s(m_ChannelName, sizeof(m_ChannelName) / sizeof(m_ChannelName[0]), channelName);
 

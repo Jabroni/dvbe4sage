@@ -9,8 +9,11 @@ FileFilterGraph::FileFilterGraph(LPCOLESTR pszFileName) :
 
 void FileFilterGraph::ReleaseInterfaces()
 {
-	if(m_pFileReader)
-		m_pFileReader = NULL;
+	if(m_pFileReaderFilter)
+	{
+		delete m_pFileReaderFilter;
+		m_pFileReaderFilter = NULL;
+	}
 
 	GenericFilterGraph::ReleaseInterfaces();
 }
@@ -48,7 +51,7 @@ HRESULT FileFilterGraph::BuildGraph()
 	}
 
 	// And connect it
-	if(FAILED(hr = ConnectFilters(m_pFileReader, m_pDVBFilter)))
+	if(FAILED(hr = ConnectFilters(m_pFileReaderFilter, m_pDVBFilter)))
 	{
 		log(0, true, m_iTunerNumber, TEXT("Cannot connect our filter to the graph, error 0x%.08X\n"), hr);
 		BuildGraphError();
@@ -83,10 +86,10 @@ HRESULT FileFilterGraph::TearDownGraph()
 {
 	if(m_fGraphBuilt || m_fGraphFailure)
 	{
-		if(m_pFileReader)
+		if(m_pFileReaderFilter != NULL)
 		{
-			m_pFilterGraph->RemoveFilter(m_pFileReader);
-			m_pFileReader = NULL;
+			m_pFilterGraph->RemoveFilter(m_pFileReaderFilter);
+			m_pFileReaderFilter = NULL;
 		}
 	}
 	return GenericFilterGraph::TearDownGraph();
@@ -96,14 +99,16 @@ HRESULT FileFilterGraph::AddFileSource()
 {
 	HRESULT hr = S_OK;
 
-	hr = m_pFileReader.CoCreateInstance(CLSID_AsyncReader);
-	if(FAILED(hr))
+	bool isOK = true;
+
+	m_pFileReaderFilter = new FileReaderFilter(m_FileName.c_str(), isOK);
+	if(!isOK)
 	{
-		log(0, true, m_iTunerNumber, TEXT("Cannot CoCreateInstance CLSID_AsyncReader, error 0x%.08X\n"), hr);
-		return hr;
+		log(0, true, m_iTunerNumber, TEXT("Cannot open the file \"%s\" for reading\n"), CW2CT(m_FileName.c_str()));
+		return E_FAIL;
 	}
 
-	hr = m_pFilterGraph->AddFilter(m_pFileReader, L"File Reader");
+	hr = m_pFilterGraph->AddFilter(m_pFileReaderFilter, L"File Reader");
 	if(FAILED(hr))
 	{
 		log(0, true, m_iTunerNumber, TEXT("Unable to add the file reader filter to graph, error 0x%.08X\n"), hr);
@@ -112,13 +117,5 @@ HRESULT FileFilterGraph::AddFileSource()
 
 	log(0, true, m_iTunerNumber, TEXT("Added file reader filter to the graph\n"));
 
-	CComQIPtr<IFileSourceFilter> pFileSource(m_pFileReader);
-
-	if(pFileSource)
-		if(FAILED(hr = pFileSource->Load(m_FileName.c_str(), NULL)))
-			log(0, true, m_iTunerNumber, TEXT("Cannot load the file \"%S\", error 0x%.08X\n"), m_FileName.c_str(), hr);
-		else;
-	else
-		log(0, true, m_iTunerNumber, TEXT("Cannot QI for IFileSourceFilter on the Async Reader\n"));
 	return hr;
 }

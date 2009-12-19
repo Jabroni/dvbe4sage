@@ -88,18 +88,15 @@ Configuration::Configuration()
 			_stscanf_s(token, TEXT("%hx"), &caid);
 			m_ServedCAIDs.insert(caid);
 		}
-	/*else
-		// Default is YES
-		m_ServedCAIDs.insert(0x90D);*/
 
-	// Get the list of ignored PMT PIDs
-	GetPrivateProfileString(TEXT("Plugins"), TEXT("IgnoreProvIds"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	// Get the list of served PROVIDs
+	GetPrivateProfileString(TEXT("Plugins"), TEXT("ServedProvIds"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
 	if(buffer[0] != TCHAR(0))
 		for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
 		{
-			USHORT provid;
-			_stscanf_s(token, TEXT("%hx"), &provid);
-			m_IgnoredProvIds.insert(provid);
+			UINT provid;
+			_stscanf_s(token, TEXT("%x"), &provid);
+			m_ServededProvIds.insert(provid);
 		}
 
 	// Get the initial polarization setting

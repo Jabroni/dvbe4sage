@@ -3,7 +3,7 @@
 #include "DVBFilter.h"
 #include "configuration.h"
 
-GUID CLSID_DVBFilter = { 0x36A5F770, 0xFE4C, 0x11CE, 0xA8, 0xED, 0x00, 0xAA, 0x00, 0x2F, 0xEC, 0xB0 };
+static const GUID CLSID_DVBFilter = { 0x36A5F770, 0xFE4C, 0x11CE, 0xA8, 0xED, 0x00, 0xAA, 0x00, 0x2F, 0xEC, 0xB0 };
 
 DVBFilter::DVBFilter(UINT ordinal) :
     CBaseFilter(NAME("DVBFilter"), NULL, &m_Lock, CLSID_DVBFilter),
@@ -78,37 +78,13 @@ HRESULT DVBFilterOutputPin::DecideBufferSize(IMemAllocator* pAlloc,
 DVBFilterInputPin::DVBFilterInputPin(DVBFilter* pDVBFilter,
 									 CCritSec* pLock,
 									 HRESULT* phr) :
-    CRenderedInputPin(NAME("DVBFilterInputPin"), pDVBFilter, pLock, phr, L"Input"),
-	m_PullPin(this)
+    CRenderedInputPin(NAME("DVBFilterInputPin"), pDVBFilter, pLock, phr, L"Input")
 {
 }
 
 HRESULT DVBFilterInputPin::CheckMediaType(const CMediaType* pMediaType)
 {
 	return S_OK;
-}
-
-HRESULT DVBFilterInputPin::CheckConnect(IPin* pPin)
-{
-	HRESULT hr = m_PullPin.Connect(pPin, NULL, FALSE);
-	return SUCCEEDED(hr) && CRenderedInputPin::CheckConnect(pPin);
-}
-
-HRESULT DVBFilterInputPin::BreakConnect()
-{
-	return m_PullPin.Disconnect();
-}
-
-HRESULT DVBFilterInputPin::Active()
-{
-	HRESULT hr = m_PullPin.Active();
-	return SUCCEEDED(hr) && CRenderedInputPin::Active();
-}
-
-HRESULT DVBFilterInputPin::Inactive()
-{
-	HRESULT hr = m_PullPin.Inactive();
-	return SUCCEEDED(hr) && CRenderedInputPin::Inactive();
 }
 
 STDMETHODIMP DVBFilterInputPin::ReceiveCanBlock()
@@ -131,7 +107,7 @@ STDMETHODIMP DVBFilterInputPin::Receive(IMediaSample *pSample)
 	// Auto lock
 	CAutoLock lock(m_pLock);
 
-	// Copy the data to the file
+	// Get the data pointed
 	PBYTE pbData;
 	pSample->GetPointer(&pbData);
 
@@ -190,4 +166,88 @@ HRESULT DVBPullPin::DecideAllocator(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES*
 		pRequest = pProps;
 
 	return CPullPin::DecideAllocator(pAlloc, pRequest);
+}
+
+static const GUID GUID_FileReaderFilter = { 0x2f676329, 0xf973, 0x4e1a, { 0xa5, 0xa7, 0x3a, 0x19, 0xa5, 0xda, 0xa1, 0x47 } };
+
+FileReaderFilter::FileReaderFilter(LPCWSTR fileName,
+								   bool& isOK) :
+	CSource(NAME("FileReaderFilter"), NULL, GUID_FileReaderFilter)
+{
+	HRESULT hr = S_OK;
+	TCHAR debugName[30];
+    m_pPin1 = new FileReaderOutputPin(this, &hr, debugName, fileName, isOK);
+}
+
+FileReaderFilter::~FileReaderFilter()
+{
+	if(m_pPin1 && m_pPin1->IsConnected())
+		m_pPin1->Disconnect();
+	delete m_pPin1;
+}
+
+FileReaderOutputPin::FileReaderOutputPin(CSource* pFilter,
+										 HRESULT* phr,
+										 TCHAR* debugName,
+										 LPCWSTR fileName,
+										 bool& isOK) :
+	CSourceStream(debugName, phr, pFilter, L"TS Output"),
+	m_InFile(_wfsopen(fileName, L"rb",  _SH_DENYNO))
+{
+	isOK = (m_InFile != NULL);
+}
+
+FileReaderOutputPin::~FileReaderOutputPin()
+{
+	if(m_InFile != NULL)
+		fclose(m_InFile);
+}
+
+HRESULT FileReaderOutputPin::GetMediaType(int iPosition,
+										  CMediaType* pMediaType)
+{
+	if(iPosition == 0)
+	{
+		pMediaType->SetType(&MEDIATYPE_Stream);
+		pMediaType->SetSubtype(&KSDATAFORMAT_SUBTYPE_BDA_MPEG2_TRANSPORT);
+		return S_OK;
+	}
+	else
+		return VFW_S_NO_MORE_ITEMS;
+}
+
+HRESULT FileReaderOutputPin::CheckMediaType(const CMediaType* pMediaType)
+{
+	return S_OK;
+}
+
+HRESULT FileReaderOutputPin::DecideBufferSize(IMemAllocator* pAlloc,
+											  ALLOCATOR_PROPERTIES* ppropInputRequest)
+{
+	ALLOCATOR_PROPERTIES request, result;
+	request.cbBuffer = 188 * g_pConfiguration->getTSPacketsPerBuffer() / 2;
+	request.cBuffers = g_pConfiguration->getNumberOfBuffers() / 2;
+	request.cbPrefix = 0;
+	request.cbAlign = 1;
+	HRESULT hr = pAlloc->SetProperties(&request, &result);
+	return hr;
+}
+
+HRESULT FileReaderOutputPin::FillBuffer(IMediaSample* pSample)
+{
+	// Auto lock
+	CAutoLock lock(m_pLock);
+
+	// Get the data pointed
+	PBYTE pbData;
+	pSample->GetPointer(&pbData);
+
+	size_t bytesRead = fread(pbData, sizeof(BYTE), pSample->GetSize() / sizeof(BYTE), m_InFile);
+	if(bytesRead <= 0)
+		return S_FALSE;
+	else
+	{
+		pSample->SetActualDataLength(bytesRead);
+		return S_OK;
+	}
 }
