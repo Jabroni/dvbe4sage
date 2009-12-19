@@ -18,7 +18,7 @@ public:
 	virtual LPCTSTR getSourceFriendlyName() const = 0;
 	virtual bool getLockStatus() = 0;
 
-	DVBParser& getParser()							{ return m_pFilterGraph->getParser(); }
+	DVBParser* getParser()							{ return m_pFilterGraph->getParser(); }
 	int getSourceOrdinal() const					{ return m_pFilterGraph->getTunerOrdinal(); }
 	bool running()									{ return m_pFilterGraph->m_fGraphRunning; }
 	bool isSourceOK() const							{ return m_IsSourceOK; }

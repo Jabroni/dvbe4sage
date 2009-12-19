@@ -44,7 +44,7 @@ public:
     virtual HRESULT StopGraph();
     virtual HRESULT TearDownGraph();
 
-	DVBParser& getParser() { return m_pDVBFilter->getParser(); }
+	DVBParser* getParser() { return m_pDVBFilter != NULL ? &m_pDVBFilter->getParser() : NULL; }
 
 	int getTunerOrdinal() const { return m_iTunerNumber; }
 };

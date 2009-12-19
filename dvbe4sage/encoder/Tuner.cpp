@@ -143,8 +143,8 @@ bool DVBSTuner::startPlayback(bool startFullTransponderDump)
 	((DVBSFilterGraph*)m_pFilterGraph)->ChangeSetting();
 
 	// Start full transponder dump if requested
- 	if(startFullTransponderDump)
-		m_pFilterGraph->getParser().startTransponderDump();
+ 	if(startFullTransponderDump && m_pFilterGraph->getParser() != NULL)
+		m_pFilterGraph->getParser()->startTransponderDump();
 
 	// Run the graph
 	HRESULT hr = S_OK;
@@ -187,23 +187,23 @@ void DVBSTuner::copyProviderDataAndStopRecording()
 	NetworkProvider& encoderProvider = m_pEncoder->getNetworkProvider();
 
 	// Get the tuner parser
-	DVBParser& tunerParser = getParser();
+	DVBParser* const tunerParser = getParser();
 
 	// If the tuner parser is valid
-	if(tunerParser.getTimeStamp() != 0)
+	if(tunerParser != NULL && tunerParser->getTimeStamp() != 0)
 	{
 		// Get the tuner network provider
-		const NetworkProvider& tunerNetworkProvider = tunerParser.getNetworkProvider();
+		const NetworkProvider& tunerNetworkProvider = tunerParser->getNetworkProvider();
 
 		// Lock the encoder and the tuner parsers
 		encoderProvider.lock();
-		tunerParser.lock();
+		tunerParser->lock();
 
 		// Copy the contents of the encoders parser from the current tuner's parser
 		encoderProvider.copy(tunerNetworkProvider);
 
 		// Unlock both parsers
-		tunerParser.unlock();
+		tunerParser->unlock();
 		encoderProvider.unlock();
 	}
 
@@ -231,7 +231,7 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 		log(0, true, pTuner->getSourceOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
 
 	// Get current transponder TID
-	USHORT currentTid = pTuner->getParser().getCurrentTid();
+	USHORT currentTid = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentTid() : 0;
 
 	// Copy provider data and stop recording, for the first time
 	pTuner->copyProviderDataAndStopRecording();

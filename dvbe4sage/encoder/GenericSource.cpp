@@ -25,10 +25,10 @@ GenericSource::~GenericSource()
 void GenericSource::stopPlayback()
 {
 	// Stop the full transponder dump
-	m_pFilterGraph->getParser().stopTransponderDump();
+	m_pFilterGraph->getParser()->stopTransponderDump();
 
 	// Tell the parser to stop processing PSI packets
-	m_pFilterGraph->getParser().stopPSIPackets();
+	m_pFilterGraph->getParser()->stopPSIPackets();
 
 	// The tuner stops the running graph
 	m_pFilterGraph->StopGraph();

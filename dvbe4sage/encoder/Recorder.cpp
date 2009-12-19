@@ -58,11 +58,11 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 		{
 			// Here we update the encoder with the latest and greatest PSI parser info
 			// Get the parser from the source
-			DVBParser& sourceParser = recorder->m_pSource->getParser();
+			DVBParser* const sourceParser = recorder->m_pSource->getParser();
 
 			// Let's see if it's valid and can be used
-			if(sourceParser.getNetworkProvider().canBeCopied() && !sourceParser.providerInfoHasBeenCopied() && sourceParser.getTimeStamp() != 0 && 
-				(__int64)difftime(now, sourceParser.getTimeStamp()) > g_pConfiguration->getPSIMaturityTime())
+			if(sourceParser != NULL && sourceParser->getNetworkProvider().canBeCopied() && !sourceParser->providerInfoHasBeenCopied() && sourceParser->getTimeStamp() != 0 && 
+				(__int64)difftime(now, sourceParser->getTimeStamp()) > g_pConfiguration->getPSIMaturityTime())
 			{
 				// If yes, get the encoder's network provider
 				NetworkProvider& encoderNetworkProvider = recorder->m_pEncoder->getNetworkProvider();
@@ -71,13 +71,13 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 				encoderNetworkProvider.lock();
 
 				// Copy the contents of the network provider
-				encoderNetworkProvider.copy(sourceParser.getNetworkProvider());
+				encoderNetworkProvider.copy(sourceParser->getNetworkProvider());
 
 				// And unlock the encoder provider
 				encoderNetworkProvider.unlock();
 
 				// Set "HasBeenCopied" flag to prevent multiple copy
-				sourceParser.setProviderInfoHasBeenCopied();
+				sourceParser->setProviderInfoHasBeenCopied();
 			}
 		}
 	}
@@ -269,16 +269,19 @@ void Recorder::stopRecording()
 		WaitForSingleObject(m_StopRecordingThread, INFINITE);
 
 	// Get the main parser
-	DVBParser& sourceParser = m_pSource->getParser();
+	DVBParser* const sourceParser = m_pSource->getParser();
 
-	// Lock the parser
-	sourceParser.lock();
+	if(sourceParser != NULL)
+	{
+		// Lock the parser
+		sourceParser->lock();
 
-	// Make the main parser stop sending packets to recorder's parser
-	sourceParser.dropParser(m_pParser);
+		// Make the main parser stop sending packets to recorder's parser
+		sourceParser->dropParser(m_pParser);
 
-	// Unlock the parser
-	sourceParser.unlock();
+		// Unlock the parser
+		sourceParser->unlock();
+	}
 
 	// Tell the encoder to stop recording on this recorder
 	m_pEncoder->stopRecording(this);
@@ -287,113 +290,116 @@ void Recorder::stopRecording()
 bool Recorder::changeState()
 {
 	// Get the parser
-	DVBParser& sourceParser = m_pSource->getParser();
-	
-	// Lock the parser
-	sourceParser.lock();
+	DVBParser* const sourceParser = m_pSource->getParser();
 
-	// We make progress on this source only if its graph is running
-	if(m_pSource->running())
+	if(sourceParser != NULL)
 	{
-		// Get the current time
-		time_t now = 0;
-		time(&now);
+		// Lock the parser
+		sourceParser->lock();
 
-		// Calculate the difference
-		if(difftime(now, m_Time) > g_pConfiguration->getTuningTimeout())
+		// We make progress on this source only if its graph is running
+		if(m_pSource->running())
 		{
-			// Log stop recording message
-			log(0, true, 0, TEXT("Could not start recording after %u seconds, "), g_pConfiguration->getTuningTimeout());
+			// Get the current time
+			time_t now = 0;
+			time(&now);
 
-			// Unlock the parser
-			sourceParser.unlock();
-
-			// Stop recording without locking the parser
-			stopRecording();
-						
-			// The recording is not OK, delete the recorder
-			return false;
-		}
-
-		// Check for source lock timeout (any source other than physical tuner should return immediate success)
-		if(!m_pSource->getLockStatus() && difftime(now, m_Time) > g_pConfiguration->getTuningLockTimeout())
-		{
-			// Log stop recording message
-			log(0, true, 0, TEXT("Could not lock signal after %u seconds, "), g_pConfiguration->getTuningLockTimeout());
-
-			// Unlock the parser
-			sourceParser.unlock();
-
-			// Stop recording without locking the parser
-			stopRecording();
-						
-			// The recording is not OK, delete the recorder
-			return false;
-		}
-		
-		// Allow it to start the actual recording
-		// Get the PMT PID for the recorder SID
-		USHORT pmtPid = 0;
-		if(sourceParser.getPMTPidForSid(m_Sid, pmtPid))
-		{
-			// Get the ES PIDs for the recorder SID
-			hash_set<USHORT> esPids;
-			if(sourceParser.getESPidsForSid(m_Sid, esPids))
+			// Calculate the difference
+			if(difftime(now, m_Time) > g_pConfiguration->getTuningTimeout())
 			{
-				// Get the CA PIDs for the recorder SID
-				hash_set<USHORT> caPids;
-				if(sourceParser.getCAPidsForSid(m_Sid, caPids))
+				// Log stop recording message
+				log(0, true, 0, TEXT("Could not start recording after %u seconds, "), g_pConfiguration->getTuningTimeout());
+
+				// Unlock the parser
+				sourceParser->unlock();
+
+				// Stop recording without locking the parser
+				stopRecording();
+							
+				// The recording is not OK, delete the recorder
+				return false;
+			}
+
+			// Check for source lock timeout (any source other than physical tuner should return immediate success)
+			if(!m_pSource->getLockStatus() && difftime(now, m_Time) > g_pConfiguration->getTuningLockTimeout())
+			{
+				// Log stop recording message
+				log(0, true, 0, TEXT("Could not lock signal after %u seconds, "), g_pConfiguration->getTuningLockTimeout());
+
+				// Unlock the parser
+				sourceParser->unlock();
+
+				// Stop recording without locking the parser
+				stopRecording();
+							
+				// The recording is not OK, delete the recorder
+				return false;
+			}
+			
+			// Allow it to start the actual recording
+			// Get the PMT PID for the recorder SID
+			USHORT pmtPid = 0;
+			if(sourceParser->getPMTPidForSid(m_Sid, pmtPid))
+			{
+				// Get the ES PIDs for the recorder SID
+				hash_set<USHORT> esPids;
+				if(sourceParser->getESPidsForSid(m_Sid, esPids))
 				{
-					// Get ECM CA Types (might be empty)
-					hash_set<CAScheme> ecmCATypes;
-					sourceParser.getECMCATypesForSid(m_Sid, ecmCATypes);
-					// Get EMM CA Types (might be empty)
-					EMMInfo emmCATypes;
-					sourceParser.getEMMCATypes(emmCATypes);
-					// Create the parser
-					m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_ChannelName, m_Sid, pmtPid, ecmCATypes, emmCATypes, m_Size);
-					// Assign recorder's parser to PAT PID
-					sourceParser.assignParserToPid(0, m_pParser);
-					m_pParser->setESPid(0, true);
-					// Assign recorder's parser to PMT PID
-					sourceParser.assignParserToPid(pmtPid, m_pParser);
-					m_pParser->setESPid(pmtPid, true);
-					// Assign recorder's parser to every relevant ES PID
-					for(hash_set<USHORT>::const_iterator it = esPids.begin(); it != esPids.end(); it++)
+					// Get the CA PIDs for the recorder SID
+					hash_set<USHORT> caPids;
+					if(sourceParser->getCAPidsForSid(m_Sid, caPids))
 					{
-						sourceParser.assignParserToPid(*it, m_pParser);
-						m_pParser->setESPid(*it, true);
+						// Get ECM CA Types (might be empty)
+						hash_set<CAScheme> ecmCATypes;
+						sourceParser->getECMCATypesForSid(m_Sid, ecmCATypes);
+						// Get EMM CA Types (might be empty)
+						EMMInfo emmCATypes;
+						sourceParser->getEMMCATypes(emmCATypes);
+						// Create the parser
+						m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_ChannelName, m_Sid, pmtPid, ecmCATypes, emmCATypes, m_Size);
+						// Assign recorder's parser to PAT PID
+						sourceParser->assignParserToPid(0, m_pParser);
+						m_pParser->setESPid(0, true);
+						// Assign recorder's parser to PMT PID
+						sourceParser->assignParserToPid(pmtPid, m_pParser);
+						m_pParser->setESPid(pmtPid, true);
+						// Assign recorder's parser to every relevant ES PID
+						for(hash_set<USHORT>::const_iterator it = esPids.begin(); it != esPids.end(); it++)
+						{
+							sourceParser->assignParserToPid(*it, m_pParser);
+							m_pParser->setESPid(*it, true);
+						}
+						// Assign recorder's parser to every relevant CA PID
+						for(hash_set<USHORT>::const_iterator it = caPids.begin(); it != caPids.end(); it++)
+						{
+							sourceParser->assignParserToPid(*it, m_pParser);
+							m_pParser->setESPid(*it, false);
+						}
+						// Add CAT to the parser as well, saying it's not an ES type
+						sourceParser->assignParserToPid(1, m_pParser);
+						m_pParser->setESPid(1, false);
+						// Finally, tell the parser it has connected clients
+						sourceParser->setHasConnectedClients();
+
+						// Indicate start recording thread can end
+						m_StartRecordingThreadCanEnd = true;
+
+						// Save the time of the beginning of recording
+						time(&m_Time);
+
+						// Start the "stop recording" thread
+						m_StopRecordingThread = CreateThread(NULL, 0, StopRecordingCallback, this, 0, &m_StopRecordingThreadId);
 					}
-					// Assign recorder's parser to every relevant CA PID
-					for(hash_set<USHORT>::const_iterator it = caPids.begin(); it != caPids.end(); it++)
-					{
-						sourceParser.assignParserToPid(*it, m_pParser);
-						m_pParser->setESPid(*it, false);
-					}
-					// Add CAT to the parser as well, saying it's not an ES type
-					sourceParser.assignParserToPid(1, m_pParser);
-					m_pParser->setESPid(1, false);
-					// Finally, tell the parser it has connected clients
-					sourceParser.setHasConnectedClients();
-
-					// Indicate start recording thread can end
-					m_StartRecordingThreadCanEnd = true;
-
-					// Save the time of the beginning of recording
-					time(&m_Time);
-
-					// Start the "stop recording" thread
-					m_StopRecordingThread = CreateThread(NULL, 0, StopRecordingCallback, this, 0, &m_StopRecordingThreadId);
 				}
 			}
 		}
-	}
-	else
-		// The source's graph is not running, so we can indicate that the start recording thread can end
-		m_StartRecordingThreadCanEnd = true;
+		else
+			// The source's graph is not running, so we can indicate that the start recording thread can end
+			m_StartRecordingThreadCanEnd = true;
 
-	// Unlock the parser
-	sourceParser.unlock();
+		// Unlock the parser
+		sourceParser->unlock();
+	}
 
 	// Everything is OK
 	return true;
