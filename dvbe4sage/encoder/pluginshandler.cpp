@@ -122,8 +122,6 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 		case TYPE_ECM:
 			// Put the request at the end of the queue
 			m_RequestQueue.push_back(request);
-			// Process the queue - no need for that, will be picked up by the worker thread anyway
-			//processECMPacketQueue();
 			break;
 		case TYPE_EMM:
 			processEMMPacket(request.packet);
@@ -151,7 +149,7 @@ void PluginsHandler::processECMPacketQueue()
 		time_t now = 0;
 		time(&now);
 
-		// Calculate the differentce
+		// Calculate the difference
 		if(difftime(now, m_Time) > g_pConfiguration->getDCWTimeout())
 		{
 			log(2, true, 0, TEXT("Timeout for SID=%hu, resetting plugins...Do you have subscription for this channel?\n"), m_CurrentSid);
@@ -170,7 +168,6 @@ void PluginsHandler::processECMPacketQueue()
 			m_TimerInitialized = false;
 			m_IsTuningTimeout = false;
 			m_WaitingForResponse = false;
-
 		}
 	}
 
@@ -186,14 +183,12 @@ void PluginsHandler::processECMPacketQueue()
 	const Dcw& dcw = m_ECMCache.find(request.packet, isOddKey);
 	if(dcw.number != 0)
 	{
-		// Update current client
-		m_pCurrentClient = request.client;
-		// And current sid
-		m_CurrentSid = request.client->sid;
 		// Remove request from the queue
 		m_RequestQueue.pop_front();
+		// Log entry
+		log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and found in the cache\n"), request.client->sid);
 		// Mark ECM request as complete WITHOUT adding it to the cache
-		ECMRequestComplete(NULL, dcw, isOddKey, false);
+		ECMRequestComplete(request.client, NULL, dcw, isOddKey, false);
 	}
 	else
 	{
@@ -289,13 +284,17 @@ bool EMMInfo::hasPid(USHORT pid) const
 	return false;
 }
 
-void PluginsHandler::ECMRequestComplete(const BYTE* ecmPacket,
+void PluginsHandler::ECMRequestComplete(Client* client,
+										const BYTE* ecmPacket,
 										const Dcw& dcw,
 										bool isOddKey,
-										bool addToCache)
+										bool addToCache )
 {
+	// Log the fact there is a response for the SID, it won't necessarily be accepted by the parser
+	log(2, true, 0, TEXT("Response for SID=%hu received, passing to the parser...\n"), client->sid);
+
 	// Set the key to the parser which called us
-	if(wrong(dcw) || !m_pCurrentClient->caller->setKey(isOddKey, dcw.key))
+	if(wrong(dcw) || !client->caller->setKey(isOddKey, dcw.key))
 	{
 		// Log the key
 		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
@@ -305,23 +304,24 @@ void PluginsHandler::ECMRequestComplete(const BYTE* ecmPacket,
 	}
 	else
 	{
-		// Add the data to the cache, if needed
+		// If asked to add the data to the cache, this means normal processing, leaving all triggers set otherwise
 		if(addToCache)
+		{
+			// Cancel deferred tuning
+			m_DeferTuning = false;
+
+			// Indicate we're no longer waiting for a response
+			m_WaitingForResponse = false;
+
+			// Indicate we're no longer waiting on the timer
+			m_TimerInitialized = false;
+
+			// Add the key to the cache
 			m_ECMCache.add(ecmPacket, dcw, isOddKey);
+		}
 		// Log the key
 		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - accepted and %sadded to the cache!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
 			addToCache ? TEXT("plugin") : TEXT("cache"), addToCache ? TEXT("") : TEXT("NOT "));
 	}
-
-	log(2, true, 0, TEXT("Response for SID=%hu received, passing to the parser...\n"), m_CurrentSid);
-
-	// Cancel deferred tuning
-	m_DeferTuning = false;
-
-	// Indicate we're no longer waiting for response
-	m_WaitingForResponse = false;
-
-	// Indicate we're no longer waiting on timer
-	m_TimerInitialized = false;
 }

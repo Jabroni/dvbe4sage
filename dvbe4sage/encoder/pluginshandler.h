@@ -100,10 +100,7 @@ protected:
 		CloseHandle(m_WorkerThread);
 	}
 	
-	void ECMRequestComplete(const BYTE* ecmPacket,
-							const Dcw& dcw,
-							bool isOddKey,
-							bool addToCache);
+	void ECMRequestComplete(Client* client, const BYTE* ecmPacket, const Dcw& dcw, bool isOddKey, bool addToCache);
 
 public:
 	// Constructor

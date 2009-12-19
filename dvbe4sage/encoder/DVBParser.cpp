@@ -1480,7 +1480,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 				m_OutputBuffers.push_back(newBuffer);
 			}
 			else
-				// Log the fact now packets were in the output buffer when an ECM packet has been recieved
+				// Log the fact no packets were in the output buffer when an ECM packet has been received
 				log(3, true, 0, TEXT("ECM packet received when the output buffer was epmty\n"));
 		}
 	}

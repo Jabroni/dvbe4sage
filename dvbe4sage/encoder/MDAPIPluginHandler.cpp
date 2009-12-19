@@ -327,8 +327,7 @@ void MDAPIPluginsHandler::dvbCommand(LPARAM lParam)
 		}
 
 		// Indicate that ECM request has been completed and add it to the cache
-		ECMRequestComplete(m_pCurrentClient->ecmPacket, dcw, isOddKey, true);
-
+		ECMRequestComplete(m_pCurrentClient, m_pCurrentClient->ecmPacket, dcw, isOddKey, true);
 	}
 	else
 		log(0, true, 0, TEXT("Key received but the client has already left\n"));

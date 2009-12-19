@@ -66,7 +66,7 @@ void WINAPI VGPluginsHandler::DCWHandler(int nParm,
 	// Do this in critical section
 	CAutoLock lock(&m_cs);
 
-	bool isOddKey = nParm != 0;
+	bool isOddKey = (nParm != 0);
 
 	// Let's check the state of the current client
 	if(m_pCurrentClient != NULL)
@@ -84,7 +84,7 @@ void WINAPI VGPluginsHandler::DCWHandler(int nParm,
 		dcw.key[7] = dcw.key[4] + dcw.key[5] + dcw.key[6];
 
 		// Indicate that ECM request has been completed and add it to the cache
-		ECMRequestComplete(m_pCurrentClient->ecmPacket, dcw, isOddKey, true);
+		ECMRequestComplete(m_pCurrentClient, m_pCurrentClient->ecmPacket, dcw, isOddKey, true);
 	}
 	else
 		log(0, true, 0, TEXT("Key received but the client has already left\n"));
