@@ -462,12 +462,15 @@ void PSIParser::parseCATTable(const cat_t* const table,
 			// Figure out the CAID
 			caScheme.caId = HILO(caDescriptor->CA_type);
 			// And the provider ID
-			caScheme.provId = 0;
+			if(caDescriptor->descriptor_length> DESCR_CA_LEN-2 /*-2 desc+len*/)
+				caScheme.provId = caDescriptor->CA_provid;
+			else
+				caScheme.provId = 0;
 			// Let's see if this CAID is served
 			if(g_pConfiguration->isCAIDServed(caScheme.caId))
 			{
 				// Check the ignore list
-				if(g_pConfiguration->isIgnoredCAPid(caScheme.pid))
+				if(g_pConfiguration->isIgnoredProvId(caScheme.provId))
 					// Make the log entry
 					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor EMM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, but this PID was found in the ignore list, so packets will NOT be passed to plugins\n"), 
 							caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
@@ -561,12 +564,15 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			// Get the CAID
 			caScheme.caId = HILO(caDescriptor->CA_type);
 			// And the PROVID
-			caScheme.provId = 0;
+			if(caDescriptor->descriptor_length> DESCR_CA_LEN-2 /*-2 desc+len*/)
+				caScheme.provId = caDescriptor->CA_provid;
+			else
+				caScheme.provId = 0;
 			// Let's see if this CAID is served
 			if(g_pConfiguration->isCAIDServed(caScheme.caId))
 			{
 				// Check the ignore list
-				if(g_pConfiguration->isIgnoredCAPid(caScheme.pid))
+				if(g_pConfiguration->isIgnoredProvId(caScheme.provId))
 					// Log the descriptor data
 					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, but this PID was found in the ignore list, so ECM packets will NOT be passed to plugins\n"),
 								programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
@@ -654,12 +660,15 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 				// Get the CAID
 				caScheme.caId = HILO(caDescriptor->CA_type);
 				// And the PROVID
-				caScheme.provId = 0;
-				// Let's see if this CAID is served
+				if(caDescriptor->descriptor_length> DESCR_CA_LEN-2 /*-2 desc+len*/)
+					caScheme.provId = caDescriptor->CA_provid;
+				else
+					caScheme.provId = 0;
+					// Let's see if this CAID is served
 				if(g_pConfiguration->isCAIDServed(caScheme.caId))
 				{
 					// Check the ignore list
-					if(g_pConfiguration->isIgnoredCAPid(caScheme.pid))
+					if(g_pConfiguration->isIgnoredProvId(caScheme.provId))
 						// Log the descriptor data
 						log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), this CAID is served, but this PID was found in the ignore list, so ECM packets will NOT be passed to plugins\n"),
 									ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);

@@ -652,7 +652,7 @@ typedef struct descr_gen_struct {
 
 /* 0x09 ca_descriptor */
 
-#define DESCR_CA_LEN 6
+#define DESCR_CA_LEN 6 //original desc_ca len - without CA_provid field.
 typedef struct descr_ca_struct {
 	unsigned char descriptor_tag                         :8;
 	unsigned char descriptor_length                      :8;
@@ -666,6 +666,7 @@ typedef struct descr_ca_struct {
 	unsigned char reserved                               :3;
 #endif
 	unsigned char CA_PID_lo                              :8;
+	unsigned char CA_provid                              :8; //non documented field
 } descr_ca_t;
 #define CastCaDescriptor(x) ((descr_ca_t *)(x))
 
