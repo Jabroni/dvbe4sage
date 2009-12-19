@@ -17,8 +17,8 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 	// Loop infinitely
 	while(!recorder->m_StopRecordingThreadCanEnd)
 	{
-		// Sleep for 1 second
-		Sleep(1000);
+		// Sleep for 100 milliseconds
+		Sleep(100);
 
 		// Let's see if the time has passed
 		// Get the current time
@@ -93,8 +93,8 @@ DWORD WINAPI StartRecordingCallback(LPVOID vpRecorder)
 	// Loop while can exit
 	while(!recorder->m_StartRecordingThreadCanEnd)
 	{
-		// Sleep for 100 milliseconds
-		Sleep(100);
+		// Sleep for 10 milliseconds
+		Sleep(10);
 
 		// Try to change the recorder state
 		if(!recorder->changeState())
@@ -162,7 +162,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 		// Check if opening file succeeded
 		if(m_fout == NULL)
 		{
-			log(0, true, 0, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
+			log(0, true, 0, TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), CW2CT(outFileName), GetLastError());
 			m_HasError = true;
 		}
 	}
@@ -205,19 +205,19 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				// Check if opening file succeeded
 				if(m_fout == NULL)
 				{
-					log(0, true, 0, TEXT("Cannot open the file \"%S\", error code=0x%.08X\n"), outFileName, GetLastError());
+					log(0, true, 0, TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), CW2CT(outFileName), GetLastError());
 					m_HasError = true;
 				}
 			}
 			else
 			{
-				log(0, true, 0, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
+				log(0, true, 0, TEXT("The file \"%s\" was not found!\n"), CW2CT(outFileName), GetLastError());
 				m_HasError = true;
 			}
 		}
 		else
 		{
-			log(0, true, 0, TEXT("The file \"%S\" was not found!\n"), outFileName, GetLastError());
+			log(0, true, 0, TEXT("The file \"%s\" was not found!\n"), CW2CT(outFileName), GetLastError());
 			m_HasError = true;
 		}
 	}

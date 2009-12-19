@@ -1419,28 +1419,10 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 	// Do this only if have plugins handler
 	if(m_pPluginsHandler != NULL)
 	{
-		// EMM packets go directly to the plugins
+		// EMM/PMT and CAT packets go directly to the plugins
 		if(m_EMMCATypes.hasPid(caPid))
-		{
-//#define _FOR_JOKER
-#ifdef _FOR_JOKER
-			static FILE* emmFile = _tfsopen(TEXT("emms.bin"), TEXT("wb"), _SH_DENYWR);
-			fwrite(currentPacket + 4, 1, PACKET_SIZE, emmFile);
-			fflush(emmFile);
-//			static int startTick = GetTickCount();
-//			int currentTick = GetTickCount();
-//			if(currentTick - startTick < 5 * 3600 * 1000)
-//			{
-//				
-//
-//			else if(emmFile != NULL)
-//			{
-//				fclose(emmFile);
-//				emmFile = NULL;
-//			}
-#endif //_FOR_JOKER
+			// Handle EMM packets
 			m_pPluginsHandler->putCAPacket(this, TYPE_EMM, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
-		}
 		else if(caPid == m_PmtPid)
 			// Handle PMT packets
 			m_pPluginsHandler->putCAPacket(this, TYPE_PMT, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
