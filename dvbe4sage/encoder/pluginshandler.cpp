@@ -183,12 +183,12 @@ void PluginsHandler::processECMPacketQueue()
 	const Dcw& dcw = m_ECMCache.find(request.packet, isOddKey);
 	if(dcw.number != 0)
 	{
-		// Remove request from the queue
-		m_RequestQueue.pop_front();
 		// Log entry
 		log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and found in the cache\n"), request.client->sid);
 		// Mark ECM request as complete WITHOUT adding it to the cache
 		ECMRequestComplete(request.client, NULL, dcw, isOddKey, false);
+		// Remove request from the queue
+		m_RequestQueue.pop_front();
 	}
 	else
 	{

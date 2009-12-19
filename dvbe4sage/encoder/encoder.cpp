@@ -571,6 +571,9 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 				delete recorder;
 			}
 		}
+		else
+			// Just add the recorder to the global structure
+			m_Recorders.insert(pair<USHORT, Recorder*>((USHORT)tunerOrdinal, recorder));
 
 		// Unlock access to the global structure
 		m_cs.Unlock();
