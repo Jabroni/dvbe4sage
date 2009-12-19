@@ -21,11 +21,6 @@ Decrypter::Decrypter(void) :
 	m_KeySet = get_key_struct();
 	// Get parallelism
 	m_Parallelism = get_internal_parallelism();
-
-	BYTE key[8];
-	key[0] = 0x14; key[1] = 0x89; key[2] = 0x5E; key[3] = 0xFB;
-	key[4] = 0x61; key[5] = 0xB5; key[6] = 0x31; key[7] = 0x47;
-	set_control_words(m_KeySet, key, key);
 }
 
 Decrypter::~Decrypter(void)
