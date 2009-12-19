@@ -291,7 +291,7 @@ void Encoder::socketOperation(SOCKET socket,
 							// Send the length as a response
 							char buffer[100];
 							int length = sprintf_s(buffer, sizeof(buffer), "%I64u\r\n", recorder->getFileLength());
-							log(0, true, 0, TEXT("Replied %.*s\n"), length - 2, buffer);
+							log(1, true, 0, TEXT("Replied %.*s\n"), length - 2, buffer);
 							send(socket, buffer, length, 0);
 						}
 						else
