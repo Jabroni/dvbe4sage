@@ -3,6 +3,7 @@
 #include "ECMCache.h"
 #include "crc32.h"
 #include "ecmcache-pskel.hxx"
+#include "extern.h"
 
 const Dcw dummyDcw = { 0 };
 
@@ -95,7 +96,7 @@ const Dcw& ECMCache::find(const BYTE* ecmPacket,
 
 // Dump the content of the cache to a file
 bool ECMCache::DumpToFile(LPCTSTR fileName,
-						  string& reason) const
+						  LPTSTR reason) const
 {
 	// Try opening the file
 	FILE* outFile = NULL;
@@ -128,7 +129,7 @@ bool ECMCache::DumpToFile(LPCTSTR fileName,
 		// We get here if for some reason we're unable to open the file
 		stringstream result;
 		result << "Cannot open the output file \"" << fileName << "\", error code = " << errno;
-		reason = result.str();
+		_tcscpy_s(reason, MAX_ERROR_MESSAGE_SIZE, CA2CT(result.str().c_str()));
 		return false;
 	}
 }
@@ -236,7 +237,7 @@ public:
 
 // Read the content of the cache from a file
 bool ECMCache::ReadFromFile(LPCTSTR fileName,
-							string& reason)
+							LPTSTR reason)
 {
 	try
 	{
@@ -264,7 +265,7 @@ bool ECMCache::ReadFromFile(LPCTSTR fileName,
 		// Get the error message from the exception
 		stringstream str;
 		str << e;
-		reason = str.str();
+		_tcscpy_s(reason, MAX_ERROR_MESSAGE_SIZE, CA2CT(str.str().c_str()));
 		return false;
 	}
 }

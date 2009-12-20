@@ -50,8 +50,8 @@ public:
 	const Dcw& find(const BYTE* ecmPacket, bool& isOddKey) const;
 
 	// Dump the content of the cache to a file
-	bool DumpToFile(LPCTSTR fileName, string& reason) const;
+	bool DumpToFile(LPCTSTR fileName, LPTSTR reason) const;
 
 	// Read the content of the cache from a file
-	bool ReadFromFile(LPCTSTR fileName, string& reason);
+	bool ReadFromFile(LPCTSTR fileName, LPTSTR reason);
 };

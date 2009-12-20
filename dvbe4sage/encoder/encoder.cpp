@@ -676,13 +676,13 @@ void Encoder::waitForFullInitialization()
 }
 
 bool Encoder::dumpECMCache(LPCTSTR fileName,
-						   string& reason) const
+						   LPTSTR reason) const
 {
 	return m_pPluginsHandler != NULL ? m_pPluginsHandler->dumpECMCache(fileName, reason) : false;
 }
 
 bool Encoder::loadECMCache(LPCTSTR fileName,
-						   string& reason)
+						   LPTSTR reason)
 {
 	return m_pPluginsHandler != NULL ? m_pPluginsHandler->loadECMCache(fileName, reason) : false;
 }

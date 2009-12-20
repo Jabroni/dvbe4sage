@@ -55,8 +55,8 @@ public:
 						bool bySage,
 						bool startFullTransponderDump);
 	bool stopRecording(Recorder* recorder);
-	bool dumpECMCache(LPCTSTR fileName, string& reason) const;
-	bool loadECMCache(LPCTSTR fileName, string& reason);
+	bool dumpECMCache(LPCTSTR fileName, LPTSTR reason) const;
+	bool loadECMCache(LPCTSTR fileName, LPTSTR reason);
 	virtual ~Encoder();
 	int getNumberOfTuners() const;
 	LPCTSTR getTunerFriendlyName(int i) const;

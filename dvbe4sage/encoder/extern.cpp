@@ -98,13 +98,13 @@ extern "C" ENCODER_API bool startRecordingFromFile(LPCWSTR inFileName,
 }
 
 extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName,
-										 string& reason)
+										 LPTSTR reason)
 {
 	return g_pEncoder != NULL ? g_pEncoder->dumpECMCache(fileName, reason) : false;
 }
 
 extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName,
-										 string& reason)
+										 LPTSTR reason)
 {
 	return g_pEncoder != NULL ? g_pEncoder->loadECMCache(fileName, reason) : false;
 }

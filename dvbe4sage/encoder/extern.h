@@ -6,6 +6,8 @@
 #define ENCODER_API __declspec(dllimport)
 #endif
 
+#define MAX_ERROR_MESSAGE_SIZE	2048
+
 // Main control points
 extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu);
 extern "C" ENCODER_API void deleteEncoder();
@@ -35,8 +37,8 @@ extern "C" ENCODER_API bool startRecordingFromFile(LPCWSTR inFileName,
 												   int sid,
 												   __int64 duration,
 												   LPCWSTR outFileName);
-extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName, std::string& reason);
-extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName, std::string& reason);
+extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName, LPTSTR reason);
+extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName, LPTSTR reason);
 
 // DVB translation functions
 extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromDescriptor(USHORT descriptor);
