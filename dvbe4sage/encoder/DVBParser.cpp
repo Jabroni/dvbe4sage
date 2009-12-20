@@ -62,13 +62,13 @@ void DVBParser::stopTransponderDump()
 // Lock function with logging
 void DVBParser::lock()
 {
-	log(4, true, m_TunerOrdinal, TEXT("Locking the parser\n"));
+	log(5, true, m_TunerOrdinal, TEXT("Locking the parser\n"));
 	m_cs.Lock();
 }
 
 void DVBParser::unlock()
 {
-	log(4, true, m_TunerOrdinal, TEXT("Unlocking the parser\n"));
+	log(5, true, m_TunerOrdinal, TEXT("Unlocking the parser\n"));
 	m_cs.Unlock();
 }
 
@@ -367,7 +367,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 				// Make sure the remainder is just stuffing '\xFF' bytes
 				for(int i = lengthToCopy; i < remainingLength; i++)
 					if(inputBuffer[i] != (BYTE)'\xFF' && inputBuffer[i] != (BYTE)'\0')
-						log(3, true, m_pParent->getTunerOrdinal(), TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
+						log(4, true, m_pParent->getTunerOrdinal(), TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
 			}
 		}
 }
@@ -838,7 +838,7 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 						break;
 					}
 					default:
-						log(3, true, m_pParent->getTunerOrdinal(), TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
+						log(4, true, m_pParent->getTunerOrdinal(), TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
 										(UINT)genericDescriptor->descriptor_tag); 
 						break;
 				}
@@ -897,11 +897,11 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			case 0x47:
 			{
 				bouquetName = string((const char*)inputBuffer + DESCR_BOUQUET_NAME_LEN, bouquetDescriptor->descriptor_length);
-				log(3, true, m_pParent->getTunerOrdinal(), TEXT("### Found bouquet with name %s\n"), bouquetName.c_str());
+				log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Found bouquet with name %s\n"), bouquetName.c_str());
 				break;
 			}
 			default:
-				log(3, true, m_pParent->getTunerOrdinal(), TEXT("!!! Unknown bouquet descriptor, type=%02X\n"), (UINT)bouquetDescriptor->descriptor_tag); 
+				log(4, true, m_pParent->getTunerOrdinal(), TEXT("!!! Unknown bouquet descriptor, type=%02X\n"), (UINT)bouquetDescriptor->descriptor_tag); 
 				break;
 		}
 		// Adjust input buffer pointer
@@ -989,7 +989,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						// Do nothing
 						break;
 					default:
-						log(3, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+						log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
 									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
 						break;
 				}
@@ -1134,7 +1134,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					// Do nothing
 					break;
 				default:
-					log(3, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+					log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
 									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
 					break;
 			}
@@ -1155,7 +1155,7 @@ void PSIParser::parseUnknownTable(const pat_t* const table,
 								  const short remainingLength) const
 {
 	// Print diagnostics message
-	log(3, true, m_pParent->getTunerOrdinal(), TEXT("$$$ Unknown table detected with TID=%02X, length=%u\n"), (UINT)table->table_id, remainingLength);
+	log(4, true, m_pParent->getTunerOrdinal(), TEXT("$$$ Unknown table detected with TID=%02X, length=%u\n"), (UINT)table->table_id, remainingLength);
 }
 
 // Query methods
@@ -1484,35 +1484,58 @@ bool ESCAParser::setKey(bool isOddKey,
 		OutputBuffer* const currentBuffer = *it;
 
 		// Try to use the key only if the buffer doesn't have one or if this is the last buffer
-		if(!currentBuffer->hasKey || it + 1 == m_OutputBuffers.end())
+		if(!(currentBuffer->hasKey && currentBuffer->keyVerified))
 		{
 			// Let's see if the key can decrypt the current buffer
-			if(!isCorrectKey(currentBuffer, isOddKey, key))
+			KeyCorrectness keyCorrectness = isCorrectKey(currentBuffer->buffer,
+														 currentBuffer->numberOfPackets,
+														 isOddKey ? key : currentBuffer->oddKey,
+														 !isOddKey ? key : currentBuffer->evenKey);
+
+			// First, deal with keys known as wrong ones
+			if(keyCorrectness == KEY_WRONG)
 				// If this is not the last buffer, delete it
 				if(it + 1 != m_OutputBuffers.end())
 				{
 					// Delete the buffer from the queue
 					it = m_OutputBuffers.erase(it);
+
 					// Log the fact we dropped some packets
-					log(2, true, 0, TEXT("Key doesn't match, dropped %d packets\n"), currentBuffer->numberOfPackets);
+					log(2, true, 0, TEXT("Key doesn't match, dropped %lu packets\n"), currentBuffer->numberOfPackets);
+
 					// And delete the buffer itself
 					delete currentBuffer;
 				}
 				else
 				{
-					// Move the iterator one step forward
-					it++;
+					// We get here if the key was wrong, but it was the last buffer
 					// Log the fact the key didn't match the last available buffer
 					log(2, true, 0, TEXT("Key doesn't match, maybe the next one will...\n"));
+
+					// The buffer doesn't have a key and it was not verified
+					currentBuffer->keyVerified = false;
+					currentBuffer->hasKey  = false;
+
+					// Move the iterator one step forward
+					it++;
 				}
 			else
 			{
-				// We get here if the key is correct
+				// We get here if the key COULD be correct
 				// Copy the key
 				memcpy(isOddKey ? currentBuffer->oddKey : currentBuffer->evenKey, key, sizeof(currentBuffer->oddKey));
 
 				// Now this buffer has its key
 				currentBuffer->hasKey = true;
+
+				// Whether it's verified or not depends on the certainty of the key check
+				currentBuffer->keyVerified = (keyCorrectness == KEY_OK);
+				if(currentBuffer->keyVerified)
+					// Buffer key has been verified
+					log(3, true, 0, TEXT("Buffer with length %lu, key verified immediately...\n"), currentBuffer->numberOfPackets);
+				else
+					// Buffer key will be verified later
+					log(3, true, 0, TEXT("Buffer with length %lu, key will be verified with delay...\n"), currentBuffer->numberOfPackets);
 
 				// Let's see if we need to update a key to its successor
 				if(it + 1 != m_OutputBuffers.end())
@@ -1524,8 +1547,9 @@ bool ESCAParser::setKey(bool isOddKey,
 					memcpy(isOddKey ? nextBuffer->oddKey : nextBuffer->evenKey, key, sizeof(nextBuffer->oddKey));
 				}
 
-				// Signal the work thread we've got a new key
-				SetEvent(m_SignallingEvent);
+				// Signal the work thread we've got a new key for sure
+				if(keyCorrectness == KEY_OK)
+					SetEvent(m_SignallingEvent);
 
 				// Indicate we found and least one matching buffer
 				foundMatchingBuffer = true;
@@ -1629,7 +1653,7 @@ ESCAParser::~ESCAParser()
 	// Finally, close the worker thread handle
 	CloseHandle(m_WorkerThread);
 
-	// And then close signalling event
+	// And then close signaling event
 	CloseHandle(m_SignallingEvent);
 }
 
@@ -1653,6 +1677,36 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 		// Increment the packet counter
 		currentBuffer->numberOfPackets++;
 
+		// If the current buffer has a key but it hasn't been verified yet, try to verify it
+		if(currentBuffer->hasKey && !currentBuffer->keyVerified)
+		{
+			switch(isCorrectKey(packet, 1, currentBuffer->oddKey, currentBuffer->evenKey))
+			{
+				case KEY_OK:
+					// Key verified
+					currentBuffer->keyVerified = true;
+					// Buffer key has been verified
+					log(3, true, 0, TEXT("Buffer key verified with delay...\n"));
+					// Let's see if any of the previous buffers are OK or need to be thrown away
+					for(deque<OutputBuffer* const>::iterator it = m_OutputBuffers.begin(); *it != currentBuffer;)
+						if(!(*it)->keyVerified)
+						{
+							log(2, true, 0, TEXT("Dropped %lu packets because of unusable key...\n"), (*it)->numberOfPackets);
+							delete *it;
+							it = m_OutputBuffers.erase(it);
+						}
+						else
+							it++;
+					break;
+				case KEY_WRONG:
+					// Key wrong, invalidate it!
+					currentBuffer->hasKey = false;
+					currentBuffer->keyVerified = false;
+					break;
+				default:
+					break;
+			}
+		}
 		// Signal the work thread it has a new packet to take care of
 		SetEvent(m_SignallingEvent);
 	}
@@ -1671,7 +1725,7 @@ void ESCAParser::decryptAndWritePending(bool immediately)
 		OutputBuffer* const currentBuffer = m_OutputBuffers.front();
 
 		// Let's see if we can write its contents
-		if((!m_IsEncrypted || currentBuffer->hasKey) && (m_OutputBuffers.size() > 1 || currentBuffer->numberOfPackets >= g_pConfiguration->getTSPacketsOutputThreshold() || immediately))
+		if((!m_IsEncrypted || currentBuffer->keyVerified) && (m_OutputBuffers.size() > 1 || currentBuffer->numberOfPackets >= g_pConfiguration->getTSPacketsOutputThreshold() || immediately))
 		{
 			// We can zero the reset counter
 			m_ResetCounter = 0;
@@ -1771,21 +1825,22 @@ bool ESCAParser::matchAudioLanguage(const BYTE* const buffer,
 	return false;
 }
 
-bool ESCAParser::isCorrectKey(const OutputBuffer* const currentBuffer,
-							  const bool isOddKey,
-							  const BYTE* const key)
+KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
+										ULONG numberOfPackets,
+										const BYTE* const oddKey,
+										const BYTE* const evenKey)
 {
 	// Flag indicating any PES packets have been found
 	bool anyPESPacketsFound = false;
 
 	// Set the decrypter keys
-	m_Decrypter.setKeys(isOddKey ? key : currentBuffer->oddKey, !isOddKey ? key : currentBuffer->evenKey);
+	m_Decrypter.setKeys(oddKey, evenKey);
 
 	// Go through all the packets
-	for(ULONG i = 0; i < currentBuffer->numberOfPackets; i++)
+	for(ULONG i = 0; i < numberOfPackets; i++)
 	{
 		// Get the packet header
-		const ts_t* const packet = (const ts_t* const)(currentBuffer->buffer + i * TS_PACKET_LEN);
+		const ts_t* const packet = (const ts_t* const)(buffer + i * TS_PACKET_LEN);
 		// Let's see if we need to try to decrypt it, meaning:
 		// 1. The packet is the beginning of the payload unit
 		// 2. It is encrypted (this already implies the packet is not PMT or PAT)
@@ -1815,7 +1870,7 @@ bool ESCAParser::isCorrectKey(const OutputBuffer* const currentBuffer,
 			// Now let's see if we have a valid PES packet header
 			if(copyPacket[offset] == 0 && copyPacket[offset + 1] == 0 && copyPacket[offset + 2] == 1)
 				// If yes, we know for sure we have the right key
-				return true;
+				return KEY_OK;
 
 			// If no, it doesn't mean anything, we might just have a wrong parity key
 			// (the packet is odd and the key is even or vise versa)
@@ -1823,5 +1878,5 @@ bool ESCAParser::isCorrectKey(const OutputBuffer* const currentBuffer,
 	}
 
 	// If no PES packets have been in the buffer, the key still might be OK, otherwise the key is wrong
-	return !anyPESPacketsFound;
+	return anyPESPacketsFound ? KEY_WRONG : KEY_MAYBE_OK;
 }

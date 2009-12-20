@@ -128,6 +128,8 @@ public:
 
 class Recorder;
 
+enum KeyCorrectness { KEY_WRONG, KEY_MAYBE_OK, KEY_OK};
+
 // ES and CA packets parser
 class ESCAParser : public TSPacketParser
 {
@@ -139,12 +141,14 @@ class ESCAParser : public TSPacketParser
 		BYTE		oddKey[8];									// CSA odd DCW
 		BYTE		evenKey[8];									// CSA even DCW
 		bool		hasKey;										// True if has one of the keys
+		bool		keyVerified;								// True if the key has been verified
 
 		// Default constructor
 		OutputBuffer() : 
 			buffer(new BYTE[TS_PACKET_LEN * g_pConfiguration->getTSPacketsPerOutputBuffer()]),
 			numberOfPackets(0),
-			hasKey(false)
+			hasKey(false),
+			keyVerified(false)
 		{
 			// Set the initial values for keys
 			ZeroMemory(oddKey, sizeof(oddKey));
@@ -157,6 +161,7 @@ class ESCAParser : public TSPacketParser
 		{
 			numberOfPackets = other.numberOfPackets;
 			hasKey = other.hasKey;
+			keyVerified = other.keyVerified;
 			memcpy(buffer, other.buffer, TS_PACKET_LEN * g_pConfiguration->getTSPacketsPerOutputBuffer());
 			memcpy(oddKey, other.oddKey, sizeof(oddKey));
 			memcpy(evenKey, other.evenKey, sizeof(evenKey));
@@ -221,7 +226,7 @@ private:
 	static bool matchAudioLanguage(const BYTE* const buffer, const int bufferLength, const char* language);
 
 	// Check if a key can decrypt the current buffer
-	bool isCorrectKey(const OutputBuffer* const currentBuffer, const bool isOddKey, const BYTE* const key);
+	KeyCorrectness isCorrectKey(const BYTE* const buffer, ULONG numberOfPackets, const BYTE* const oddKey, const BYTE* const evenKey);
 
 	// Default and copy constructors are disallowed
 	ESCAParser();
