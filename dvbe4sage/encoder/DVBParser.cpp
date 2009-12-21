@@ -1435,12 +1435,12 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 		{
 			// If yes, save it
 			memcpy(m_LastECMPacket, currentPacket + 4, PACKET_SIZE);
-			
-			// And send to the plugins
-			m_pPluginsHandler->putCAPacket(this, TYPE_ECM, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 
 			// Lock the output buffers queue
 			CAutoLock lock(&m_csOutputBuffer);
+			
+			// And send to the plugins
+			m_pPluginsHandler->putCAPacket(this, TYPE_ECM, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 
 			// Get the last packet in the queue
 			OutputBuffer* const lastBuffer = m_OutputBuffers.back();
