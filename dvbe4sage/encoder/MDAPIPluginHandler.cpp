@@ -306,12 +306,12 @@ void MDAPIPluginsHandler::stopFilter(LPARAM lParam)
 // This is the callback called for each newly arrived dvb command
 void MDAPIPluginsHandler::dvbCommand(LPARAM lParam)
 {
-	// Do this in critical section
-	CAutoLock lock(&m_cs);
-
 	// Get the DVB command structure from the lParam
 	TDVB_COMMAND dvbCommand = *(TDVB_COMMAND*)lParam;
 	bool isOddKey = dvbCommand.buffer[4] ? true : false;
+
+	// Do this in critical section
+	CAutoLock lock(&m_cs);
 
 	// Let's check the state of the current client
 	if(m_pCurrentClient != NULL)
@@ -349,8 +349,13 @@ void MDAPIPluginsHandler::resetProcessState()
 bool MDAPIPluginsHandler::handleTuningRequest()
 {
 	bool bRet = false;
+
 	// Invalidate current ECM callback
 	m_CurrentEcmCallback = NULL;
+
+	// Fill the structure
+	TPROGRAM82 tp;
+	fillTPStructure(&tp);
 
 	// Unlock the critical section, since some of the plugins do SendMessage and not PostMessage
 	m_cs.Unlock();
@@ -360,10 +365,6 @@ bool MDAPIPluginsHandler::handleTuningRequest()
 	for(list<Plugin>::iterator pit = m_Plugins.begin(); pit != m_Plugins.end(); pit++)
 		if(pit->acceptsCAid(m_pCurrentClient->ecmCaids))
 		{
-			// Fill the structure
-			TPROGRAM82 tp;
-			fillTPStructure(&tp);
-
 			// And then finally tune to the program
 			pit->m_fpChannelChange(tp);
 			bRet = true;
@@ -376,9 +377,6 @@ bool MDAPIPluginsHandler::handleTuningRequest()
 
 void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)
 {
-	// Lock the internal structures
-	m_cs.Lock();
-
 	// Zero memory
 	memset(tp, 0, sizeof(TPROGRAM82));
 
@@ -410,7 +408,4 @@ void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)
 	tp->wECM = m_pCurrentClient->ecmPid;
 	tp->wSID = m_pCurrentClient->sid;
 	tp->wPMT = m_pCurrentClient->pmtPid;
-
-	// Unlock the internal structures
-	m_cs.Unlock();
 }
