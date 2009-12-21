@@ -1495,7 +1495,8 @@ bool ESCAParser::setKey(bool isOddKey,
 
 		// Try to use the key only if the buffer doesn't have one
 		// If the buffer has a key, even an unverified one, leave it alone, it might verify itself later
-		if(!currentBuffer->hasKey)
+		// But we do want to do this for the last empty buffer
+		if(!currentBuffer->hasKey || (it + 1 == m_OutputBuffers.end() && currentBuffer->numberOfPackets == 0))
 		{
 			// Let's see if the key can decrypt the current buffer
 			KeyCorrectness keyCorrectness = isCorrectKey(currentBuffer->buffer,
@@ -1542,8 +1543,14 @@ bool ESCAParser::setKey(bool isOddKey,
 				// Whether it's verified or not depends on the certainty of the key check
 				currentBuffer->keyVerified = (keyCorrectness == KEY_OK);
 				if(currentBuffer->keyVerified)
+				{
 					// Buffer key has been verified
 					log(3, true, 0, TEXT("Buffer with length %lu, key verified immediately...\n"), currentBuffer->numberOfPackets);
+					// Also, verify all non-verified buffers prior that one
+					for(deque<OutputBuffer* const>::iterator it1 = m_OutputBuffers.begin(); *it1 != currentBuffer; it1++)
+						if((*it1)->hasKey)
+							(*it1)->keyVerified = true;
+				}
 				else
 					// Buffer key will be verified later
 					log(3, true, 0, TEXT("Buffer with length %lu, key will be verified with delay...\n"), currentBuffer->numberOfPackets);
