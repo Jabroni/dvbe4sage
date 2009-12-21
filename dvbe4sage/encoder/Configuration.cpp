@@ -44,7 +44,7 @@ Configuration::Configuration()
 	m_UseNewTuningMethod = GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseNewTuningMethod"), 0, iniFileFullPath) == 0 ? false : true;
 	m_DontFixPMT = GetPrivateProfileInt(TEXT("Advanced"), TEXT("DontFixPMT"), 0, iniFileFullPath) == 0 ? false : true;
 	m_IsVGCam = GetPrivateProfileInt(TEXT("Plugins"), TEXT("IsVGCam"), 0, iniFileFullPath) == 0 ? false : true;
-	m_MaxNumberOfResets = GetPrivateProfileInt(TEXT("Plugins"), TEXT("MaxNumberOfResets"), 10, iniFileFullPath) == 0 ? false : true;
+	m_MaxNumberOfResets = GetPrivateProfileInt(TEXT("Plugins"), TEXT("MaxNumberOfResets"), 5, iniFileFullPath) == 0 ? false : true;
 	m_MaxECMCacheSize = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("MaxECMCacheSize"), 3000, iniFileFullPath);
 	m_ECMCacheAutodeleteChunkSize = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("ECMCacheAutodeleteChunkSize"), 300, iniFileFullPath);
 	m_ScanAllTransponders = GetPrivateProfileInt(TEXT("Tuning"), TEXT("ScanAllTransponders"), 0, iniFileFullPath) == 0 ? false : true;

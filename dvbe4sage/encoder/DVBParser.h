@@ -226,7 +226,7 @@ private:
 	static bool matchAudioLanguage(const BYTE* const buffer, const int bufferLength, const char* language);
 
 	// Check if a key can decrypt the current buffer
-	KeyCorrectness isCorrectKey(const BYTE* const buffer, ULONG numberOfPackets, const BYTE* const oddKey, const BYTE* const evenKey);
+	KeyCorrectness isCorrectKey(const BYTE* const buffer, ULONG numberOfPackets, const BYTE* const oddKey, bool checkAgainstOddKey,	const BYTE* const evenKey, bool checkAgainstEvenKey);
 
 	// Default and copy constructors are disallowed
 	ESCAParser();

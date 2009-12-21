@@ -1449,7 +1449,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			if(lastBuffer->numberOfPackets != 0)
 			{
 				// Log how many packets were before the new buffer has been added
-				log(3, true, 0, TEXT("ECM packet received when %d packets resided in the output buffer\n"), lastBuffer->numberOfPackets);
+				log(3, true, 0, TEXT("ECM packet received when %lu packets resided in the output buffer\n"), lastBuffer->numberOfPackets);
 
 				// Otherwise, create a new output buffer
 				OutputBuffer* const newBuffer = new OutputBuffer;
@@ -1462,8 +1462,14 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 				m_OutputBuffers.push_back(newBuffer);
 			}
 			else
+			{
 				// Log the fact no packets were in the output buffer when an ECM packet has been received
 				log(3, true, 0, TEXT("ECM packet received when the output buffer was epmty\n"));
+
+				// Also, make sure the keys are reset
+				lastBuffer->hasKey = false;
+				lastBuffer->keyVerified = false;
+			}
 		}
 	}
 }
@@ -1483,14 +1489,15 @@ bool ESCAParser::setKey(bool isOddKey,
 		// Get the buffer from the queue
 		OutputBuffer* const currentBuffer = *it;
 
-		// Try to use the key only if the buffer doesn't have one or if this is the last buffer
-		if(!(currentBuffer->hasKey && currentBuffer->keyVerified))
+		// Try to use the key only if the buffer doesn't have one
+		// If the buffer has a key, even an unverified one, leave it alone, it might verify itself later
+		if(!currentBuffer->hasKey)
 		{
 			// Let's see if the key can decrypt the current buffer
 			KeyCorrectness keyCorrectness = isCorrectKey(currentBuffer->buffer,
 														 currentBuffer->numberOfPackets,
-														 isOddKey ? key : currentBuffer->oddKey,
-														 !isOddKey ? key : currentBuffer->evenKey);
+														 key, isOddKey,
+														 key, !isOddKey);
 
 			// First, deal with keys known as wrong ones
 			if(keyCorrectness == KEY_WRONG)
@@ -1548,8 +1555,7 @@ bool ESCAParser::setKey(bool isOddKey,
 				}
 
 				// Signal the work thread we've got a new key for sure
-				if(keyCorrectness == KEY_OK)
-					SetEvent(m_SignallingEvent);
+				SetEvent(m_SignallingEvent);
 
 				// Indicate we found and least one matching buffer
 				foundMatchingBuffer = true;
@@ -1680,28 +1686,22 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 		// If the current buffer has a key but it hasn't been verified yet, try to verify it
 		if(currentBuffer->hasKey && !currentBuffer->keyVerified)
 		{
-			switch(isCorrectKey(packet, 1, currentBuffer->oddKey, currentBuffer->evenKey))
+			switch(isCorrectKey(packet, 1, currentBuffer->oddKey, true, currentBuffer->evenKey, true))
 			{
 				case KEY_OK:
 					// Key verified
 					currentBuffer->keyVerified = true;
 					// Buffer key has been verified
 					log(3, true, 0, TEXT("Buffer key verified with delay...\n"));
-					// Let's see if any of the previous buffers are OK or need to be thrown away
-					for(deque<OutputBuffer* const>::iterator it = m_OutputBuffers.begin(); *it != currentBuffer;)
-						if(!(*it)->keyVerified)
-						{
-							log(2, true, 0, TEXT("Dropped %lu packets because of unusable key...\n"), (*it)->numberOfPackets);
-							delete *it;
-							it = m_OutputBuffers.erase(it);
-						}
-						else
-							it++;
+					// Verify all the previous ones postfactum
+					for(deque<OutputBuffer* const>::iterator it = m_OutputBuffers.begin(); *it != currentBuffer;it++)
+						(*it)->keyVerified = true;
 					break;
 				case KEY_WRONG:
 					// Key wrong, invalidate it!
 					currentBuffer->hasKey = false;
 					currentBuffer->keyVerified = false;
+					log(2, true, 0, TEXT("Wrong key has been assigned to the buffer, invalidating...\n"));
 					break;
 				default:
 					break;
@@ -1828,8 +1828,17 @@ bool ESCAParser::matchAudioLanguage(const BYTE* const buffer,
 KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 										ULONG numberOfPackets,
 										const BYTE* const oddKey,
-										const BYTE* const evenKey)
+										bool checkAgainstOddKey,
+										const BYTE* const evenKey,
+										bool checkAgainstEvenKey)
 {
+	log(4, true, 0, TEXT("Trying to match the key against %lu packets\n"), numberOfPackets);
+
+	// See if the keys are initialized
+	static const BYTE nullKey[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+	bool oddKeyInitialized = (memcmp(oddKey, nullKey, sizeof(nullKey)) != 0);
+	bool evenKeyInitialized = (memcmp(evenKey, nullKey, sizeof(nullKey)) != 0);
+
 	// Flag indicating any PES packets have been found
 	bool anyPESPacketsFound = false;
 
@@ -1847,9 +1856,10 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 		// 3. It contains not only adaptation field
 		// 4. It doesn't have an error
 		if(packet->payload_unit_start_indicator &&
-		   packet->transport_scrambling_control != 0 &&
 		   packet->adaptation_field_control != 2 &&
-		   !packet->transport_error_indicator)
+		   !packet->transport_error_indicator &&
+		   (evenKeyInitialized && checkAgainstEvenKey && packet->transport_scrambling_control == 2 ||
+		    oddKeyInitialized &&  checkAgainstOddKey &&  packet->transport_scrambling_control == 3 ))
 		{
 			// There is at least one PES packet in the buffer
 			anyPESPacketsFound = true;
@@ -1867,13 +1877,23 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 			// Log the offset value
 			log(4, true, 0, TEXT("Offset = %lu\n"), offset);
 
+			USHORT pid = HILO(packet->PID);
+
 			// Now let's see if we have a valid PES packet header
 			if(copyPacket[offset] == 0 && copyPacket[offset + 1] == 0 && copyPacket[offset + 2] == 1)
+			{
+				log(3, true, 0, TEXT("Discovered a packet with PID=0x%hX matching the key, expected %s key\n"),
+					pid, (packet->transport_scrambling_control & 1) ? TEXT("ODD") : TEXT("EVEN"));
 				// If yes, we know for sure we have the right key
 				return KEY_OK;
+			}
 
 			// If no, it doesn't mean anything, we might just have a wrong parity key
 			// (the packet is odd and the key is even or vise versa)
+			
+			// Log message
+			log(3, true, 0, TEXT("Discovered a packet with PID=0x%hX mismatching the key, expected %s key\n"),
+				pid, (packet->transport_scrambling_control & 1) ? TEXT("ODD") : TEXT("EVEN"));
 		}
 	}
 
