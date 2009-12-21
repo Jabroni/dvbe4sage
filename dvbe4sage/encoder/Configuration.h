@@ -49,6 +49,7 @@ class Configuration
 	bool						m_IsVGCam;
 	USHORT						m_MaxECMCacheSize;
 	USHORT						m_ECMCacheAutodeleteChunkSize;
+	bool						m_EnableECMCache;
 public:
 	Configuration();
 	
@@ -96,6 +97,7 @@ public:
 	bool getDontFixPMT() const						{ return m_DontFixPMT; }
 	USHORT getMaxECMCacheSize() const				{ return m_MaxECMCacheSize; }
 	USHORT getECMCacheAutodeleteChunkSize() const	{ return m_ECMCacheAutodeleteChunkSize; }
+	bool getEnableECMCache() const					{ return m_EnableECMCache; }
 };
 
 extern Configuration* g_pConfiguration;

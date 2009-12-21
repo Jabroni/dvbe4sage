@@ -290,7 +290,7 @@ void PluginsHandler::ECMRequestComplete(Client* client,
 										const BYTE* ecmPacket,
 										const Dcw& dcw,
 										bool isOddKey,
-										bool addToCache )
+										bool fromPlugin)
 {
 	// Log the fact there is a response for the SID, it won't necessarily be accepted by the parser
 	log(2, true, 0, TEXT("Response for SID=%hu received, passing to the parser...\n"), client->sid);
@@ -301,13 +301,13 @@ void PluginsHandler::ECMRequestComplete(Client* client,
 		// Log the key
 		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
-			addToCache ? TEXT("plugin") : TEXT("cache"));
+			fromPlugin ? TEXT("plugin") : TEXT("cache"));
 		return;
 	}
 	else
 	{
-		// If asked to add the data to the cache, this means normal processing, leaving all triggers set otherwise
-		if(addToCache)
+		// If received from the plugin, this means normal processing, leaving all triggers set otherwise
+		if(fromPlugin)
 		{
 			// Cancel deferred tuning
 			m_DeferTuning = false;
@@ -318,12 +318,13 @@ void PluginsHandler::ECMRequestComplete(Client* client,
 			// Indicate we're no longer waiting on the timer
 			m_TimerInitialized = false;
 
-			// Add the key to the cache
-			m_ECMCache.add(ecmPacket, dcw, isOddKey);
+			// Add the key to the cache, if permitted by configuration
+			if(g_pConfiguration->getEnableECMCache())
+				m_ECMCache.add(ecmPacket, dcw, isOddKey);
 		}
 		// Log the key
 		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - accepted and %sadded to the cache!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
-			addToCache ? TEXT("plugin") : TEXT("cache"), addToCache ? TEXT("") : TEXT("NOT "));
+			fromPlugin ? TEXT("plugin") : TEXT("cache"), fromPlugin && g_pConfiguration->getEnableECMCache() ? TEXT("") : TEXT("NOT "));
 	}
 }
