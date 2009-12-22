@@ -2,7 +2,6 @@
 // Microsoft Visual C++ generated include file.
 // Used by pluginshandler.rc
 //
-#define IDR_MENU1                       101
 #define IDR_PLUGINS_MENU                101
 
 // Next default values for new objects
