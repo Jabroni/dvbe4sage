@@ -6,6 +6,7 @@
 #include "Recorder.h"
 #include "configuration.h"
 #include "extern.h"
+#include "GenericSource.h"
 
 // Define constants
 #define	CRC_LENGTH			4
@@ -1446,7 +1447,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			if(lastBuffer->numberOfPackets != 0)
 			{
 				// Log how many packets were before the new buffer has been added
-				log(3, true, 0, TEXT("ECM packet received when %lu packets resided in the output buffer\n"), lastBuffer->numberOfPackets);
+				log(3, true, getTunerOrdinal(), TEXT("ECM packet received when %lu packets resided in the output buffer\n"), lastBuffer->numberOfPackets);
 
 				// Otherwise, create a new output buffer
 				OutputBuffer* const newBuffer = new OutputBuffer;
@@ -1461,7 +1462,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			else
 			{
 				// Log the fact no packets were in the output buffer when an ECM packet has been received
-				log(3, true, 0, TEXT("ECM packet received when the output buffer was epmty\n"));
+				log(3, true, getTunerOrdinal(), TEXT("ECM packet received when the output buffer was epmty\n"));
 
 				// Also, make sure the keys are reset
 				lastBuffer->hasKey = false;
@@ -1513,7 +1514,7 @@ bool ESCAParser::setKey(bool isOddKey,
 					it = m_OutputBuffers.erase(it);
 
 					// Log the fact we dropped some packets
-					log(2, true, 0, TEXT("Key doesn't match, dropped %lu packets\n"), currentBuffer->numberOfPackets);
+					log(2, true, getTunerOrdinal(), TEXT("Key doesn't match, dropped %lu packets\n"), currentBuffer->numberOfPackets);
 
 					// And delete the buffer itself
 					delete currentBuffer;
@@ -1522,7 +1523,7 @@ bool ESCAParser::setKey(bool isOddKey,
 				{
 					// We get here if the key was wrong, but it was the last buffer
 					// Log the fact the key didn't match the last available buffer
-					log(2, true, 0, TEXT("Key doesn't match, maybe the next one will...\n"));
+					log(2, true, getTunerOrdinal(), TEXT("Key doesn't match, maybe the next one will...\n"));
 
 					// The buffer doesn't have a key and it was not verified
 					currentBuffer->keyVerified = false;
@@ -1545,7 +1546,7 @@ bool ESCAParser::setKey(bool isOddKey,
 				if(currentBuffer->keyVerified)
 				{
 					// Buffer key has been verified
-					log(3, true, 0, TEXT("Buffer with length %lu, key verified immediately...\n"), currentBuffer->numberOfPackets);
+					log(3, true, getTunerOrdinal(), TEXT("Buffer with length %lu, key verified immediately...\n"), currentBuffer->numberOfPackets);
 					// Also, verify all non-verified buffers prior that one
 					for(deque<OutputBuffer* const>::iterator it1 = m_OutputBuffers.begin(); *it1 != currentBuffer; it1++)
 						if((*it1)->hasKey)
@@ -1553,7 +1554,7 @@ bool ESCAParser::setKey(bool isOddKey,
 				}
 				else
 					// Buffer key will be verified later
-					log(3, true, 0, TEXT("Buffer with length %lu, key will be verified with delay...\n"), currentBuffer->numberOfPackets);
+					log(3, true, getTunerOrdinal(), TEXT("Buffer with length %lu, key will be verified with delay...\n"), currentBuffer->numberOfPackets);
 
 				// Let's see if we need to update a key to its successor
 				if(it + 1 != m_OutputBuffers.end())
@@ -1685,7 +1686,7 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 
 	// This really shouldn't happen!
 	if(currentBuffer->numberOfPackets >= g_pConfiguration->getTSPacketsPerOutputBuffer())
-		log(0, true, 0, TEXT("Too many packets for decryption!\n"));
+		log(0, true, getTunerOrdinal(), TEXT("Too many packets for decryption!\n"));
 	else
 	{
 		// Copy the packet to the output buffer
@@ -1703,8 +1704,8 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 					// Key verified
 					currentBuffer->keyVerified = true;
 					// Buffer key has been verified
-					log(3, true, 0, TEXT("Buffer key verified with delay...\n"));
-					// Verify all the previous ones postfactum
+					log(3, true, getTunerOrdinal(), TEXT("Buffer key verified with delay...\n"));
+					// Verify all the previous ones post factum
 					for(deque<OutputBuffer* const>::iterator it = m_OutputBuffers.begin(); *it != currentBuffer;it++)
 						(*it)->keyVerified = true;
 					break;
@@ -1712,7 +1713,7 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 					// Key wrong, invalidate it!
 					currentBuffer->hasKey = false;
 					currentBuffer->keyVerified = false;
-					log(2, true, 0, TEXT("Wrong key has been assigned to the buffer, invalidating...\n"));
+					log(2, true, getTunerOrdinal(), TEXT("Wrong key has been assigned to the buffer, invalidating...\n"));
 					break;
 				default:
 					break;
@@ -1745,7 +1746,7 @@ void ESCAParser::decryptAndWritePending(bool immediately)
 			m_Decrypter.setKeys(currentBuffer->oddKey, currentBuffer->evenKey);
 
 			// Log how many packets are about to be written
-			log(3, true, 0, TEXT("Writing %d pending packets..."), currentBuffer->numberOfPackets);
+			log(3, true, getTunerOrdinal(), TEXT("Writing %d pending packets..."), currentBuffer->numberOfPackets);
 			
 			// Decrypt multiple packets
 			m_Decrypter.decrypt(currentBuffer->buffer, currentBuffer->numberOfPackets);
@@ -1843,7 +1844,7 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 										const BYTE* const evenKey,
 										bool checkAgainstEvenKey)
 {
-	log(4, true, 0, TEXT("Trying to match the key against %lu packets\n"), numberOfPackets);
+	log(4, true, getTunerOrdinal(), TEXT("Trying to match the key against %lu packets\n"), numberOfPackets);
 
 	// See if the keys are initialized
 	static const BYTE nullKey[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -1886,14 +1887,14 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 			const ULONG offset = TS_LEN + ((packet->adaptation_field_control == 3) ? (ULONG)(copyPacket[TS_LEN] + 1) : 0);
 
 			// Log the offset value
-			log(4, true, 0, TEXT("Offset = %lu\n"), offset);
+			log(4, true, getTunerOrdinal(), TEXT("Offset = %lu\n"), offset);
 
 			USHORT pid = HILO(packet->PID);
 
 			// Now let's see if we have a valid PES packet header
 			if(copyPacket[offset] == 0 && copyPacket[offset + 1] == 0 && copyPacket[offset + 2] == 1)
 			{
-				log(3, true, 0, TEXT("Discovered a packet with PID=0x%hX matching the key, expected %s key\n"),
+				log(3, true, getTunerOrdinal(), TEXT("Discovered a packet with PID=0x%hX matching the key, expected %s key\n"),
 					pid, (packet->transport_scrambling_control & 1) ? TEXT("ODD") : TEXT("EVEN"));
 				// If yes, we know for sure we have the right key
 				return KEY_OK;
@@ -1903,11 +1904,16 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 			// (the packet is odd and the key is even or vise versa)
 			
 			// Log message
-			log(3, true, 0, TEXT("Discovered a packet with PID=0x%hX mismatching the key, expected %s key\n"),
+			log(3, true, getTunerOrdinal(), TEXT("Discovered a packet with PID=0x%hX mismatching the key, expected %s key\n"),
 				pid, (packet->transport_scrambling_control & 1) ? TEXT("ODD") : TEXT("EVEN"));
 		}
 	}
 
 	// If no PES packets have been in the buffer, the key still might be OK, otherwise the key is wrong
 	return anyPESPacketsFound ? KEY_WRONG : KEY_MAYBE_OK;
+}
+
+int ESCAParser::getTunerOrdinal() const
+{
+	return m_pRecorder->getSource()->getSourceOrdinal();
 }

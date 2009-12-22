@@ -8,6 +8,7 @@
 #include "virtualtuner.h"
 #include "encoder.h"
 #include "GenericSource.h"
+#include "FileSource.h"
 
 DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 {
@@ -29,7 +30,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 		if((__int64)difftime(now, recorder->m_Time) > recorder->m_Duration)
 		{
 			// Log stop recording message
-			log(0, true, 0, TEXT("Time passed, "));
+			log(0, true, recorder->getSource()->getSourceOrdinal(), TEXT("Time passed, "));
 
 			// Tell it to stop recording
 			recorder->stopRecording();
@@ -43,7 +44,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 		else if(recorder->brokenPipe())
 		{
 			// Log stop recording message
-			log(0, true, 0, TEXT("File operation failed, "));
+			log(0, true, recorder->getSource()->getSourceOrdinal(), TEXT("File operation failed, "));
 
 			// Tell it to stop recording
 			recorder->stopRecording();
@@ -162,7 +163,7 @@ Recorder::Recorder(PluginsHandler* const plugins,
 		// Check if opening file succeeded
 		if(m_fout == NULL)
 		{
-			log(0, true, 0, TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), CW2CT(outFileName), GetLastError());
+			log(0, true, getSource()->getSourceOrdinal(), TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), CW2CT(outFileName), GetLastError());
 			m_HasError = true;
 		}
 	}
@@ -205,19 +206,19 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				// Check if opening file succeeded
 				if(m_fout == NULL)
 				{
-					log(0, true, 0, TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), CW2CT(outFileName), GetLastError());
+					log(0, true, getSource()->getSourceOrdinal(), TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), CW2CT(outFileName), GetLastError());
 					m_HasError = true;
 				}
 			}
 			else
 			{
-				log(0, true, 0, TEXT("The file \"%s\" was not found!\n"), CW2CT(outFileName), GetLastError());
+				log(0, true, getSource()->getSourceOrdinal(), TEXT("The file \"%s\" was not found!\n"), CW2CT(outFileName), GetLastError());
 				m_HasError = true;
 			}
 		}
 		else
 		{
-			log(0, true, 0, TEXT("The file \"%s\" was not found!\n"), CW2CT(outFileName), GetLastError());
+			log(0, true, getSource()->getSourceOrdinal(), TEXT("The file \"%s\" was not found!\n"), CW2CT(outFileName), GetLastError());
 			m_HasError = true;
 		}
 	}
@@ -231,6 +232,10 @@ Recorder::~Recorder(void)
 	// Close the output file
 	if(m_fout != NULL)
 		fclose(m_fout);
+
+	// If the recorder works on a FileSource kind of source, also delete it
+	if(dynamic_cast<FileSource*>(m_pSource) != NULL)
+		delete m_pSource;
 
 	// Close orphan thread handles
 	if(m_StartRecordingThread != NULL)
@@ -308,7 +313,7 @@ bool Recorder::changeState()
 			if(difftime(now, m_Time) > g_pConfiguration->getTuningTimeout())
 			{
 				// Log stop recording message
-				log(0, true, 0, TEXT("Could not start recording after %u seconds, "), g_pConfiguration->getTuningTimeout());
+				log(0, true, getSource()->getSourceOrdinal(), TEXT("Could not start recording after %u seconds, "), g_pConfiguration->getTuningTimeout());
 
 				// Unlock the parser
 				sourceParser->unlock();
@@ -324,7 +329,7 @@ bool Recorder::changeState()
 			if(!m_pSource->getLockStatus() && difftime(now, m_Time) > g_pConfiguration->getTuningLockTimeout())
 			{
 				// Log stop recording message
-				log(0, true, 0, TEXT("Could not lock signal after %u seconds, "), g_pConfiguration->getTuningLockTimeout());
+				log(0, true, getSource()->getSourceOrdinal(), TEXT("Could not lock signal after %u seconds, "), g_pConfiguration->getTuningLockTimeout());
 
 				// Unlock the parser
 				sourceParser->unlock();

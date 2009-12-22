@@ -293,13 +293,13 @@ void PluginsHandler::ECMRequestComplete(Client* client,
 										bool fromPlugin)
 {
 	// Log the fact there is a response for the SID, it won't necessarily be accepted by the parser
-	log(2, true, 0, TEXT("Response for SID=%hu received, passing to the parser...\n"), client->sid);
+	log(2, true, client->caller->getTunerOrdinal(), TEXT("Response for SID=%hu received, passing to the parser...\n"), client->sid);
 
 	// Set the key to the parser which called us
 	if(wrong(dcw) || !client->caller->setKey(isOddKey, dcw.key))
 	{
 		// Log the key
-		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+		log(2, true, client->caller->getTunerOrdinal(), TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
 			fromPlugin ? TEXT("plugin") : TEXT("cache"));
 		return;
@@ -323,7 +323,7 @@ void PluginsHandler::ECMRequestComplete(Client* client,
 				m_ECMCache.add(ecmPacket, dcw, isOddKey);
 		}
 		// Log the key
-		log(2, true, 0, TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - accepted and %sadded to the cache!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
+		log(2, true, client->caller->getTunerOrdinal(), TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - accepted and %sadded to the cache!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
 			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
 			fromPlugin ? TEXT("plugin") : TEXT("cache"), fromPlugin && g_pConfiguration->getEnableECMCache() ? TEXT("") : TEXT("NOT "));
 	}

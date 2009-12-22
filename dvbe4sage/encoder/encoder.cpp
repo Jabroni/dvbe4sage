@@ -100,9 +100,10 @@ Encoder::~Encoder()
 	// For all recorders
 	while(!m_Recorders.empty())
 	{
-		log(0, true, 0, TEXT("Aborting, "));
 		// Get the recorder pointer
 		Recorder* recorder = m_Recorders.begin()->second;
+		// Log the entry
+		log(0, true, recorder->getSource()->getSourceOrdinal(), TEXT("Aborting, "));
 		// Stop ongoing recordings
 		recorder->stopRecording();
 		// And delete the recorder
@@ -502,100 +503,95 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// Boil out if an appropriate tuner is not found
 	if(tuner == NULL)
 	{
-		log(0, true, 0, TEXT("Cannot start recording for %s=%d (\"%s\"), no sutable tuner found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel, channelName);
+		log(0, true, 0, TEXT("Cannot start recording for %s=%d (\"%s\"), no sutable source found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel, channelName);
 		return false;
 	}
 	
 	// Make a log entry
 	if(useSid)
-		log(0, true, 0, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu (\"%s\"), Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu (\"%s\"), Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), sid, channelName, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 	else
-		log(0, true, 0, TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), channel, channelName, sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
 	// If we found the tuner
-	if(tuner != NULL)
+	// Create the recorder
+	Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, outFileName, useSid, channel, sid, channelName, duration, this, size, bySage);
+
+	// Let's see if the recorder has an error, just delete it and exit
+	if(recorder->hasError())
 	{
-		// Create the recorder
-		Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, outFileName, useSid, channel, sid, channelName, duration, this, size, bySage);
+		log(0, true, tuner->getSourceOrdinal(), TEXT("Cannot start recording!\n")),
+		delete recorder;
+		return false;
+	}
 
-		// Let's see if the recorder has an error, just delete it and exit
-		if(recorder->hasError())
+	// Lock access to global structure
+	m_cs.Lock();
+
+	// Let's see if the tuner is already used
+	bool bTunerUsed = false;
+	for(hash_multimap<USHORT, Recorder*>::iterator it = m_Recorders.begin(); it != m_Recorders.end(); it++)
+		if(it->second->getSource() == tuner)
 		{
-			log(0, true, 0, TEXT("Cannot start recording!\n")),
-			delete recorder;
-			return false;
+			bTunerUsed = true;
+			break;
 		}
 
-		// Lock access to global structure
-		m_cs.Lock();
+	// Assign this recorder to the virtual tuner if needed
+	if(virtualTuner != NULL)
+		virtualTuner->setRecorder(recorder);
 
-		// Let's see if the tuner is already used
-		bool bTunerUsed = false;
-		for(hash_multimap<USHORT, Recorder*>::iterator it = m_Recorders.begin(); it != m_Recorders.end(); it++)
-			if(it->second->getSource() == tuner)
-			{
-				bTunerUsed = true;
-				break;
-			}
+	// Set the flag to succeeded
+	bool succeeded = true;
 
-		// Assign this recorder to the virtual tuner if needed
-		if(virtualTuner != NULL)
-			virtualTuner->setRecorder(recorder);
+	// Let's see if we need to do anything on the tuner
+	if(!bTunerUsed)
+	{
+		// Tune to the right parameters
+		tuner->tune(frequency, symbolRate, polarization, modulation, fecRate);
 
-		// Set the flag to succeeded
-		bool succeeded = true;
-
-		// Let's see if we need to do anything on the tuner
-		if(!bTunerUsed)
+		// Now, start the recording
+		if(tuner->startPlayback(startFullTransponderDump))
 		{
-			// Tune to the right parameters
-			tuner->tune(frequency, symbolRate, polarization, modulation, fecRate);
-
-			// Now, start the recording
-			if(tuner->startPlayback(startFullTransponderDump))
-			{
-				// Set the TID if recording was started successfully
-				tuner->setTid(tid);
-				// And add the recorder to the global structure
-				m_Recorders.insert(pair<USHORT, Recorder*>((USHORT)tunerOrdinal, recorder));
-			}
-			else
-			{
-				// Unset succeeded flag
-				succeeded = false;
-				// And delete the recorder
-				delete recorder;
-			}
-		}
-		else
-			// Just add the recorder to the global structure
+			// Set the TID if recording was started successfully
+			tuner->setTid(tid);
+			// And add the recorder to the global structure
 			m_Recorders.insert(pair<USHORT, Recorder*>((USHORT)tunerOrdinal, recorder));
-
-		// Unlock access to the global structure
-		m_cs.Unlock();
-
-		// If succeeded, try to start recording
-		if(succeeded)
-		{
-			// Start the recording
-			recorder->startRecording();
-			// All is good
-			return true;
 		}
 		else
 		{
-			// Make the log entry
-			log(0, true, 0, TEXT("Cannot start recording!\n"));
-			// And return false
-			return false;
+			// Unset succeeded flag
+			succeeded = false;
+			// And delete the recorder
+			delete recorder;
 		}
 	}
 	else
+		// Just add the recorder to the global structure
+		m_Recorders.insert(pair<USHORT, Recorder*>((USHORT)tunerOrdinal, recorder));
+
+	// Unlock access to the global structure
+	m_cs.Unlock();
+
+	// If succeeded, try to start recording
+	if(succeeded)
+	{
+		// Start the recording
+		recorder->startRecording();
+		// All is good
+		return true;
+	}
+	else
+	{
+		// Make the log entry
+		log(0, true, tuner->getSourceOrdinal(), TEXT("Cannot start recording!\n"));
+		// And return false
 		return false;
+	}
 }
 
 bool Encoder::stopRecording(Recorder* recorder)
@@ -628,13 +624,7 @@ bool Encoder::stopRecording(Recorder* recorder)
 
 	// If no, stop running graph on it
 	if(!bSourceUsed)
-	{
 		source->stopPlayback();
-
-		// If this is a FileSource kind of source, also delete it
-		if(dynamic_cast<FileSource*>(source) != NULL)
-			delete source;
-	}
 
 	return true;
 }

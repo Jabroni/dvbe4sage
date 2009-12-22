@@ -261,6 +261,9 @@ public:
 
 	// Get the file length
 	__int64 getFileLength() const	{ return m_FileLength; }
+
+	// Get the tuner ordinal
+	int getTunerOrdinal() const;
 };
 
 // TS stream parser

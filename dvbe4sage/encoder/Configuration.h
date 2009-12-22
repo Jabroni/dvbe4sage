@@ -22,14 +22,13 @@ class Configuration
 	UINT						m_InitialRunningTime;
 	bool						m_UseSidForTuning;
 	USHORT						m_NumberOfVirtualTuners;
-	hash_set<int>				m_ExcludedTuners;
-	hash_set<int>				m_IncludedTuners;
+	hash_set<UINT>				m_ExcludedTuners;
+	hash_set<UINT>				m_IncludedTuners;
 	hash_set<string>			m_ExcludedTunersMAC;
 	hash_set<string>			m_IncludedTunersMAC;
 	bool						m_ScanAllTransponders;
 
-	hash_set<int>				m_DVBS2Tuners;
-	string						m_DECSADllName;
+	hash_set<UINT>				m_DVBS2Tuners;
 	bool						m_DisableWriteBuffering;
 	string						m_PreferredAudioLanguage;
 	ULONG						m_LNBSW;
@@ -53,12 +52,12 @@ class Configuration
 public:
 	Configuration();
 	
-	bool excludeTuner(int tunerOrdinal) const		{ return m_ExcludedTuners.count(tunerOrdinal) > 0; }
+	bool excludeTuner(UINT tunerOrdinal) const		{ return m_ExcludedTuners.count(tunerOrdinal) > 0; }
 	bool excludeTunersByMAC(const string mac) const	{ return m_ExcludedTunersMAC.count(mac) > 0 ; }
-	bool includeTuner(int tunerOrdinal) const		{ return m_IncludedTuners.count(tunerOrdinal) > 0; }
+	bool includeTuner(UINT tunerOrdinal) const		{ return m_IncludedTuners.count(tunerOrdinal) > 0; }
 	bool includeTunersByMAC(const string mac) const	{ return m_IncludedTunersMAC.count(mac) > 0 ; }
 	bool includeTuners() const						{ return !m_IncludedTuners.empty() || !m_IncludedTunersMAC.empty(); }
-	bool isDVBS2Tuner(int tunerOrdinal) const		{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
+	bool isDVBS2Tuner(UINT tunerOrdinal) const		{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
 	bool isCAIDServed(USHORT caid) const			{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
 	bool isPROVIDServed(UINT provid) const			{ return m_ServededProvIds.empty() || m_ServededProvIds.count(provid) > 0; }
 	bool isVGCam() const							{ return m_IsVGCam; };
@@ -80,7 +79,6 @@ public:
 	UINT getInitialRunningTime() const				{ return m_InitialRunningTime; }
 	bool getUseSidForTuning() const					{ return m_UseSidForTuning; }
 	USHORT getNumberOfVirtualTuners() const			{ return m_NumberOfVirtualTuners; }
-	LPCTSTR getDECSADllName() const					{ return m_DECSADllName.c_str(); }
 	bool getDisableWriteBuffering() const			{ return m_DisableWriteBuffering; }
 	LPCTSTR getPrefferedAudioLanguage() const		{ return m_PreferredAudioLanguage.c_str(); }
 	ULONG getLNBSW() const							{ return m_LNBSW; }
