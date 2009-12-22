@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 
+#include "..\\svnrevision\\svnrevision.h"
 #include "Configuration.h"
 #include "extern.h"
 #include "logger.h"
@@ -17,6 +18,7 @@ Configuration::Configuration()
 	_tcscpy_s(&iniFileFullPath[iniFileFullPathLen], sizeof(iniFileFullPath) / sizeof(iniFileFullPath[0]) - iniFileFullPathLen - 1, INI_FILE_NAME);
 
 	// Log info
+	log(0, true, 0, TEXT("DVBE4SAGE Encoder SVN revision %d\n"), SVN_REVISION);
 	log(0, true, 0, TEXT("Loading configuration info from \"%s\"\n"), iniFileFullPath);
 
 	// Buffer
