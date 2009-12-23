@@ -85,6 +85,19 @@ void WINAPI VGPluginsHandler::DCWHandler(int nParm,
 
 		// Indicate that ECM request has been completed and add it to the cache
 		ECMRequestComplete(m_pCurrentClient, m_pCurrentClient->ecmPacket, dcw, isOddKey, true);
+
+		p = (unsigned char *)&pDCW[0] + (!isOddKey ? 8 : 0);
+
+		// If OK, copy the key from the DVB command buffer
+		memcpy(dcw.key, p, 8);
+
+		//Fix Checksum
+		dcw.key[3] = dcw.key[0] + dcw.key[1] + dcw.key[2];
+		dcw.key[7] = dcw.key[4] + dcw.key[5] + dcw.key[6];
+
+		// Indicate that ECM request has been completed and add it to the cache
+		if(dcw.number != 0)
+			ECMRequestComplete(m_pCurrentClient, m_pCurrentClient->ecmPacket, dcw, isOddKey, true);
 	}
 	else
 		log(0, true, 0, TEXT("Key received but the client has already left\n"));
