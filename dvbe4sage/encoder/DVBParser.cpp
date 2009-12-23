@@ -1497,7 +1497,7 @@ bool ESCAParser::setKey(bool isOddKey,
 		// Try to use the key only if the buffer doesn't have one
 		// If the buffer has a key, even an unverified one, leave it alone, it might verify itself later
 		// But we do want to do this for the last empty buffer
-		if(!currentBuffer->hasKey || (it + 1 == m_OutputBuffers.end() && currentBuffer->numberOfPackets == 0))
+		if(!currentBuffer->hasKey || it + 1 == m_OutputBuffers.end())
 		{
 			// Let's see if the key can decrypt the current buffer
 			KeyCorrectness keyCorrectness = isCorrectKey(currentBuffer->buffer,
