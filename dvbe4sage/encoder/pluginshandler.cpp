@@ -21,10 +21,13 @@ DWORD WINAPI pluginsHandlerWorkerThreadRoutine(LPVOID param)
 		// Sleep for some time
 		Sleep(10);
 		// Do this in critical section
-		CAutoLock lock(&(pluginsHandler->m_cs));
+		pluginsHandler->m_cs.Lock();
 		// See if we need to terminate the thread
 		if(pluginsHandler->m_ExitWorkerThread)
+		{
 			shouldExit = true;
+			pluginsHandler->m_cs.Unlock();
+		}
 		else
 			// Process packets pending plugins attention
 			pluginsHandler->processECMPacketQueue();
@@ -245,14 +248,20 @@ void PluginsHandler::processECMPacketQueue()
 					m_IsTuningTimeout = true;
 		 			// Handle the tuning request
 					handleTuningRequest();
+					// We must return from here to retain the correct lock state
+					return;
 				}
 				else
 					log(2, true, 0, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
 			}
 		}
+		// Now, unlock the handler
+		m_cs.Unlock();
 		// We must return here to yield the queue
 		return;
 	}
+	// Now, unlock the handler
+	m_cs.Unlock();
 }
 
 // Remove obsolete caller

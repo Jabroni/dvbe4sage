@@ -27,7 +27,6 @@ protected:
 	virtual void processCATPacket(BYTE *packet) {}
 	virtual void resetProcessState() {}
 	virtual bool canProcessECM()				{ return m_GetECM != NULL; }
-	virtual bool handleTuningRequest()			{ return true; }
 
 public:
 	// Constructor

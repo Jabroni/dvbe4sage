@@ -87,7 +87,11 @@ protected:
 	virtual void processCATPacket(BYTE* packet) = 0;
 	virtual void resetProcessState() = 0;
 	virtual bool canProcessECM() = 0;
-	virtual bool handleTuningRequest() = 0;
+	virtual bool handleTuningRequest()
+	{
+		m_cs.Unlock();
+		return true;
+	}
 
 	void EndWorkerThread()
 	{
