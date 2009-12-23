@@ -177,15 +177,16 @@ void PluginsHandler::processECMPacketQueue()
 		// Get the first request from the queue
 		Request& request = m_RequestQueue.front();
 
-		// Let's see if we already have a DCW for this very ECM in the cache
-		bool isOddKey = false;
-		const Dcw& dcw = m_ECMCache.find(request.packet, isOddKey);
-		if(dcw.number != 0)
+		// Let's see if we already have a DCWs for this very ECM in the cache
+		list<const ECMDCWPair*> result;
+		if(m_ECMCache.find(request.packet, result))
 		{
 			// Log entry
 			log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and found in the cache\n"), request.client->sid);
-			// Mark ECM request as complete WITHOUT adding it to the cache
-			ECMRequestComplete(request.client, NULL, dcw, isOddKey, false);
+			// Go through the list
+			for(list<const ECMDCWPair*>::const_iterator it = result.begin(); it != result.end(); it++)
+				// Mark ECM request as complete WITHOUT adding it to the cache
+				ECMRequestComplete(request.client, NULL, (*it)->dcw, (*it)->isOddKey, false);
 			// Remove request from the queue
 			m_RequestQueue.pop_front();
 		}

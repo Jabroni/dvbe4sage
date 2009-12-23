@@ -18,6 +18,11 @@ struct ECMDCWPair
 	Dcw			dcw;					// The corresponding DCW
 	bool		isOddKey;				// TRUE is the key is ODD, FALSE if EVEN
 	time_t		timeStamp;				// The time stamp - for size keeping
+
+	bool operator==(const ECMDCWPair& other) const
+	{
+		return memcmp(ecm, other.ecm, sizeof(ecm)) == 0 && dcw.number == other.dcw.number && isOddKey == other.isOddKey;
+	}
 };
 
 class ECMCache
@@ -47,7 +52,7 @@ public:
 	void add(const BYTE* ecmPacket, const Dcw& dcw, bool isOddKey);
 
 	// Find if the packet is in the cache (if no, retrieve a reference to dummy Dcw)
-	const Dcw& find(const BYTE* ecmPacket, bool& isOddKey) const;
+	bool find(const BYTE* ecmPacket, list<const ECMDCWPair*>& result) const;
 
 	// Dump the content of the cache to a file
 	bool DumpToFile(LPCTSTR fileName, LPTSTR reason) const;

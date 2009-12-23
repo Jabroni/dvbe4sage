@@ -61,7 +61,7 @@ void ECMCache::add(const BYTE* ecmPacket,
 	// Let's see if we don't already have this ECM packet
 	for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.find(newHash); it != m_Data.end(); it++)
 		// Now, check whether the actual packet really matches
-		if(memcmp(it->second.ecm, ecmPacket, PACKET_SIZE) == 0)
+		if(it->second == newPair)
 			return;
 
 	// Now we're sure the pair is indeed new
@@ -74,9 +74,11 @@ void ECMCache::add(const BYTE* ecmPacket,
 }
 
 // Find if the packet is in the cache (if no, retrieve a reference to dummy Dcw)
-const Dcw& ECMCache::find(const BYTE* ecmPacket,
-						  bool& isOddKey) const
+bool ECMCache::find(const BYTE* ecmPacket,
+					list<const ECMDCWPair*>& result) const
 {
+	bool res = false;
+
 	// Compute the incoming packet hash
 	__int32 hashInQuestion = _dvb_crc32(ecmPacket, PACKET_SIZE);
 
@@ -85,13 +87,13 @@ const Dcw& ECMCache::find(const BYTE* ecmPacket,
 		// Now, check whether the actual packet really matches
 		if(memcmp(it->second.ecm, ecmPacket, PACKET_SIZE) == 0)
 			{
-				// If yes, return the corresponding DCW
-				isOddKey = it->second.isOddKey;
-				return it->second.dcw;
+				// If yes, add it to the resulting list
+				result.push_back(&(it->second));
+				// And indicate we found something
+				res = true;
 			}
 
-	// We found nothing, return the dummy DCW
-	return dummyDcw;
+	return res;
 }
 
 // Dump the content of the cache to a file
