@@ -495,6 +495,8 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 {
 	// Get SID the for this PMT
 	USHORT programNumber = HILO(table->program_number);
+	if(programNumber == (USHORT)-1)
+		return;
 
 	// Let's see if we already discovered EMM PID or passed PMT packets counter threshold
 	// If no, boil out
@@ -593,9 +595,6 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		// Get the stream PID
 		USHORT ESPid = HILO(streamInfo->elementary_PID);
 
-		// Add this elementary stream information to the set
-		m_ESPidsForSid[programNumber].insert(ESPid);
-
 		// Get ES info length
 		USHORT ESInfoLength = HILO(streamInfo->ES_info_length);
 
@@ -665,7 +664,16 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		}
 		// Let's see if we had CA descriptors but none was actually used for this ES PID
 		if(caMap.empty() && hasCADescriptors)
-			log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used for PID=%hu, SID=%hu, either you have forgotten to specify \"ServedCAIDs\"/\"ServedPROVIDs\" or this PID is not going to be decoded because it uses a non-default ECM PID\n"), ESPid, programNumber);
+			log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used for PID=%hu, SID=%hu, either you have forgotten to specify \"ServedCAIDs\"/\"ServedPROVIDs\" or this PID is not going to be decoded because it uses a non-default ECM PID, so this PID will not be present in the output!\n"), ESPid, programNumber);
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// Temporary hack - this is the "Big brother" workaround!
+		// TODO : fixme!
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		else if(streamInfo->stream_type != 11)
+			// Add this elementary stream information to the set
+			m_ESPidsForSid[programNumber].insert(ESPid);
+		else
+			log(0, true, m_pParent->getTunerOrdinal(), TEXT("The ES PID=%hu, SID=%hu is excluded because of its content type\n"), ESPid, programNumber);
 
 		// Add the CA type into the map only if there were CA descriptors
 		if(hasCADescriptors && !caMap.empty() && m_CATypesForSid.find(programNumber) == m_CATypesForSid.end())
