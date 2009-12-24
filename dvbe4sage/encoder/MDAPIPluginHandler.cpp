@@ -348,31 +348,28 @@ void MDAPIPluginsHandler::resetProcessState()
 
 bool MDAPIPluginsHandler::handleTuningRequest()
 {
-	bool bRet = false;
-
 	// Invalidate current ECM callback
 	m_CurrentEcmCallback = NULL;
 
 	// Fill the structure
 	TPROGRAM82 tp;
 	fillTPStructure(&tp);
-
-	// Unlock the critical section, since some of the plugins do SendMessage and not PostMessage
+	
+	// Unlock the critical section, since some of the ####### plugins do SendMessage and not PostMessage
 	m_cs.Unlock();
 
 	// This client doesn't have any keys yet
 	// For each plugin, check if it handles this particular CA
 	for(list<Plugin>::iterator pit = m_Plugins.begin(); pit != m_Plugins.end(); pit++)
-		if(pit->acceptsCAid(m_pCurrentClient->ecmCaids))
+		//if(pit->acceptsCAid(m_pCurrentClient->ecmCaids))
 		{
 			// And then finally tune to the program
 			pit->m_fpChannelChange(tp);
-			bRet = true;
 			// Boil out (only one plugin is supported)
 			break;
 		}
 	
-	return bRet;
+	return false;
 }
 
 void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)

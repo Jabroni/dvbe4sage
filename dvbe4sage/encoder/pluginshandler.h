@@ -87,11 +87,7 @@ protected:
 	virtual void processCATPacket(BYTE* packet) = 0;
 	virtual void resetProcessState() = 0;
 	virtual bool canProcessECM() = 0;
-	virtual bool handleTuningRequest()
-	{
-		m_cs.Unlock();
-		return true;
-	}
+	virtual bool handleTuningRequest()					{ return true; }
 
 	void EndWorkerThread()
 	{
@@ -128,7 +124,7 @@ public:
 					 USHORT pmtPid,
 					 const BYTE* const currentPacket);
 	// Routine processing packet queue
-	void processECMPacketQueue();
+	bool processECMPacketQueue();
 	// Remove obsolete caller
 	void removeCaller(ESCAParser* caller);
 	bool dumpECMCache(LPCTSTR fileName, LPTSTR reason) const		{ return m_ECMCache.DumpToFile(fileName, reason); }

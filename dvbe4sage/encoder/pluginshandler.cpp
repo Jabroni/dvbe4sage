@@ -28,9 +28,11 @@ DWORD WINAPI pluginsHandlerWorkerThreadRoutine(LPVOID param)
 			shouldExit = true;
 			pluginsHandler->m_cs.Unlock();
 		}
-		else
-			// Process packets pending plugins attention
-			pluginsHandler->processECMPacketQueue();
+		// Process packets pending plugins attention
+		else if(pluginsHandler->processECMPacketQueue())
+			// If needed, unlock the critical section
+			pluginsHandler->m_cs.Unlock();
+			
 	}
 	// Exit
 	return 0;
@@ -141,8 +143,8 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	}
 }
 
-// Routine processing packet queue
-void PluginsHandler::processECMPacketQueue()
+// Routine processing packet queue, returns true if need to unlock the critical section outside this functions
+bool PluginsHandler::processECMPacketQueue()
 {
 	// Let's see we aren't past the timeout
 	// Let's check the indicator first
@@ -246,22 +248,17 @@ void PluginsHandler::processECMPacketQueue()
 					m_TimerInitialized = true;
 					// This is the tuning timeout
 					m_IsTuningTimeout = true;
-		 			// Handle the tuning request
-					handleTuningRequest();
-					// We must return from here to retain the correct lock state
-					return;
+		 			// Handle the tuning request and return
+					return handleTuningRequest();
 				}
 				else
 					log(2, true, 0, TEXT("A tunung request came while an old one hasn't been satisfied yet, ignoring...\n"));
 			}
 		}
-		// Now, unlock the handler
-		m_cs.Unlock();
 		// We must return here to yield the queue
-		return;
+		return true;
 	}
-	// Now, unlock the handler
-	m_cs.Unlock();
+	return true;
 }
 
 // Remove obsolete caller
