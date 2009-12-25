@@ -51,12 +51,13 @@ void ECMCache::add(const BYTE* ecmPacket,
 	ECMDCWPair newPair;
 
 	// Copy the data
-	memcpy(newPair.ecm, ecmPacket, PACKET_SIZE);
+	size_t ecmSize = (size_t)ecmPacket[3];
+	memcpy(newPair.ecm, ecmPacket, ecmSize);
 	newPair.dcw = dcw;
 	newPair.isOddKey = isOddKey;
 
 	// Compute the hash
-	unsigned __int32 newHash = _dvb_crc32(ecmPacket, PACKET_SIZE);
+	unsigned __int32 newHash = _dvb_crc32(ecmPacket, ecmSize);
 
 	// Let's see if we don't already have this ECM packet
 	for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.find(newHash); it != m_Data.end(); it++)
@@ -80,18 +81,19 @@ bool ECMCache::find(const BYTE* ecmPacket,
 	bool res = false;
 
 	// Compute the incoming packet hash
-	__int32 hashInQuestion = _dvb_crc32(ecmPacket, PACKET_SIZE);
+	size_t ecmSize = (size_t)ecmPacket[3];
+	__int32 hashInQuestion = _dvb_crc32(ecmPacket, ecmSize);
 
 	// Find the entry with the matching hash
 	for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.find(hashInQuestion); it != m_Data.end(); it++)
 		// Now, check whether the actual packet really matches
-		if(memcmp(it->second.ecm, ecmPacket, PACKET_SIZE) == 0)
-			{
-				// If yes, add it to the resulting list
-				result.push_back(&(it->second));
-				// And indicate we found something
-				res = true;
-			}
+		if(memcmp(it->second.ecm, ecmPacket, ecmSize) == 0)
+		{
+			// If yes, add it to the resulting list
+			result.push_back(&(it->second));
+			// And indicate we found something
+			res = true;
+		}
 
 	return res;
 }
@@ -111,8 +113,7 @@ bool ECMCache::DumpToFile(LPCTSTR fileName,
 		{
 			_ftprintf(outFile, TEXT("\t<keypair>\n"));
 			_ftprintf(outFile, TEXT("\t\t<ecm>"));
-			// Fixme : change it to the real ECM packet size!
-			for(int i = 0; i < PACKET_SIZE; i++)
+			for(int i = 0; i < (int)it->second.ecm[3]; i++)
 				_ftprintf(outFile, TEXT("%.02X"), (UINT)it->second.ecm[i]);
 			_ftprintf(outFile, TEXT("</ecm>\n"));
 			_ftprintf(outFile, TEXT("\t\t<dcw>"));

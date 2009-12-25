@@ -1440,10 +1440,10 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			m_pPluginsHandler->putCAPacket(this, TYPE_CAT, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 		// Now, we have only ECM packets left
 		// For ECM packets, see if the content is new
-		else if(memcmp(m_LastECMPacket, currentPacket + 4, PACKET_SIZE) != 0)
+		else if(memcmp(m_LastECMPacket, currentPacket + 4, (size_t)currentPacket[7]) != 0)
 		{
 			// If yes, save it
-			memcpy(m_LastECMPacket, currentPacket + 4, PACKET_SIZE);
+			memcpy(m_LastECMPacket, currentPacket + 4, (size_t)currentPacket[7]);
 
 			// Lock the output buffers queue
 			m_csOutputBuffer.Lock();

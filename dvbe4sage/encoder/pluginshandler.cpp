@@ -8,6 +8,9 @@
 #include "dvbparser.h"
 #include "logger.h"
 #include "configuration.h"
+#include "crc32.h"
+
+#define EMM_CACHE_TIMEOUT	20	// Seconds
 
 // This is the worker thread main function waits for events
 DWORD WINAPI pluginsHandlerWorkerThreadRoutine(LPVOID param)
@@ -111,7 +114,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	{
 		log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
 		currentClient.ecmPid = caPid;
-		memcpy(currentClient.ecmPacket, currentPacket, PACKET_SIZE);
+		memcpy(currentClient.ecmPacket, currentPacket, (size_t)currentPacket[3]);
 	}
 	
 	// Make a new request
@@ -129,8 +132,15 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 			m_RequestQueue.push_back(request);
 			break;
 		case TYPE_EMM:
-			processEMMPacket(request.packet);
+		{
+			unsigned __int32 newPacketCRC;
+			if(!inEMMCache(request.packet, newPacketCRC))
+			{
+				addToEMMCache(request.packet, newPacketCRC);
+				processEMMPacket(request.packet);
+			}
 			break;
+		}
 		case TYPE_PMT:
 			processPMTPacket(request.packet);
 			break;
@@ -334,4 +344,44 @@ void PluginsHandler::ECMRequestComplete(Client* client,
 			(USHORT)dcw.key[0], (USHORT)dcw.key[1], (USHORT)dcw.key[2], (USHORT)dcw.key[3], (USHORT)dcw.key[4], (USHORT)dcw.key[5], (USHORT)dcw.key[6], (USHORT)dcw.key[7],
 			fromPlugin ? TEXT("plugin") : TEXT("cache"), fromPlugin && g_pConfiguration->getEnableECMCache() ? TEXT("") : TEXT("NOT "));
 	}
+}
+
+bool PluginsHandler::inEMMCache(const BYTE* const packet,
+								unsigned __int32& newPacketCRC) const
+{
+	// Get the size of the new packet
+	const size_t emmSize = (size_t)packet[3];
+	// Calculate its CRC
+	newPacketCRC = _dvb_crc32(packet, emmSize);
+
+	// Let's see if we don't already have this EMM packet
+	for(hash_multimap<unsigned __int32, EMM>::const_iterator it = m_EMMCache.find(newPacketCRC); it != m_EMMCache.end(); it++)
+		// If the actual packet matches, we found it
+		if(memcmp(it->second.packet, packet, emmSize) == 0)
+			return true;
+
+	// We found none
+	return false;
+}
+
+void PluginsHandler::addToEMMCache(const BYTE* const packet,
+								   const unsigned __int32 newPacketCRC)
+{
+	// Build the new EMM structure
+	EMM newEmm;
+	// Copy the packet
+	memcpy(newEmm.packet, packet, (size_t)packet[3]);
+	// Get the current time stamp
+	time(&newEmm.timeStamp);
+
+	// Remove all old EMM packets from the cache
+	for(hash_multimap<unsigned __int32, EMM>::iterator it = m_EMMCache.begin(); it != m_EMMCache.end();)
+		// If the packet is older than 60 seconds, remove it
+		if(difftime(newEmm.timeStamp, it->second.timeStamp) > EMM_CACHE_TIMEOUT)
+			it = m_EMMCache.erase(it);
+		else
+			it++;
+
+	// Put the new packet into the cache
+	m_EMMCache.insert(pair<unsigned __int32, EMM>(newPacketCRC, newEmm));
 }

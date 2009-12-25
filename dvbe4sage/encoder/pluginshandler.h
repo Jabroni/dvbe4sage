@@ -62,6 +62,17 @@ protected:
 		Request() : client(0) { ZeroMemory(packet, sizeof(packet)); }
 	};
 
+	struct EMM
+	{
+		BYTE		packet[PACKET_SIZE];
+		time_t		timeStamp;
+		EMM() : timeStamp(0) { ZeroMemory(packet, sizeof(packet)); }
+		EMM(const EMM& other) : timeStamp(other.timeStamp)
+		{
+			memcpy(packet, other.packet, (size_t)other.packet[3]);
+		}
+	};
+
 	// Global data structures
 	list<Request>							m_RequestQueue;
 	hash_map<ESCAParser*, Client>			m_Clients;
@@ -76,9 +87,13 @@ protected:
 	time_t									m_Time;
 	bool									m_ExitWorkerThread;
 	ECMCache								m_ECMCache;
+	hash_multimap<unsigned __int32, EMM>	m_EMMCache;
 
 	// Key checker
 	static bool wrong(const Dcw& dcw);
+
+	bool inEMMCache(const BYTE* const packet, unsigned __int32& newPacketCRC) const;
+	void addToEMMCache(const BYTE* const packet, const unsigned __int32 newPacketCRC);
 
 protected:
 	virtual void processECMPacket(BYTE* packet) = 0;
