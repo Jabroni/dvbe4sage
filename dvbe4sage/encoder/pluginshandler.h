@@ -59,17 +59,17 @@ protected:
 	{
 		Client*			client;
 		BYTE			packet[PACKET_SIZE];
-		Request() : client(0) { ZeroMemory(packet, sizeof(packet)); }
+		Request() : client(0) { memset(packet, (int)'\xFF', sizeof(packet)); }
 	};
 
 	struct EMM
 	{
 		BYTE		packet[PACKET_SIZE];
 		time_t		timeStamp;
-		EMM() : timeStamp(0) { ZeroMemory(packet, sizeof(packet)); }
+		EMM() : timeStamp(0) { memset(packet, (int)'\xFF', sizeof(packet)); }
 		EMM(const EMM& other) : timeStamp(other.timeStamp)
 		{
-			memcpy(packet, other.packet, (size_t)other.packet[3]);
+			memcpy(packet, other.packet, (size_t)other.packet[3] + 4);
 		}
 	};
 

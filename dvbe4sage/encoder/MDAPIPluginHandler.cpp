@@ -136,7 +136,7 @@ MDAPIPluginsHandler::~MDAPIPluginsHandler()
 
 void MDAPIPluginsHandler::processECMPacket(BYTE* packet)
 {
-	m_CurrentEcmCallback(m_CurrentEcmFilterId, (ULONG)packet[3], packet);  
+	m_CurrentEcmCallback(m_CurrentEcmFilterId, PACKET_SIZE/*(ULONG)packet[3] + 4*/, packet);  
 }
 
 void MDAPIPluginsHandler::processEMMPacket(BYTE* packet)
@@ -144,7 +144,7 @@ void MDAPIPluginsHandler::processEMMPacket(BYTE* packet)
 	// Here we handle EMM packets, just send them to the filter when it's ready
 	if(m_CurrentEmmCallback != NULL)
 		// Process it
-		m_CurrentEmmCallback(m_CurrentEmmFilterId, (ULONG)packet[3], packet);
+		m_CurrentEmmCallback(m_CurrentEmmFilterId, PACKET_SIZE/*(ULONG)packet[3] + 4*/, packet);
 	else
 		log(4, true, 0, TEXT("EMM callback hasn't been established yet, dropping the packet...\n"));
 }
@@ -195,7 +195,11 @@ LRESULT MDAPIPluginsHandler::WindowProc(UINT message, WPARAM wParam, LPARAM lPar
 				{
 					LPTPROGRAM82 tp = (LPTPROGRAM82)lParam;
 					if(tp != NULL)
+					{
+						m_cs.Lock();
 						fillTPStructure(tp);
+						m_cs.Unlock();
+					}
 					break;
 				}
 				case MDAPI_GET_PROGRAMM_NUMMER:

@@ -51,7 +51,7 @@ void ECMCache::add(const BYTE* ecmPacket,
 	ECMDCWPair newPair;
 
 	// Copy the data
-	size_t ecmSize = (size_t)ecmPacket[3];
+	size_t ecmSize = (size_t)ecmPacket[3] + 4;
 	memcpy(newPair.ecm, ecmPacket, ecmSize);
 	newPair.dcw = dcw;
 	newPair.isOddKey = isOddKey;
@@ -81,7 +81,7 @@ bool ECMCache::find(const BYTE* ecmPacket,
 	bool res = false;
 
 	// Compute the incoming packet hash
-	size_t ecmSize = (size_t)ecmPacket[3];
+	size_t ecmSize = (size_t)ecmPacket[3] + 4;
 	__int32 hashInQuestion = _dvb_crc32(ecmPacket, ecmSize);
 
 	// Find the entry with the matching hash
@@ -113,7 +113,7 @@ bool ECMCache::DumpToFile(LPCTSTR fileName,
 		{
 			_ftprintf(outFile, TEXT("\t<keypair>\n"));
 			_ftprintf(outFile, TEXT("\t\t<ecm>"));
-			for(int i = 0; i < (int)it->second.ecm[3]; i++)
+			for(int i = 0; i < (int)it->second.ecm[3] + 4; i++)
 				_ftprintf(outFile, TEXT("%.02X"), (UINT)it->second.ecm[i]);
 			_ftprintf(outFile, TEXT("</ecm>\n"));
 			_ftprintf(outFile, TEXT("\t\t<dcw>"));

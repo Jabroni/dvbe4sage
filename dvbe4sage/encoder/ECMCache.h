@@ -19,6 +19,14 @@ struct ECMDCWPair
 	bool		isOddKey;				// TRUE is the key is ODD, FALSE if EVEN
 	time_t		timeStamp;				// The time stamp - for size keeping
 
+	ECMDCWPair()
+	{
+		memset(ecm, (int)'\xFF', sizeof(ecm));
+		dcw.number = 0;
+		isOddKey = false;
+		timeStamp = 0;
+	}
+
 	bool operator==(const ECMDCWPair& other) const
 	{
 		return memcmp(ecm, other.ecm, sizeof(ecm)) == 0 && dcw.number == other.dcw.number && isOddKey == other.isOddKey;

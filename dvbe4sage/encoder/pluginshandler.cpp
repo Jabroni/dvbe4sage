@@ -114,7 +114,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	{
 		log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
 		currentClient.ecmPid = caPid;
-		memcpy(currentClient.ecmPacket, currentPacket, (size_t)currentPacket[3]);
+		memcpy(currentClient.ecmPacket, currentPacket, (size_t)currentPacket[3] + 4);
 	}
 	
 	// Make a new request
@@ -122,7 +122,7 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	// Put the client into it
 	request.client = &currentClient;
 	// Copy the packet itself
-	memcpy(request.packet, currentPacket, sizeof(request.packet));
+	memcpy(request.packet, currentPacket, PACKET_SIZE);
 
 	// Handle incoming packets differently
 	switch(packetType)
@@ -350,7 +350,7 @@ bool PluginsHandler::inEMMCache(const BYTE* const packet,
 								unsigned __int32& newPacketCRC) const
 {
 	// Get the size of the new packet
-	const size_t emmSize = (size_t)packet[3];
+	const size_t emmSize = (size_t)packet[3] + 4;
 	// Calculate its CRC
 	newPacketCRC = _dvb_crc32(packet, emmSize);
 
@@ -370,7 +370,7 @@ void PluginsHandler::addToEMMCache(const BYTE* const packet,
 	// Build the new EMM structure
 	EMM newEmm;
 	// Copy the packet
-	memcpy(newEmm.packet, packet, (size_t)packet[3]);
+	memcpy(newEmm.packet, packet, (size_t)packet[3] + 4);
 	// Get the current time stamp
 	time(&newEmm.timeStamp);
 
