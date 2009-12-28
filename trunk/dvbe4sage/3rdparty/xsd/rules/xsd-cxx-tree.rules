@@ -7,7 +7,7 @@
 		<CustomBuildRule
 			Name="C++/Tree Mapping Rule"
 			DisplayName="C++/Tree Mapping Rule"
-			CommandLine="xsd.exe cxx-tree [AllOptions] [AdditionalOptions] [Inputs]"
+			CommandLine="..\3rdparty\xsd\bin\xsd.exe cxx-tree [AllOptions] [AdditionalOptions] [Inputs]"
 			Outputs="[$OutDir]\$(InputName)[$HeaderSuffix];[$OutDir]\$(InputName)[$SourceSuffix]"
 			FileExtensions="*.xsd"
 			ExecutionDescription="xsd cxx-tree [Inputs]"

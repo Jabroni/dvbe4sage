@@ -7,7 +7,7 @@
 		<CustomBuildRule
 			Name="C++/Parser Mapping Rule"
 			DisplayName="C++/Parser Mapping Rule"
-			CommandLine="xsd.exe cxx-parser [AllOptions] [AdditionalOptions] [Inputs]"
+			CommandLine="..\3rdparty\xsd\bin\xsd.exe cxx-parser [AllOptions] [AdditionalOptions] [Inputs]"
 			Outputs="[$OutDir]\$(InputName)[$SkelFileSuffix][$HeaderSuffix];[$OutDir]\$(InputName)[$SkelFileSuffix][$SourceSuffix]"
 			FileExtensions="*.xsd"
 			ExecutionDescription="xsd cxx-parser [Inputs]"
