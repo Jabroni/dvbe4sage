@@ -5,7 +5,7 @@
 #include "dvbe4sage.h"
 #include "NewRecording.h"
 #include "dvbe4sagedlg.h"
-#include "extern.h"
+#include "../encoder/extern.h"
 
 // NewRecording dialog
 

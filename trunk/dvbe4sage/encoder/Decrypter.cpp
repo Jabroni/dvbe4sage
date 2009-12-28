@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 
-#include "../FFdecsa/FFdecsa.h"
+#include <FFdecsa.h>
 #include "si_tables.h"
 #include "Decrypter.h"
 #include "Logger.h"
