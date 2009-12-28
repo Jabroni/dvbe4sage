@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<provider name="Yes_DBS" ONID="171" acceptSID="false" DontFixPMT="false" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="provider.xsd">
+  <initialTuningInfo xsi:type="DVBSTuningInfo" frequency="10842000" symbolRate="27500" FECRate="3/4" modulation="QPSK" />
+</provider>

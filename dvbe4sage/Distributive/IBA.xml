@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<provider name="IBA" ONID="8192" acceptSID="true" parseNIT="false" DontFixPMT="false" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="provider.xsd">
+  <initialTuningInfo xsi:type="DVBSTuningInfo" frequency="11647000" symbolRate="8518" FECRate="3/4" modulation="QPSK" />
+</provider>

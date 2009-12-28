@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<provider name="Platforma_HD" ONID="1714" acceptSID="true" DontFixPMT="true" cacheInfo="true" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="provider.xsd">
+  <initialTuningInfo xsi:type="DVBSTuningInfo" frequency="12207000" symbolRate="27500" FECRate="2/3" modulation="8PSK" dvbs2="true" />
+</provider>

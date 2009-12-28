@@ -1,0 +1,12 @@
+Debug*
+Release*
+Win32
+x64
+*.user
+*.suo
+*.ncb
+*.aps
+*.cxx
+*.ixx
+*.hxx
+svnrevision.h

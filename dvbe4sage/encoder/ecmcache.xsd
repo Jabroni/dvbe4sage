@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="Keypair">
+    <xs:sequence>
+      <xs:element name="ecm">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="([0-9A-Fa-f]{2})*"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="dcw">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="([0-9A-Fa-f]{2}){8}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="parity">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="O"/>
+            <xs:enumeration value="E"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="cache">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" maxOccurs="unbounded" name="keypair" type="Keypair"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
