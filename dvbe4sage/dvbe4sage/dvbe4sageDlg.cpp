@@ -5,7 +5,7 @@
 #include "stdafx.h"
 #include "dvbe4sage.h"
 #include "dvbe4sageDlg.h"
-#include "extern.h"
+#include "../encoder/extern.h"
 #include "NewRecording.h"
 
 #ifdef _DEBUG
