@@ -272,6 +272,10 @@ Configuration::Configuration()
 	m_ECMCacheAutodeleteChunkSize = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("ECMCacheAutodeleteChunkSize"), 300, iniFileFullPath);
 	log(0, false, 0, TEXT("ECMCacheAutodeleteChunkSize=%hu\n"), m_ECMCacheAutodeleteChunkSize);
 
+	GetPrivateProfileString(TEXT("Advanced"), TEXT("BouquetName"), TEXT("BSkyB Bouquet 1 - DTH England"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	m_BouquetName = buffer;
+	log(0, false, 0, TEXT("BouquetName=%s\n"), m_BouquetName.c_str());
+
 	log(0, false, 0, TEXT("\n"));
 
 	log(0, false, 0, TEXT("End of configuration file dump\n"));
