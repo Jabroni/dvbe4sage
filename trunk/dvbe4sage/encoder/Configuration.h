@@ -49,6 +49,7 @@ class Configuration
 	USHORT						m_MaxECMCacheSize;
 	USHORT						m_ECMCacheAutodeleteChunkSize;
 	bool						m_EnableECMCache;
+	string						m_BouquetName;
 public:
 	Configuration();
 	
@@ -96,6 +97,7 @@ public:
 	USHORT getMaxECMCacheSize() const				{ return m_MaxECMCacheSize; }
 	USHORT getECMCacheAutodeleteChunkSize() const	{ return m_ECMCacheAutodeleteChunkSize; }
 	bool getEnableECMCache() const					{ return m_EnableECMCache; }
+	const string& getBouquetName() const			{ return m_BouquetName; }
 };
 
 extern Configuration* g_pConfiguration;

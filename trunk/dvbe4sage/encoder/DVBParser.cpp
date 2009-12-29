@@ -920,8 +920,13 @@ void PSIParser::parseBATTable(const nit_t* const table,
 		bouquetDescriptorsLength -= bouquetDescriptor->descriptor_length + DESCR_BOUQUET_NAME_LEN;
 	}
 
-	// Do it only for "Yes Bouquet 1" bouquet
-	if(bouquetName == "Yes Bouquet 1")
+	// Flags for supported "remote channel number tuning" providers
+	bool isYES = (bouquetName == "Yes Bouquet 1");
+	bool isFoxtel = (bouquetName == "Austar digital");
+	bool isSkyUK = (bouquetName == g_pConfiguration->getBouquetName());
+
+	// Do it only for supported providers
+	if(isYES || isFoxtel || isSkyUK)
 	{
 		// Now we're at the beginning of the transport streams list
 		const nit_mid_t* const transportStreams = (const nit_mid_t*)inputBuffer;
@@ -957,50 +962,75 @@ void PSIParser::parseBATTable(const nit_t* const table,
 				const descr_gen_t* const generalDescriptor = CastGenericDescriptor(inputBuffer);
 				const USHORT descriptorLength = generalDescriptor->descriptor_length;
 
-				switch(generalDescriptor->descriptor_tag)
+				if(isYES && generalDescriptor->descriptor_tag == (BYTE)0xE2 ||
+				   isFoxtel && generalDescriptor->descriptor_tag == (BYTE)0x93)
 				{
-					case 0xE2:
+					// This is where YES and Foxtel keep their channel mapping
+					const int len = descriptorLength / 4;
+					for(int i = 0; i < len; i++)
 					{
-						// This is where YES keeps channel mapping
-						const int len = descriptorLength / 4;
-						for(int i = 0; i < len; i++)
+						// Get plain pointer
+						const BYTE* pointer = inputBuffer + DESCR_GEN_LEN + i * 4;
+
+						// Now get service ID
+						USHORT serviceID = ntohs(*(USHORT*)pointer);
+
+						// And then get channel number
+						USHORT channelNumber = ntohs(*(USHORT*)(pointer + 2));
+
+						// See if service ID already initialized
+						hash_map<USHORT, Service>::iterator it = m_Provider.m_Services.find(serviceID);
+						if(it != m_Provider.m_Services.end() && it->second.channelNumber == 0)
 						{
-							// Get plain pointer
-							const BYTE* pointer = inputBuffer + DESCR_GEN_LEN + i * 4;
+							// Update timestamp
+							time(&m_TimeStamp);
 
-							// Now get service ID
-							USHORT serviceID = ntohs(*(USHORT*)pointer);
+							// Prime channel number here
+							Service& myService = it->second;
+							myService.channelNumber = channelNumber;
 
-							// And then get channel number
-							USHORT channelNumber = ntohs(*(USHORT*)(pointer + 2));
-
-							// See if service ID already initialized
-							hash_map<USHORT, Service>::iterator it = m_Provider.m_Services.find(serviceID);
-							if(it != m_Provider.m_Services.end() && it->second.channelNumber == 0)
-							{
-								// Update timestamp
-								time(&m_TimeStamp);
-
-								// Prime channel number here
-								Service& myService = it->second;
-								myService.channelNumber = channelNumber;
-
-								// And make the opposite mapping too
-								m_Provider.m_Channels[channelNumber] = serviceID;
-							}
+							// And make the opposite mapping too
+							m_Provider.m_Channels[channelNumber] = serviceID;
 						}
-
-						break;
 					}
-					case 0x41:
-					case 0xE4:
-					case 0x5F:
-						// Do nothing
-						break;
-					default:
-						log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
-									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
-						break;
+				}
+				else if(isSkyUK && generalDescriptor->descriptor_tag == (BYTE)0xB1 && ntohs(*(USHORT*)(inputBuffer + DESCR_GEN_LEN)) == (USHORT)0xFFFF)
+				{
+					// This is where Sky UK keep their channel mapping
+					const int len = (descriptorLength - 2) / 9;
+					for(int i = 0; i < len; i++)
+					{
+						// Get plain pointer
+						const BYTE* pointer = inputBuffer + DESCR_GEN_LEN + i * 9 + 2;
+
+						// Boil out on bogus entries
+						if(ntohs(*(USHORT*)(pointer + 7)) == (USHORT)0xFFFF)
+							continue;
+
+						// Now get service ID
+						USHORT serviceID = ntohs(*(USHORT*)pointer);
+
+						// And then get channel number
+						USHORT channelNumber = ntohs(*(USHORT*)(pointer + 5));
+
+						if(serviceID == (USHORT)0xFFFF || serviceID == 0 || channelNumber == (USHORT)0xFFFF || channelNumber == 0)
+							continue;
+
+						// See if service ID already initialized
+						hash_map<USHORT, Service>::iterator it = m_Provider.m_Services.find(serviceID);
+						if(it != m_Provider.m_Services.end() && it->second.channelNumber == 0 && !it->second.serviceNames["eng"].empty())
+						{
+							// Update timestamp
+							time(&m_TimeStamp);
+
+							// Prime channel number here
+							Service& myService = it->second;
+							myService.channelNumber = channelNumber;
+
+							// And make the opposite mapping too
+							m_Provider.m_Channels[channelNumber] = serviceID;
+						}
+					}
 				}
 
 				// Adjust input Buffer
