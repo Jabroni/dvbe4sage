@@ -24,11 +24,17 @@ GenericSource::~GenericSource()
 
 void GenericSource::stopPlayback()
 {
-	// Stop the full transponder dump
-	m_pFilterGraph->getParser()->stopTransponderDump();
+	// Get the filter parser
+	DVBParser* pParser = m_pFilterGraph->getParser();
 
-	// Tell the parser to stop processing PSI packets
-	m_pFilterGraph->getParser()->stopPSIPackets();
+	if(pParser != NULL)
+	{
+		// Stop the full transponder dump
+		pParser->stopTransponderDump();
+
+		// And tell the parser to stop processing PSI packets
+		pParser->stopPSIPackets();
+	}
 
 	// The tuner stops the running graph
 	m_pFilterGraph->StopGraph();
