@@ -994,7 +994,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						}
 					}
 				}
-				else if(isSkyUK && generalDescriptor->descriptor_tag == (BYTE)0xB1 && ntohs(*(USHORT*)(inputBuffer + DESCR_GEN_LEN)) == (USHORT)0xFFFF)
+				else if(isSkyUK && generalDescriptor->descriptor_tag == (BYTE)0xB1)
 				{
 					// This is where Sky UK keep their channel mapping
 					const int len = (descriptorLength - 2) / 9;
