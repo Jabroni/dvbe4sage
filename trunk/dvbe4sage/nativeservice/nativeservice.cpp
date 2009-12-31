@@ -276,10 +276,17 @@ int main(int argc,
 				// Now, change the dependency of SageTV service
 				SC_HANDLE sageHandle = OpenService(managerHandle, TEXT("SageTV"), SERVICE_ALL_ACCESS);
 				if(sageHandle != NULL)
-					if(!ChangeServiceConfig(sageHandle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, NULL, NULL, NULL, servicename, NULL, NULL, NULL))
+				{
+					// Make sure the service name is double \0 terminated
+					TCHAR dependencyArray[1024];
+					_tcscpy_s(dependencyArray, STRING_LENGTH(dependencyArray), servicename);
+					dependencyArray[_tcsnlen(servicename, 1024) + 1] = TCHAR('\0');
+
+					if(!ChangeServiceConfig(sageHandle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, NULL, NULL, NULL, dependencyArray, NULL, NULL, NULL))
 						_ftprintf(stderr, TEXT("Could not change dependency of the SageTV service, error code=%d\n"), GetLastError());
 					else
-						_tprintf(TEXT("Successfully changed the SageTV service dependency\n"));
+						_tprintf(TEXT("Successfully changed the SageTV service dependency!\n"));
+				}
 
 				// All is OK, just close the handles
 				CloseServiceHandle(serviceHandle);
