@@ -400,6 +400,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
+						AdditionalOptions="/wd4505"
 						UsePrecompiledHeader="0"
 					/>
 				</FileConfiguration>
@@ -408,6 +409,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
+						AdditionalOptions="/wd4505"
 						UsePrecompiledHeader="0"
 					/>
 				</FileConfiguration>
