@@ -23,6 +23,8 @@
 SERVICE_STATUS ServiceStatus;
 SERVICE_STATUS_HANDLE hStatus;
 HWND hWnd;
+int globalArgc = 1;
+TCHAR** globalArgv = NULL;
 
 // Control handler function
 void ControlHandler(DWORD request) 
@@ -59,12 +61,17 @@ LRESULT CALLBACK myWndProc(HWND hwnd,
 void ServiceMain(int argc,
 				 TCHAR** argv) 
 {
-	// Set current directory to where the modules are located
-	TCHAR path[MAXSHORT];
-	GetModuleFileName(NULL, path, sizeof(path) / sizeof(path[0]));
-	LPTSTR end = _tcsrchr(path, TCHAR('\\'));
-	end[0] = TCHAR('\0');
-	SetCurrentDirectory(path);
+	if(globalArgc == 1)
+	{
+		// Legacy mode - set current directory to where the modules are located
+		TCHAR path[MAXSHORT];
+		GetModuleFileName(NULL, path, STRING_LENGTH(path));
+		LPTSTR end = _tcsrchr(path, TCHAR('\\'));
+		end[0] = TCHAR('\0');
+		SetCurrentDirectory(path);
+	}
+	else
+		SetCurrentDirectory(globalArgv[1]);
 
 	ServiceStatus.dwServiceType        = SERVICE_WIN32_OWN_PROCESS; 
 	ServiceStatus.dwCurrentState       = SERVICE_START_PENDING; 
@@ -156,19 +163,15 @@ int main(int argc,
 {
 	int retCode = 0;
 
-	if(argc == 1)
+	// Copy arguments to the global variable;
+	globalArgc = argc;
+	globalArgv = argv;
+
+	// Try service start first
+	SERVICE_TABLE_ENTRY ServiceTable[] = { { TEXT(""), (LPSERVICE_MAIN_FUNCTION)ServiceMain } , { NULL, NULL } };
+	if(!StartServiceCtrlDispatcher(ServiceTable))
 	{
-		// Usual service start
-		SERVICE_TABLE_ENTRY ServiceTable[] = { { TEXT(""), (LPSERVICE_MAIN_FUNCTION)ServiceMain } , { NULL, NULL } };
-		if(!StartServiceCtrlDispatcher(ServiceTable))
-		{
-			// If started not as a service, print usage information and exit
-			PrintUsageInfo(argv[0]);
-			return -1;
-		}
-	}
-	else
-	{
+		// Now we try install/uninstall procedure
 		// We assume no username or password have been specified so far
 		LPCTSTR username = NULL;
 		LPCTSTR password = NULL;
@@ -201,6 +204,7 @@ int main(int argc,
 		
 		switch(mode)
 		{
+			case MODE_NONE:
 			case MODE_ERROR:
 				// Print usage information
 				PrintUsageInfo(argv[0]);
@@ -232,11 +236,23 @@ int main(int argc,
 
 				// Get the current executable full path
 				TCHAR binrayFullPath[MAXSHORT];
-				GetModuleFileName(NULL, binrayFullPath, sizeof(binrayFullPath) / sizeof(binrayFullPath[0]));
+				GetModuleFileName(NULL, binrayFullPath, STRING_LENGTH(binrayFullPath));
+				LPCTSTR pathDelimiterString = _tcschr(binrayFullPath, TCHAR(' ')) != NULL ? TEXT("\"") : TEXT("");
+
+				// Get the current directory
+				TCHAR currentDir[MAXSHORT];
+				GetCurrentDirectory(STRING_LENGTH(currentDir), currentDir);
+				LPCTSTR argDelimiterString = _tcschr(currentDir, TCHAR(' ')) != NULL ? TEXT("\"") : TEXT("");
+
+				// Make service command line
+				TCHAR commandLine[MAXSHORT * 2];
+				_stprintf_s(commandLine, STRING_LENGTH(commandLine), TEXT("%s%s%s %s%s%s"), 
+					pathDelimiterString, binrayFullPath, pathDelimiterString,
+					argDelimiterString, currentDir, argDelimiterString);
 
 				// Now, try to create the service
 				SC_HANDLE serviceHandle = CreateService(managerHandle, servicename, servicename, SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
-														SERVICE_AUTO_START, SERVICE_ERROR_NORMAL, binrayFullPath, NULL, NULL, NULL, username, password);
+														SERVICE_AUTO_START, SERVICE_ERROR_NORMAL, commandLine, NULL, NULL, NULL, username, password);
 
 				// Check whether we successfully created our service
 				if(serviceHandle == NULL)
