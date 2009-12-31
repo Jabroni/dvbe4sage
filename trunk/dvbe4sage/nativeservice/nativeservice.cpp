@@ -277,15 +277,49 @@ int main(int argc,
 				SC_HANDLE sageHandle = OpenService(managerHandle, TEXT("SageTV"), SERVICE_ALL_ACCESS);
 				if(sageHandle != NULL)
 				{
-					// Make sure the service name is double \0 terminated
-					TCHAR dependencyArray[1024];
-					_tcscpy_s(dependencyArray, STRING_LENGTH(dependencyArray), servicename);
-					dependencyArray[_tcsnlen(servicename, 1024) + 1] = TCHAR('\0');
+					// Let's go through the current Sage service dependencies
+					DWORD bytesNeeded = 0, bufferSize = 0;
+					LPQUERY_SERVICE_CONFIG pServiceConfig = NULL;
+					QueryServiceConfig(sageHandle, NULL, 0, &bytesNeeded);
 
-					if(!ChangeServiceConfig(sageHandle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, NULL, NULL, NULL, dependencyArray, NULL, NULL, NULL))
-						_ftprintf(stderr, TEXT("Could not change dependency of the SageTV service, error code=%d\n"), GetLastError());
+					bufferSize = bytesNeeded;
+					pServiceConfig = (LPQUERY_SERVICE_CONFIG)malloc(bufferSize);
+					if(QueryServiceConfig(sageHandle, pServiceConfig, bufferSize, &bytesNeeded))
+					{
+						// This is our dependency array
+						TCHAR dependencyArray[10240];
+
+						// Copy old dependency info into it first
+						int index = 0;
+						for(; pServiceConfig->lpDependencies[index] != TCHAR('\0') || pServiceConfig->lpDependencies[index + 1] != TCHAR('\0'); index++)
+							dependencyArray[index] = pServiceConfig->lpDependencies[index];
+
+						// Make it '\0' terminated
+						if(index != 0)
+							dependencyArray[index++] = TCHAR('\0');
+
+						// Add our new dependency
+						_tcscpy_s(&dependencyArray[index], STRING_LENGTH(dependencyArray), servicename);
+
+						// And make it double NULL terminated
+						dependencyArray[index + _tcsnlen(servicename, STRING_LENGTH(dependencyArray)) + 1] = TCHAR('\0');
+
+						// Now, change the dependency
+						if(!ChangeServiceConfig(sageHandle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, NULL, NULL, NULL, dependencyArray, NULL, NULL, NULL))
+						{
+							_ftprintf(stderr, TEXT("Could not change dependency of the SageTV service, error code=%d\n"), GetLastError());
+							retCode = -1;
+						}
+						else
+							_tprintf(TEXT("Successfully changed the SageTV service dependency!\n"));
+					}
 					else
-						_tprintf(TEXT("Successfully changed the SageTV service dependency!\n"));
+					{
+						_ftprintf(stderr, TEXT("Cannot query service info for SageTV service, error code=%d\n"), GetLastError());
+						retCode = -1;
+					}
+					// Delete the buffer
+					free(pServiceConfig);
 				}
 
 				// All is OK, just close the handles
@@ -307,6 +341,67 @@ int main(int argc,
 				{
 					_ftprintf(stderr, TEXT("Could not open the service manager, error code=%d, are you running this program as an administrator?\n"), GetLastError());
 					return -1;
+				}
+
+				// Now, change the dependency of SageTV service
+				SC_HANDLE sageHandle = OpenService(managerHandle, TEXT("SageTV"), SERVICE_ALL_ACCESS);
+				if(sageHandle != NULL)
+				{
+					// Let's go through the current Sage service dependencies
+					DWORD bytesNeeded = 0, bufferSize = 0;
+					LPQUERY_SERVICE_CONFIG pServiceConfig = NULL;
+					QueryServiceConfig(sageHandle, NULL, 0, &bytesNeeded);
+	
+					bufferSize = bytesNeeded;
+					pServiceConfig = (LPQUERY_SERVICE_CONFIG)malloc(bufferSize);
+
+					if(QueryServiceConfig(sageHandle, pServiceConfig, bufferSize, &bytesNeeded))
+					{
+						// This is our dependency array
+						TCHAR dependencyArray[10240], buffer[10240];
+
+						// Copy old dependency info into it first
+						int bufferIndex = 0, dependencyArrayIndex = 0;
+						for(int index = 0; pServiceConfig->lpDependencies[index] != TCHAR('\0') || (index > 0 && pServiceConfig->lpDependencies[index - 1] != TCHAR('\0')); index++)
+						{
+							buffer[bufferIndex] = pServiceConfig->lpDependencies[index];
+							// Check if the string has ended
+							if(buffer[bufferIndex] == TCHAR('\0'))
+							{
+								if(_tcscmp(buffer, servicename) != 0)
+								{
+									// Copy the string only if it DOESN'T match the name of the service we're about to delete
+									_tcscpy_s(&dependencyArray[dependencyArrayIndex], STRING_LENGTH(dependencyArray), buffer);
+									dependencyArrayIndex += bufferIndex + 1;
+								}
+								bufferIndex = 0;
+							}
+							else
+								bufferIndex++;
+						}
+						// Place the final double '\0' to terminate the dependency string
+						dependencyArray[dependencyArrayIndex++] = TCHAR('\0');
+						dependencyArray[dependencyArrayIndex] = TCHAR('\0');
+
+						// Now, change the dependency
+						if(!ChangeServiceConfig(sageHandle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, NULL, NULL, NULL, dependencyArray, NULL, NULL, NULL))
+						{
+							_ftprintf(stderr, TEXT("Could not change dependency of the SageTV service, error code=%d\n"), GetLastError());
+							retCode = -1;
+						}
+						else
+							_tprintf(TEXT("Successfully changed the SageTV service dependency!\n"));
+					}
+					else
+					{
+						_ftprintf(stderr, TEXT("Cannot query service info for SageTV service, error code=%d\n"), GetLastError());
+						retCode = -1;
+					}
+					// Delete the buffer
+					free(pServiceConfig);
+		
+					// Close Sage service handle
+					CloseServiceHandle(sageHandle);
 				}
 
 				// Open the service
