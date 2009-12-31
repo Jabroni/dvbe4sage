@@ -1,5 +1,9 @@
 #include "stdafx.h"
 
+// We need this only for the new Platform SDK (v7.0)
+
+#if VER_PRODUCTBUILD >= 7600
+
 #define STRSAFE_NO_CB_FUNCTIONS
 #include <strsafe.h>
 
@@ -50,3 +54,5 @@ StringCbCopyW(
 
     return hr;
 }
+
+#endif // VER_PRODUCTBUILD >= 7600
