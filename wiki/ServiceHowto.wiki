@@ -16,7 +16,7 @@ The following command installs DVBE4SAGE service:
 
 `dvbe4sagesvc /install [/servicename:`_`name`_`] [/user:`_`domain\username`_`] [/password:`_`password`_`]`
 
-All the flags but */install* are optional. When */servicename* is not specified, the default name is assigned (_"DVB Enhancer for SageTV"_). When */user* is not specified, the service is installed as _*LocalSystem*_. When */user\* is specified but */password* is not, the user is prompted for the password. If the user name is that of a local user (*not* of a domain user), it should be specified as *.\username*.
+All the flags but */install* are optional. When */servicename* is not specified, the default name is assigned (_"DVB Enhancer for SageTV"_). When */user* is not specified, the service is installed as _*LocalSystem*_. When */user* is specified but */password* is not, the user is prompted for the password. If the user name is that of a local user (*not* of a domain user), it should be specified as *.\username*.
 
 The following command uninstalls DVBE4SAGE service:
 
