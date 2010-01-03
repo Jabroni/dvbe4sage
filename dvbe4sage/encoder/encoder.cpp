@@ -599,6 +599,14 @@ bool Encoder::stopRecording(Recorder* recorder)
 	// Lock access to global structure
 	CAutoLock lock(&m_cs);
 
+	// Remove the recorder from its virtual tuner
+	for(vector<VirtualTuner*>::iterator it = m_VirtualTuners.begin(); it != m_VirtualTuners.end(); it++)
+		if((*it)->getRecorder() == recorder)
+		{
+			(*it)->setRecorder(NULL);
+			break;
+		}
+
 	// Get the source of the recorder
 	GenericSource* source = recorder->getSource();
 
