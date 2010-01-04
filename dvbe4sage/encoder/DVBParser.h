@@ -77,6 +77,8 @@ private:
 	time_t											m_TimeStamp;					// Last update time stamp
 	bool											m_ProviderInfoHasBeenCopied;	// True if the tables have been copied to the encoder
 
+	bool											m_AustarDigitalDone;			// True after Austar Digital has been scanned
+
 	// Disallow default and copy constructors
 	PSIParser();
 	PSIParser(const PSIParser&);
@@ -89,7 +91,8 @@ public:
 		m_AllowParsing(true),
 		m_PMTCounter(0),
 		m_TimeStamp(0),
-		m_ProviderInfoHasBeenCopied(false)
+		m_ProviderInfoHasBeenCopied(false),
+		m_AustarDigitalDone(false)
 	{
 	}
 
