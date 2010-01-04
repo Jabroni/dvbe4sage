@@ -226,6 +226,7 @@ void PSIParser::clear()
 	m_CurrentTid = 0;
 	m_AllowParsing = true;
 	m_PMTCounter = 0;
+	m_AustarDigitalDone = false;
 }
 
 // This routine converts PSI TS packets to readable PSI tables
@@ -860,7 +861,8 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 			}
 			
 			// Insert the new service to the map
-			m_Provider.m_Services[serviceID] = newService;
+			if(newService.serviceType < 0x80)
+				m_Provider.m_Services[serviceID] = newService;
 		}
 
 		// Adjust input buffer pointer
@@ -922,12 +924,15 @@ void PSIParser::parseBATTable(const nit_t* const table,
 
 	// Flags for supported "remote channel number tuning" providers
 	bool isYES = (bouquetName == "Yes Bouquet 1");
-	bool isFoxtel = (bouquetName == "Austar digital");
+	bool isFoxtel = (bouquetName.empty() || bouquetName == "Austar digital");
 	bool isSkyUK = (bouquetName == g_pConfiguration->getBouquetName());
 
 	// Do it only for supported providers
 	if(isYES || isFoxtel || isSkyUK)
 	{
+		// First time flag
+		bool firstTime = true;
+
 		// Now we're at the beginning of the transport streams list
 		const nit_mid_t* const transportStreams = (const nit_mid_t*)inputBuffer;
 
@@ -949,6 +954,9 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			// Get length of descriptors
 			const USHORT transportDescriptorsLength = HILO(transportStream->transport_descriptors_length);
 
+			// Get the ONID (we'll need it for Foxtel)
+			USHORT onid = HILO(transportStream->original_network_id);
+
 			// Update inputBuffer
 			inputBuffer += NIT_TS_LEN;
 			
@@ -963,7 +971,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 				const USHORT descriptorLength = generalDescriptor->descriptor_length;
 
 				if(isYES && generalDescriptor->descriptor_tag == (BYTE)0xE2 ||
-				   isFoxtel && generalDescriptor->descriptor_tag == (BYTE)0x93)
+				   isFoxtel && onid == 4096 && generalDescriptor->descriptor_tag == (BYTE)0x93 &&
+				   (!bouquetName.empty() || m_AustarDigitalDone))
 				{
 					// This is where YES and Foxtel keep their channel mapping
 					const int len = descriptorLength / 4;
@@ -980,7 +989,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 
 						// See if service ID already initialized
 						hash_map<USHORT, Service>::iterator it = m_Provider.m_Services.find(serviceID);
-						if(it != m_Provider.m_Services.end() && it->second.channelNumber == 0)
+						if(channelNumber < 1000 && it != m_Provider.m_Services.end() &&
+							it->second.channelNumber == 0 && m_Provider.m_Channels.find(channelNumber) == m_Provider.m_Channels.end())
 						{
 							// Update timestamp
 							time(&m_TimeStamp);
@@ -991,6 +1001,16 @@ void PSIParser::parseBATTable(const nit_t* const table,
 
 							// And make the opposite mapping too
 							m_Provider.m_Channels[channelNumber] = serviceID;
+
+							// Print log message
+							if(firstTime)
+							{
+								log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found in Bouquet=\"%s\"\n"), bouquetName.c_str());
+								firstTime = false;
+							}
+
+							// Print log message
+							log(2, true, m_pParent->getTunerOrdinal(), TEXT("SID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"), serviceID, channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
 						}
 					}
 				}
@@ -1029,6 +1049,16 @@ void PSIParser::parseBATTable(const nit_t* const table,
 
 							// And make the opposite mapping too
 							m_Provider.m_Channels[channelNumber] = serviceID;
+
+							// Print log message
+							if(firstTime)
+							{
+								log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found in Bouquet=\"%s\"\n"), bouquetName.c_str());
+								firstTime = false;
+							}
+
+							// Print log message
+							log(2, true, m_pParent->getTunerOrdinal(), TEXT("SID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"), serviceID, channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
 						}
 					}
 				}
@@ -1043,6 +1073,9 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			// Adjust the length
 			transportLoopLength -= transportDescriptorsLength + NIT_TS_LEN;
 		}
+
+		// Now we can indicate that Austar digital bouquet has been scanned
+		m_AustarDigitalDone = m_AustarDigitalDone || (bouquetName == "Austar digital");
 	}
 }
 
