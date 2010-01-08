@@ -313,7 +313,7 @@ void PluginsHandler::ECMRequestComplete(Client* client,
 	log(2, true, client->caller->getTunerOrdinal(), TEXT("Response for SID=%hu received, passing to the parser...\n"), client->sid);
 
 	// Set the key to the parser which called us
-	if(wrong(dcw) || !client->caller->setKey(isOddKey, dcw.key))
+	if(wrong(dcw) || !client->caller->setKey(isOddKey, dcw.key, !fromPlugin))
 	{
 		// Log the key
 		log(2, true, client->caller->getTunerOrdinal(), TEXT("Received %s DCW = %.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX%.02hX (from the %s) - wrong key, discarded!\n"), isOddKey ? TEXT("ODD") : TEXT("EVEN"),
