@@ -201,7 +201,6 @@ private:
 	deque<OutputBuffer* const>		m_OutputBuffers;					// Vector of output buffers (one per distinct ECM packet)
 	CCritSec						m_csOutputBuffer;					// Critical section on output buffers structure
 	HANDLE							m_WorkerThread;						// The worker thread handling decryption
-	HANDLE							m_SignallingEvent;					// Event for signalling we have new work for the worker thread
 	const bool						m_IsEncrypted;						// True if the ES are encrypted
 	__int64							m_FileLength;						// Contains the output file length so far
 	const __int64					m_MaxFileLength;					// Max file length for cyclic buffer, for regular file -1
@@ -254,7 +253,7 @@ public:
 	virtual void parseTSPacket(const ts_t* const packet, USHORT pid, bool& abandonPacket);
 
 	// This routine is called by the plugins handler
-	bool setKey(bool isOddKey, const BYTE* const key);
+	bool setKey(bool isOddKey, const BYTE* const key, bool setWithNoCheck);
 
 	// Tell PID meaning
 	void setESPid(USHORT pid, bool isESPid);

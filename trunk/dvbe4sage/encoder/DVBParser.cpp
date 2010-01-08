@@ -267,12 +267,10 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 	// Get the relevant table
 	SectionBuffer& sectionBuffer = m_BufferForPid[pid];
 
-	// If duplicate buffer, skip it
-	if(sectionBuffer.lastContinuityCounter == packet->continuity_counter)
-	{
-		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Got duplicate packet, dropping...\n"));
-		return;
-	}
+	// Let's check the continuity counter status	
+	BYTE expectedContinuityCounter = sectionBuffer.lastContinuityCounter == 15 ? 0 : sectionBuffer.lastContinuityCounter + 1;
+	if(expectedContinuityCounter != packet->continuity_counter)
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Some packets were lost (expected CC=%hu, actual CC=%hu)\n"), (USHORT)expectedContinuityCounter, (USHORT)packet->continuity_counter);
 
 	// Update continuity counter
 	sectionBuffer.lastContinuityCounter = (BYTE)packet->continuity_counter;
@@ -281,6 +279,13 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 	const BYTE* inputBuffer = (BYTE*)packet + TS_LEN + offset;
 	// And the remaining length
 	short remainingLength = TS_PACKET_LEN - TS_LEN - offset;
+
+	// Boil out on invalid remaining length
+	if(remainingLength <= 0)
+	{
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Invalid offset on a packet with adaptation field, skipping...\n"));
+		return;
+	}
 
 	// Let's see if the packet contains start of a new section
 	if(packet->payload_unit_start_indicator)
@@ -1320,8 +1325,8 @@ DWORD WINAPI parserWorkerThreadRoutine(LPVOID param)
 	ESCAParser* const parser = (ESCAParser* const)param;
 	while(!parser->m_ExitWorkerThread)
 	{
-		// We wait for the signal
-		WaitForSingleObject(parser->m_SignallingEvent, INFINITE);
+		// Sleep for a while
+		Sleep(100);
 
 		// Decrypt and write any pending data
 		parser->decryptAndWritePending(parser->m_ExitWorkerThread);
@@ -1577,7 +1582,8 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 }
 
 bool ESCAParser::setKey(bool isOddKey,
-						const BYTE* const key)
+						const BYTE* const key,
+						bool setWithNoCheck)
 {
 	// Output buffer manipulations in the critical section
 	CAutoLock lock(&m_csOutputBuffer);
@@ -1597,10 +1603,7 @@ bool ESCAParser::setKey(bool isOddKey,
 		if(!currentBuffer->hasKey || it + 1 == m_OutputBuffers.end())
 		{
 			// Let's see if the key can decrypt the current buffer
-			KeyCorrectness keyCorrectness = isCorrectKey(currentBuffer->buffer,
-														 currentBuffer->numberOfPackets,
-														 key, isOddKey,
-														 key, !isOddKey);
+			KeyCorrectness keyCorrectness = setWithNoCheck ? KEY_OK : isCorrectKey(currentBuffer->buffer, currentBuffer->numberOfPackets, key, isOddKey, key, !isOddKey);
 
 			// First, deal with keys known as wrong ones
 			if(keyCorrectness == KEY_WRONG)
@@ -1663,9 +1666,6 @@ bool ESCAParser::setKey(bool isOddKey,
 					memcpy_s(isOddKey ? nextBuffer->oddKey : nextBuffer->evenKey, sizeof(nextBuffer->oddKey), key, sizeof(nextBuffer->oddKey));
 				}
 
-				// Signal the work thread we've got a new key for sure
-				SetEvent(m_SignallingEvent);
-
 				// Indicate we found and least one matching buffer
 				foundMatchingBuffer = true;
 
@@ -1712,7 +1712,6 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 					   const EMMInfo& emmCATypes,
 					   __int64 maxFileLength) :
 	m_WorkerThread(NULL),
-	m_SignallingEvent(NULL),
 	m_pOutFile(pFile),
 	m_pPluginsHandler(pPluginsHandler),
 	m_ChannelName(channelName),
@@ -1740,9 +1739,6 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 
 	// Create worker thread
 	m_WorkerThread = CreateThread(NULL, 0, parserWorkerThreadRoutine, this, 0, NULL);
-
-	// Create signaling event
-	m_SignallingEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
 // Destructor of the parser
@@ -1751,9 +1747,6 @@ ESCAParser::~ESCAParser()
 	// Shutdown the worker thread 
 	// Set the flag
 	m_ExitWorkerThread = true;
-
-	// Signal the event
-	SetEvent(m_SignallingEvent);
 
 	// Wait for the thread to finish
 	WaitForSingleObject(m_WorkerThread, INFINITE);
@@ -1767,9 +1760,6 @@ ESCAParser::~ESCAParser()
 
 	// Finally, close the worker thread handle
 	CloseHandle(m_WorkerThread);
-
-	// And then close signaling event
-	CloseHandle(m_SignallingEvent);
 }
 
 // This function is called from the main filter thread!
@@ -1816,8 +1806,6 @@ void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 					break;
 			}
 		}
-		// Signal the work thread it has a new packet to take care of
-		SetEvent(m_SignallingEvent);
 	}
 }
 
