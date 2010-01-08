@@ -92,7 +92,7 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 		if(inputBufferLength < TS_PACKET_LEN)
 		{
 			// Copy it to a special buffer
-			memcpy(m_LeftoverBuffer, inputBuffer, inputBufferLength);
+			memcpy_s(m_LeftoverBuffer, sizeof(m_LeftoverBuffer), inputBuffer, inputBufferLength);
 			// And remember its length
 			m_LeftoverLength = inputBufferLength;
 			// Boil out, nothing left to do here!
@@ -110,7 +110,7 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 		if(*inputBuffer != '\x47' && m_LeftoverLength > 0)
 		{
 			// Copy it's content to the current buffer
-			memcpy(currentPacket, m_LeftoverBuffer, m_LeftoverLength);
+			memcpy_s(currentPacket, sizeof(currentPacket), m_LeftoverBuffer, m_LeftoverLength);
 			// Adjust destination index
 			copyIndex = m_LeftoverLength;
 			// Adjust length to be copied
@@ -120,7 +120,13 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 		}
 
 		// Copy the contents of the current input buffer
-		memcpy(currentPacket + copyIndex, inputBuffer, copyLength);
+		if(copyIndex > sizeof(currentPacket))
+		{
+			log(2, true, m_TunerOrdinal, TEXT("Critical error - leftover length is greater than the packet length, dropping the buffer...\n"));
+			break;
+		}
+		else
+			memcpy_s(currentPacket + copyIndex, sizeof(currentPacket) - copyIndex, inputBuffer, copyLength);
 
 		// Get its header
 		const ts_t* const header = (const ts_t* const)currentPacket;
@@ -128,7 +134,7 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 		// Sanity check - the sync byte!
 		if(header->sync_byte != '\x47')
 		{	
-			log(0, true, m_TunerOrdinal, TEXT("Catastrophic error - TS packet has wrong sync_byte!\n"));
+			log(2, true, m_TunerOrdinal, TEXT("Catastrophic error - TS packet has wrong sync_byte, dropping the buffer...\n"));
 			break;
 		}
 
@@ -264,11 +270,11 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 	// If duplicate buffer, skip it
 	if(sectionBuffer.lastContinuityCounter == packet->continuity_counter)
 	{
-		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Got duplicate packet...\n"));
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("Got duplicate packet, dropping...\n"));
 		return;
 	}
 
-	// Update countinuity counter
+	// Update continuity counter
 	sectionBuffer.lastContinuityCounter = (BYTE)packet->continuity_counter;
 
 	// Set the starting address
@@ -294,22 +300,31 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 			if(sectionBuffer.expectedLength > pointer)
 			{
 				// If no, discard the previously saved buffer
-				log(2, true, m_pParent->getTunerOrdinal(), TEXT("TS packet messed up, fixing...\n"));
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("PSI table messed up, fixing...\n"));
 				sectionBuffer.offset = 0;
 				sectionBuffer.expectedLength = 0;
 			}
 			else
 			{
-				// Append the rest of the section
-				memcpy(&sectionBuffer.buffer[sectionBuffer.offset], inputBuffer, sectionBuffer.expectedLength);
-				// Adjust the offset
-				sectionBuffer.offset += sectionBuffer.expectedLength;
-				// Adjust the expected length
-				sectionBuffer.expectedLength = 0;
-				// Pass it to further parsing
-				parseTable((const pat_t* const)sectionBuffer.buffer, (short)sectionBuffer.offset, abandonPacket);
-				// Adjust the offset once again
-				sectionBuffer.offset = 0;
+				if(sectionBuffer.offset > sizeof(sectionBuffer.buffer))
+				{
+					log(2, true, m_pParent->getTunerOrdinal(), TEXT("PSI table parsing went bananas, this really shouldn't be happening...\n"));
+					sectionBuffer.offset = 0;
+					sectionBuffer.expectedLength = 0;
+				}
+				else
+				{
+					// Append the rest of the section
+					memcpy_s(&sectionBuffer.buffer[sectionBuffer.offset], sizeof(sectionBuffer.buffer) - sectionBuffer.offset, inputBuffer, sectionBuffer.expectedLength);
+					// Adjust the offset
+					sectionBuffer.offset += sectionBuffer.expectedLength;
+					// Adjust the expected length
+					sectionBuffer.expectedLength = 0;
+					// Pass it to further parsing
+					parseTable((const pat_t* const)sectionBuffer.buffer, (short)sectionBuffer.offset, abandonPacket);
+					// Adjust the offset once again
+					sectionBuffer.offset = 0;
+				}
 			}
 		}
 		
@@ -319,7 +334,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 		remainingLength -= pointer;
 
 		// Now loop through the rest of the packet
-		while(remainingLength != 0 && (*inputBuffer) != (BYTE)'\xFF')
+		while(remainingLength > 0 && (*inputBuffer) != (BYTE)'\xFF')
 		{
 			// Find the beginning of the PSI table
 			const pat_t* const pat = (const pat_t* const)(inputBuffer);
@@ -332,7 +347,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 			else
 			{
 				// Otherwise we need to keep it in the buffer
-				memcpy(sectionBuffer.buffer, (BYTE*)pat, remainingLength);
+				memcpy_s(sectionBuffer.buffer, sizeof(sectionBuffer.buffer), (BYTE*)pat, remainingLength);
 				// Set the offset
 				sectionBuffer.offset = remainingLength;
 				// Set the expected length
@@ -346,6 +361,8 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 			// And the remaining length
 			remainingLength -= sectionLength;
 		}
+		if(remainingLength < 0)
+			log(2, true, m_pParent->getTunerOrdinal(), TEXT("Possible corruption - attempt to jump beyond packet boundaries...\n"));
 	}
 	else
 		// Take care of a packet without new section
@@ -353,23 +370,32 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 		{
 			// Calculate the length of the data we need to copy
 			const USHORT lengthToCopy = min(remainingLength, sectionBuffer.expectedLength);
-			// Copy the data to the buffer
-			memcpy(&sectionBuffer.buffer[sectionBuffer.offset], inputBuffer, lengthToCopy);
-			// Adjust the offset
-			sectionBuffer.offset += lengthToCopy;
-			// And the expected length
-			sectionBuffer.expectedLength -= lengthToCopy;
-			// Let's see if we can pass the buffer to further processing
-			if(sectionBuffer.expectedLength == 0)
+			if(sectionBuffer.offset > sizeof(sectionBuffer.buffer))
 			{
-				// Parse the section
-				parseTable((const pat_t* const)sectionBuffer.buffer, (short)sectionBuffer.offset, abandonPacket);
-				// Reset the offset
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("PSI table parsing went bananas, this really shouldn't be happening...\n"));
 				sectionBuffer.offset = 0;
-				// Make sure the remainder is just stuffing '\xFF' bytes
-				for(int i = lengthToCopy; i < remainingLength; i++)
-					if(inputBuffer[i] != (BYTE)'\xFF' && inputBuffer[i] != (BYTE)'\0')
-						log(4, true, m_pParent->getTunerOrdinal(), TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
+				sectionBuffer.expectedLength = 0;
+			}
+			else
+			{
+				// Copy the data to the buffer
+				memcpy_s(&sectionBuffer.buffer[sectionBuffer.offset], sizeof(sectionBuffer.buffer) - sectionBuffer.offset, inputBuffer, lengthToCopy);
+				// Adjust the offset
+				sectionBuffer.offset += lengthToCopy;
+				// And the expected length
+				sectionBuffer.expectedLength -= lengthToCopy;
+				// Let's see if we can pass the buffer to further processing
+				if(sectionBuffer.expectedLength == 0)
+				{
+					// Parse the section
+					parseTable((const pat_t* const)sectionBuffer.buffer, (short)sectionBuffer.offset, abandonPacket);
+					// Reset the offset
+					sectionBuffer.offset = 0;
+					// Make sure the remainder is just stuffing '\xFF' bytes
+					for(int i = lengthToCopy; i < remainingLength; i++)
+						if(inputBuffer[i] != (BYTE)'\xFF' && inputBuffer[i] != (BYTE)'\0')
+							log(4, true, m_pParent->getTunerOrdinal(), TEXT("Invalid byte 0x%.02X at offset %d\n"), (UINT)inputBuffer[i], 188 - remainingLength + i);
+				}
 			}
 		}
 }
@@ -1317,7 +1343,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	BYTE currentPacket[TS_PACKET_LEN];
 	
 	// Copy the contents of the current input buffer
-	memcpy(currentPacket, (BYTE*)packet, TS_PACKET_LEN);
+	memcpy_s(currentPacket, sizeof(currentPacket), (BYTE*)packet, TS_PACKET_LEN);
 
 	// Skip or fix PAT
 	if(pid == 0)
@@ -1377,7 +1403,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 
 		// Copy the packet
 		BYTE copyPacket[TS_PACKET_LEN];
-		memcpy(copyPacket, currentPacket, TS_PACKET_LEN);
+		memcpy_s(copyPacket, sizeof(copyPacket), currentPacket, TS_PACKET_LEN);
 
 		// Find the pointer byte - should be the first one after the TS header
 		BYTE pointer = currentPacket[TS_LEN];
@@ -1506,7 +1532,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 		else if(memcmp(m_LastECMPacket, currentPacket + 4, (size_t)currentPacket[7] + 4) != 0)
 		{
 			// If yes, save it
-			memcpy(m_LastECMPacket, currentPacket + 4, (size_t)currentPacket[7] + 4);
+			memcpy_s(m_LastECMPacket, sizeof(m_LastECMPacket), currentPacket + 4, (size_t)currentPacket[7] + 4);
 
 			// Lock the output buffers queue
 			m_csOutputBuffer.Lock();
@@ -1524,8 +1550,8 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 				OutputBuffer* const newBuffer = new OutputBuffer;
 
 				// Copy both keys from the previously last buffer
-				memcpy(newBuffer->evenKey, lastBuffer->evenKey, sizeof(newBuffer->evenKey));
-				memcpy(newBuffer->oddKey, lastBuffer->oddKey, sizeof(newBuffer->oddKey));
+				memcpy_s(newBuffer->evenKey, sizeof(newBuffer->evenKey), lastBuffer->evenKey, sizeof(newBuffer->evenKey));
+				memcpy_s(newBuffer->oddKey, sizeof(newBuffer->oddKey), lastBuffer->oddKey, sizeof(newBuffer->oddKey));
 				
 				// Put the new buffer at the end of the queue
 				m_OutputBuffers.push_back(newBuffer);
@@ -1607,7 +1633,7 @@ bool ESCAParser::setKey(bool isOddKey,
 			{
 				// We get here if the key COULD be correct
 				// Copy the key
-				memcpy(isOddKey ? currentBuffer->oddKey : currentBuffer->evenKey, key, sizeof(currentBuffer->oddKey));
+				memcpy_s(isOddKey ? currentBuffer->oddKey : currentBuffer->evenKey, sizeof(currentBuffer->oddKey), key, sizeof(currentBuffer->oddKey));
 
 				// Now this buffer has its key
 				currentBuffer->hasKey = true;
@@ -1634,7 +1660,7 @@ bool ESCAParser::setKey(bool isOddKey,
 					OutputBuffer* const nextBuffer = *(it + 1);
 
 					// Copy the key
-					memcpy(isOddKey ? nextBuffer->oddKey : nextBuffer->evenKey, key, sizeof(nextBuffer->oddKey));
+					memcpy_s(isOddKey ? nextBuffer->oddKey : nextBuffer->evenKey, sizeof(nextBuffer->oddKey), key, sizeof(nextBuffer->oddKey));
 				}
 
 				// Signal the work thread we've got a new key for sure
@@ -1949,7 +1975,7 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 
 			// Copy the packet in question aside
 			BYTE copyPacket[TS_PACKET_LEN];
-			memcpy(copyPacket, (void*)packet, sizeof(copyPacket));
+			memcpy_s(copyPacket, sizeof(copyPacket), (void*)packet, sizeof(copyPacket));
 
 			// Decrypt the packet
 			m_Decrypter.decrypt(copyPacket, 1);
