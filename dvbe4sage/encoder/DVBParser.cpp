@@ -15,6 +15,7 @@
 // Our message for communications
 #define WM_ALL_COMMUNICATIONS	WM_USER + 1
 
+#define FOXTEL_ONID			4096
 
 // Start dumping the full transponder
 void DVBParser::startTransponderDump()
@@ -891,8 +892,8 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 				descriptorLoopRemainingLength -= genericDescriptor->descriptor_length + DESCR_GEN_LEN;
 			}
 			
-			// Insert the new service to the map
-			if(newService.serviceType < 0x80)
+			// Insert the new service into the map
+			if(newService.ONID != FOXTEL_ONID || newService.serviceType < 0x80)
 				m_Provider.m_Services[serviceID] = newService;
 		}
 
@@ -1002,7 +1003,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 				const USHORT descriptorLength = generalDescriptor->descriptor_length;
 
 				if(isYES && generalDescriptor->descriptor_tag == (BYTE)0xE2 ||
-				   isFoxtel && onid == 4096 && generalDescriptor->descriptor_tag == (BYTE)0x93 &&
+				   isFoxtel && onid == FOXTEL_ONID && generalDescriptor->descriptor_tag == (BYTE)0x93 &&
 				   (!bouquetName.empty() || m_AustarDigitalDone))
 				{
 					// This is where YES and Foxtel keep their channel mapping
