@@ -111,18 +111,24 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	currentClient.channelName = channelName;
 	currentClient.pmtPid = pmtPid;
 	if(packetType == TYPE_ECM)
-	{
-		log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
-		currentClient.ecmPid = caPid;
-		memcpy(currentClient.ecmPacket, currentPacket, (size_t)currentPacket[3] + 4);
-	}
+		if((size_t)currentPacket[3] + 4 > PACKET_SIZE)
+		{
+			log(2, true, 0, TEXT("Bogus ECM packet received, skipping...\n"));
+			return;
+		}
+		else
+		{
+			log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
+			currentClient.ecmPid = caPid;
+			memcpy_s(currentClient.ecmPacket, sizeof(currentClient.ecmPacket), currentPacket, (size_t)currentPacket[3] + 4);
+		}
 	
 	// Make a new request
 	Request request;
 	// Put the client into it
 	request.client = &currentClient;
 	// Copy the packet itself
-	memcpy(request.packet, currentPacket, PACKET_SIZE);
+	memcpy_s(request.packet, sizeof(request.packet), currentPacket, PACKET_SIZE);
 
 	// Handle incoming packets differently
 	switch(packetType)
@@ -351,6 +357,11 @@ bool PluginsHandler::inEMMCache(const BYTE* const packet,
 {
 	// Get the size of the new packet
 	const size_t emmSize = (size_t)packet[3] + 4;
+
+	// if bogus, boil out
+	if(emmSize > PACKET_SIZE)
+		return true;
+
 	// Calculate its CRC
 	newPacketCRC = _dvb_crc32(packet, emmSize);
 
@@ -369,8 +380,10 @@ void PluginsHandler::addToEMMCache(const BYTE* const packet,
 {
 	// Build the new EMM structure
 	EMM newEmm;
+
 	// Copy the packet
-	memcpy(newEmm.packet, packet, (size_t)packet[3] + 4);
+	memcpy_s(newEmm.packet, sizeof(newEmm.packet), packet, (size_t)packet[3] + 4);
+
 	// Get the current time stamp
 	time(&newEmm.timeStamp);
 
