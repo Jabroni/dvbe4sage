@@ -276,6 +276,9 @@ Configuration::Configuration()
 	m_BouquetName = buffer;
 	log(0, false, 0, TEXT("BouquetName=%s\n"), m_BouquetName.c_str());
 
+	m_PreferSDOverHD = GetPrivateProfileInt(TEXT("Advanced"), TEXT("PreferSDOverHD"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("PreferSDOverHD=%u\n"), m_PreferSDOverHD ? 1 : 0);
+
 	log(0, false, 0, TEXT("\n"));
 
 	log(0, false, 0, TEXT("End of configuration file dump\n"));

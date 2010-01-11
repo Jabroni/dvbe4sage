@@ -958,9 +958,10 @@ void PSIParser::parseBATTable(const nit_t* const table,
 	bool isYES = (bouquetName == "Yes Bouquet 1");
 	bool isFoxtel = (bouquetName.empty() || bouquetName == "Austar digital");
 	bool isSkyUK = (bouquetName == g_pConfiguration->getBouquetName());
+	bool isSkyItalia = (bouquetName.find("Live bouquet ID") != string::npos);
 
 	// Do it only for supported providers
-	if(isYES || isFoxtel || isSkyUK)
+	if(isYES || isFoxtel || isSkyUK || isSkyItalia)
 	{
 		// First time flag
 		bool firstTime = true;
@@ -987,7 +988,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			const USHORT transportDescriptorsLength = HILO(transportStream->transport_descriptors_length);
 
 			// Get the ONID (we'll need it for Foxtel)
-			USHORT onid = HILO(transportStream->original_network_id);
+			const USHORT onid = HILO(transportStream->original_network_id);
 
 			// Update inputBuffer
 			inputBuffer += NIT_TS_LEN;
@@ -1014,10 +1015,10 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						const BYTE* pointer = inputBuffer + DESCR_GEN_LEN + i * 4;
 
 						// Now get service ID
-						USHORT serviceID = ntohs(*(USHORT*)pointer);
+						const USHORT serviceID = ntohs(*(USHORT*)pointer);
 
 						// And then get channel number
-						USHORT channelNumber = ntohs(*(USHORT*)(pointer + 2));
+						const USHORT channelNumber = ntohs(*(USHORT*)(pointer + 2));
 
 						// See if service ID already initialized
 						hash_map<USHORT, Service>::iterator it = m_Provider.m_Services.find(serviceID);
@@ -1042,11 +1043,11 @@ void PSIParser::parseBATTable(const nit_t* const table,
 							}
 
 							// Print log message
-							log(2, true, m_pParent->getTunerOrdinal(), TEXT("SID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"), serviceID, channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
+							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Mapped SID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"), serviceID, channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
 						}
 					}
 				}
-				else if(isSkyUK && generalDescriptor->descriptor_tag == (BYTE)0xB1)
+				else if((isSkyUK || isSkyItalia )&& generalDescriptor->descriptor_tag == (BYTE)0xB1)
 				{
 					// This is where Sky UK keep their channel mapping
 					const int len = (descriptorLength - 2) / 9;
@@ -1060,10 +1061,10 @@ void PSIParser::parseBATTable(const nit_t* const table,
 							continue;
 
 						// Now get service ID
-						USHORT serviceID = ntohs(*(USHORT*)pointer);
+						const USHORT serviceID = ntohs(*(USHORT*)pointer);
 
 						// And then get channel number
-						USHORT channelNumber = ntohs(*(USHORT*)(pointer + 5));
+						const USHORT channelNumber = ntohs(*(USHORT*)(pointer + 5));
 
 						if(serviceID == (USHORT)0xFFFF || serviceID == 0 || channelNumber == (USHORT)0xFFFF || channelNumber == 0)
 							continue;
@@ -1072,11 +1073,33 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						hash_map<USHORT, Service>::iterator it = m_Provider.m_Services.find(serviceID);
 						if(it != m_Provider.m_Services.end() && it->second.channelNumber == 0 && !it->second.serviceNames["eng"].empty())
 						{
+							// Get the service
+							Service& myService = it->second;
+
+							// For Sky Italia, allow override of duplicate channels only for HD channels on top of SD ones, if not requested otherwise
+							if(isSkyItalia && m_Provider.m_Channels.find(channelNumber) != m_Provider.m_Channels.end())
+							{
+								const USHORT otherServiceID = m_Provider.m_Channels[channelNumber];
+								if(otherServiceID != serviceID)
+								{
+									Service& otherService = m_Provider.m_Services[m_Provider.m_Channels[channelNumber]];
+									if(myService.serviceType != otherService.serviceType)
+										if(g_pConfiguration->getPreferSDOverHD() ^  (myService.serviceType != 25))
+											continue;
+										else
+										{
+											// Unmap the other service from this channel number
+											otherService.channelNumber = 0;
+											// Print log message
+											log(2, true, m_pParent->getTunerOrdinal(), TEXT("Unmapped, SID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"), otherServiceID, channelNumber, otherService.serviceNames["eng"].c_str(), (USHORT)otherService.serviceType, (USHORT)otherService.runningStatus);
+										}
+								}
+							}
+							
 							// Update timestamp
 							time(&m_TimeStamp);
 
 							// Prime channel number here
-							Service& myService = it->second;
 							myService.channelNumber = channelNumber;
 
 							// And make the opposite mapping too
@@ -1090,7 +1113,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 							}
 
 							// Print log message
-							log(2, true, m_pParent->getTunerOrdinal(), TEXT("SID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"), serviceID, channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
+							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Mapped SID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"), serviceID, channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
 						}
 					}
 				}
