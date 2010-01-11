@@ -50,6 +50,7 @@ class Configuration
 	USHORT						m_ECMCacheAutodeleteChunkSize;
 	bool						m_EnableECMCache;
 	string						m_BouquetName;
+	bool						m_PreferSDOverHD;
 public:
 	Configuration();
 	
@@ -98,6 +99,7 @@ public:
 	USHORT getECMCacheAutodeleteChunkSize() const	{ return m_ECMCacheAutodeleteChunkSize; }
 	bool getEnableECMCache() const					{ return m_EnableECMCache; }
 	const string& getBouquetName() const			{ return m_BouquetName; }
+	bool getPreferSDOverHD() const					{ return m_PreferSDOverHD; }
 };
 
 extern Configuration* g_pConfiguration;
