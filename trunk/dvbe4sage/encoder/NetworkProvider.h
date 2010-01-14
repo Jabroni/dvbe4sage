@@ -3,7 +3,7 @@
 using namespace std;
 using namespace stdext;
 
-// Auxiliary structure for transpoders
+// Auxiliary structure for transponders
 struct Transponder
 {
 	USHORT							onid;
@@ -20,10 +20,12 @@ struct Service
 {
 	USHORT							TSID;				// Transport stream ID
 	USHORT							ONID;				// Original network ID
-	USHORT							channelNumber;		// Remote channel number
+	short							channelNumber;		// Remote channel number
 	BYTE							serviceType;		// Service type
 	BYTE							runningStatus;		// Running status
 	hash_map<string, string>		serviceNames;		// Language to service name map
+
+	Service(): channelNumber(-1) {}
 };
 
 class NetworkProvider
