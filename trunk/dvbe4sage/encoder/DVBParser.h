@@ -67,7 +67,8 @@ private:
 	hash_map<USHORT, hash_set<USHORT>>				m_ESPidsForSid;					// SID to ES PIDs map
 	hash_map<USHORT, hash_set<USHORT>>				m_CAPidsForSid;					// SID to CA PIDs map
 	hash_map<USHORT, SectionBuffer>					m_BufferForPid;					// PID to Table map
-	USHORT											m_CurrentTid;					// Current transponder ID
+	USHORT											m_CurrentTID;					// Current transponder TID
+	USHORT											m_CurrentONID;					// Current network ONID
 	EMMInfo											m_EMMPids;						// EMM PID to EMM CA types map
 	
 	// Other important data
@@ -86,7 +87,8 @@ private:
 public:
 	// Constructor
 	PSIParser(DVBParser* const pParent) : 
-		m_CurrentTid(0),
+		m_CurrentTID(0),
+		m_CurrentONID(0),
 		m_pParent(pParent),
 		m_AllowParsing(true),
 		m_PMTCounter(0),
@@ -105,14 +107,8 @@ public:
 	void getEMMCATypes(EMMInfo& emmCATypes) const								{ emmCATypes = m_EMMPids; }
 	time_t getTimeStamp() const													{ return m_TimeStamp; }
 	bool providerInfoHasBeenCopied() const										{ return m_ProviderInfoHasBeenCopied; }
-	USHORT getCurrentTid() const												{ return m_CurrentTid; }
-
-	// Delegated to the network provider
-	bool getSidForChannel(USHORT channel, USHORT& sid) const					{ return m_Provider.getSidForChannel(channel, sid); }
-	bool getTransponderForSid(USHORT sid, Transponder& transponder) const		{ return m_Provider.getTransponderForSid(sid, transponder); }
-	bool getServiceName(USHORT sid, LPTSTR output, int outputLength) const		{ return m_Provider.getServiceName(sid, output, outputLength); }
-	USHORT getNid() const														{ return m_Provider.getNid(); }
-	bool canBeCopied() const													{ return m_Provider.canBeCopied(); }
+	USHORT getCurrentTID() const												{ return m_CurrentTID; }
+	USHORT getCurrentONID() const												{ return m_CurrentONID; }
 
 	// Setter for "Has been copied" flag
 	void setProviderInfoHasBeenCopied()											{ m_ProviderInfoHasBeenCopied = true; }
@@ -326,14 +322,12 @@ public:
 	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const							{ return m_PSIParser.getPMTPidForSid(sid, pmtPid); }
 	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids) const				{ return m_PSIParser.getESPidsForSid(sid, esPids); }
 	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const				{ return m_PSIParser.getCAPidsForSid(sid, caPids); }
-	bool getSidForChannel(USHORT channel, USHORT& sid) const						{ return m_PSIParser.getSidForChannel(channel, sid); }
-	bool getTransponderForSid(USHORT sid, Transponder& transponder) const			{ return m_PSIParser.getTransponderForSid(sid, transponder); }
 	bool getECMCATypesForSid(USHORT sid, hash_set<CAScheme>& ecmCATypes) const		{ return m_PSIParser.getECMCATypesForSid(sid, ecmCATypes); }
 	void getEMMCATypes(EMMInfo& emmCATypes) const									{ m_PSIParser.getEMMCATypes(emmCATypes); }
 	time_t getTimeStamp() const														{ return m_PSIParser.getTimeStamp(); }
-	bool getServiceName(USHORT sid, LPTSTR output, int outputLength) const			{ return m_PSIParser.getServiceName(sid, output, outputLength); }
 	bool providerInfoHasBeenCopied() const											{ return m_PSIParser.providerInfoHasBeenCopied(); }
-	USHORT getCurrentTid() const													{ return m_PSIParser.getCurrentTid(); }
+	USHORT getCurrentTID() const													{ return m_PSIParser.getCurrentTID(); }
+	USHORT getCurrentONID() const													{ return m_PSIParser.getCurrentONID(); }
 
 
 	// Setter for the internal parser "HasBeenCopied" flag

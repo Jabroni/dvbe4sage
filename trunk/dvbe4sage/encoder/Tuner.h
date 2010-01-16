@@ -16,6 +16,8 @@ private:
 	bool					m_LockStatus;
 	static int				m_TTBudget2Tuners;
 	static int				m_USB2Tuners;
+	USHORT					m_TID;
+	USHORT					m_ONID;
 
 	// We disable unsafe constructors
 	DVBSTuner();
@@ -35,14 +37,12 @@ public:
 	virtual bool getLockStatus();
 
 	const string& getTunerMac() const				{ return m_MAC; }
-	void tune(ULONG frequency,
-		ULONG symbolRate,
-		Polarisation polarization,
-		ModulationType modulation,
-		BinaryConvolutionCodeRate fecRate);
+	void tune(ULONG frequency, ULONG symbolRate, Polarisation polarization, ModulationType modulation, BinaryConvolutionCodeRate fecRate);
 	void runIdle();
-	USHORT getTid() const							{ return ((DVBSFilterGraph*)m_pFilterGraph)->m_Tid; }
-	void setTid(USHORT tid)							{ ((DVBSFilterGraph*)m_pFilterGraph)->m_Tid = tid; }
+	USHORT getTID() const							{ return m_TID; }
+	void setTID(USHORT tid)							{ m_TID = tid; }
+	USHORT getONID() const							{ return m_ONID; }
+	void setONID(USHORT onid)						{ m_ONID = onid; }
 	HANDLE getInitializationEvent()					{ return m_InitializationEvent; }
 	void copyProviderDataAndStopRecording();
 

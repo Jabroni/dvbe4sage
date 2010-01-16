@@ -10,7 +10,6 @@
 // Constructor, initializes member variables
 // and calls InitializeGraphBuilder
 DVBSFilterGraph::DVBSFilterGraph(UINT ordinal):
-	m_Tid(0),
 	m_IsHauppauge(false),
 	m_IsFireDTV(false),
 	m_IsTTBDG2(false),
@@ -694,18 +693,4 @@ BOOL DVBSFilterGraph::GetTunerDemodPropertySetInterfaces()
 	}
 
     return TRUE;
-}
-
-HRESULT DVBSFilterGraph::RunGraph()
-{
-	// Reset the TID
-	m_Tid = 0;
-	return GenericFilterGraph::RunGraph();
-}
-
-HRESULT DVBSFilterGraph::StopGraph()
-{
-	// Reset the TID
-	m_Tid = 0;
-	return GenericFilterGraph::StopGraph();
 }

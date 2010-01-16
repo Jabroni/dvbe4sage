@@ -230,14 +230,16 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 	if(!pTuner->getLockStatus())
 		log(0, true, pTuner->getSourceOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
 
-	// Get current transponder TID
-	USHORT currentTid = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentTid() : 0;
+	// Get current transponder TID and ONID
+	const USHORT currentTID = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentTID() : 0;
+	const USHORT currentONID = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentONID() : 0;
+	const UINT32 utid = NetworkProvider::getUniqueSID(currentONID, currentTID);
 
 	// Copy provider data and stop recording, for the first time
 	pTuner->copyProviderDataAndStopRecording();
 
 	// Get the list of transponders from the encoder network providers
-	const hash_map<USHORT, Transponder> transponders = pTuner->m_pEncoder->getNetworkProvider().getTransponders();
+	const hash_map<UINT32, Transponder> transponders = pTuner->m_pEncoder->getNetworkProvider().getTransponders();
 
 	// If asked for, loop through all the transponders
 	if(g_pConfiguration->scanAllTransponders())
@@ -245,14 +247,15 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 		// Log entry
 		log(0, true, pTuner->getSourceOrdinal(), TEXT("Full transponder scan at initialization requested, starting...\n"));
 
-		for(hash_map<USHORT, Transponder>::const_iterator it = transponders.begin(); it != transponders.end(); it++)
+		for(hash_map<UINT32, Transponder>::const_iterator it = transponders.begin(); it != transponders.end(); it++)
 		{
 			// Log transponder data
-			log(0, true, pTuner->getSourceOrdinal(), TEXT("Transponder with TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s - %s"),
-				it->first, it->second.frequency, it->second.symbolRate, printablePolarization(it->second.polarization), printableModulation(it->second.modulation), printableFEC(it->second.fec),
-				it->first != currentTid ? TEXT("scanning started!\n") : TEXT("skipped, because it's the same transponder as the initial one!\n"));
+			log(0, true, pTuner->getSourceOrdinal(), TEXT("Transponder with ONID=%hu, TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s - %s"),
+				NetworkProvider::getONIDFromUniqueSID(it->first), NetworkProvider::getSIDFromUniqueSID(it->first), it->second.frequency, it->second.symbolRate,
+				printablePolarization(it->second.polarization), printableModulation(it->second.modulation), printableFEC(it->second.fec),
+				it->first != utid ? TEXT("scanning started!\n") : TEXT("skipped, because it's the same transponder as the initial one!\n"));
 			// For any transponder other than the initial one
-			if(it->first != currentTid)
+			if(it->first != utid)
 			{
 				
 				// Tune to its parameters
