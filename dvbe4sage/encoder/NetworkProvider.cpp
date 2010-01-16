@@ -1,11 +1,11 @@
 #include "StdAfx.h"
 #include "NetworkProvider.h"
 
-bool NetworkProvider::getServiceName(USHORT sid,
+bool NetworkProvider::getServiceName(UINT32 usid,
 									 LPTSTR output,
 									 int outputLength) const
 {
-	hash_map<USHORT, Service>::const_iterator it = m_Services.find(sid);
+	hash_map<UINT32, Service>::const_iterator it = m_Services.find(usid);
 	if(it != m_Services.end())
 	{
 		hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find(string("eng"));
@@ -30,26 +30,25 @@ bool NetworkProvider::getServiceName(USHORT sid,
 }
 
 bool NetworkProvider::getSidForChannel(USHORT channel,
-									   USHORT& sid) const
+									   UINT32& usid) const
 {
-	hash_map<USHORT, USHORT>::const_iterator it = m_Channels.find(channel);
+	hash_map<USHORT, UINT32>::const_iterator it = m_Channels.find(channel);
 	if(it != m_Channels.end())
 	{
-		sid = it->second;
+		usid = it->second;
 		return true;
 	}
 	else
 		return false;
 }
 
-bool NetworkProvider::getTransponderForSid(USHORT sid,
+bool NetworkProvider::getTransponderForSid(UINT32 usid,
 										   Transponder& transponder) const
 {
-	hash_map<USHORT, Service>::const_iterator it1 = m_Services.find(sid);
+	hash_map<UINT32, Service>::const_iterator it1 = m_Services.find(usid);
 	if(it1 != m_Services.end())
 	{
-		USHORT tid = it1->second.TSID;
-		hash_map<USHORT, Transponder>::const_iterator it2 = m_Transponders.find(tid);
+		hash_map<UINT32, Transponder>::const_iterator it2 = m_Transponders.find(getUniqueSID(it1->second.tid, it1->second.onid));
 		if(it2 != m_Transponders.end())
 		{
 			transponder = it2->second;
@@ -67,20 +66,23 @@ void NetworkProvider::clear()
 	m_Transponders.clear();
 	m_Services.clear();
 	m_Channels.clear();
-	m_CurrentNid = 0;
+	m_DefaultONID = 0;
 }
 
 void NetworkProvider::copy(const NetworkProvider& other)
 {
 	// Copy transponders
-	for(hash_map<USHORT, Transponder>::const_iterator it = other.m_Transponders.begin(); it != other.m_Transponders.end(); it++)
+	for(hash_map<UINT32, Transponder>::const_iterator it = other.m_Transponders.begin(); it != other.m_Transponders.end(); it++)
 		m_Transponders[it->first] = it->second;
 
 	// Copy services
-	for(hash_map<USHORT, Service>::const_iterator it = other.m_Services.begin(); it != other.m_Services.end(); it++)
+	for(hash_map<UINT32, Service>::const_iterator it = other.m_Services.begin(); it != other.m_Services.end(); it++)
 		m_Services[it->first] = it->second;
 
 	// Copy channels
-	for(hash_map<USHORT, USHORT>::const_iterator it = other.m_Channels.begin(); it != other.m_Channels.end(); it++)
+	for(hash_map<USHORT, UINT32>::const_iterator it = other.m_Channels.begin(); it != other.m_Channels.end(); it++)
 		m_Channels[it->first] = it->second;
+
+	if(m_DefaultONID == 0)
+		m_DefaultONID = other.m_DefaultONID;
 }

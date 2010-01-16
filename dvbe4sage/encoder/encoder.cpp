@@ -348,8 +348,8 @@ LRESULT Encoder::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 DVBSTuner* Encoder::getTuner(int tunerOrdinal,
-						 bool useLogicalTuner,
-						 const Transponder* const pTransponder)
+							 bool useLogicalTuner,
+							 const Transponder* const pTransponder)
 {
 	// Initialize with NULL
 	DVBSTuner* tuner = NULL;
@@ -360,7 +360,7 @@ DVBSTuner* Encoder::getTuner(int tunerOrdinal,
 		// Now let's find an appropriate tuner
 		// Let's see if there isn't one already tuned to this TID
 		for(UINT i = 0; i < m_Tuners.size(); i++)
-			if(m_Tuners[i]->running() && m_Tuners[i]->getTid() == pTransponder->tid)
+			if(m_Tuners[i]->running() && m_Tuners[i]->getTID() == pTransponder->tid && m_Tuners[i]->getONID() == pTransponder->onid)
 			{
 				tuner = m_Tuners[i];
 				break;
@@ -414,7 +414,9 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	m_Provider.lock();
 
 	// First, let's obtain the SID for the channel
+	UINT32 usid = 0;
 	USHORT sid = 0;
+	USHORT onid = 0;
 
 	// The channel name will be held here
 	TCHAR channelName[256];
@@ -423,15 +425,25 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// If provided with a SID, just use it
 	if(useSid)
 	{
-		sid = (USHORT)channel;
+		usid = (UINT32)channel;
+
+		// Get SID and ONID for the service
+		sid = NetworkProvider::getSIDFromUniqueSID(usid);
+		onid = NetworkProvider::getONIDFromUniqueSID(usid);
+		if(onid == 0 && m_Provider.getDefaultONID() != 0)
+		{
+			onid = m_Provider.getDefaultONID();
+			log(2, true, 0, TEXT("A short SID specified, assuming default ONID=%hu\n"), onid);
+		}
+
 		// Get the channel name
-		m_Provider.getServiceName(sid, channelName, sizeof(channelName) / sizeof(channelName[0]));
+		m_Provider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 		
 		// Make a log entry
-		log(2, true, 0, TEXT("Service SID=%hu has Name=\"%s\"\n"), sid, channelName);
+		log(2, true, 0, TEXT("Service SID=%hu on ONID=%hu has Name=\"%s\"\n"), sid, onid, channelName);
 	}
 	// Otherwise, find it from the mapping
-	else if(!m_Provider.getSidForChannel((USHORT)channel, sid))
+	else if(!m_Provider.getSidForChannel((USHORT)channel, usid))
 	{
 		// If not found, report an error
 		log(0, true, 0, TEXT("Cannot obtain SID number for the channel \"%d\", no recording done!\n"), channel);
@@ -444,11 +456,15 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	}
 	else
 	{
+		// Get SID and ONID for the service
+		sid = NetworkProvider::getSIDFromUniqueSID(usid);
+		onid = NetworkProvider::getONIDFromUniqueSID(usid);
+
 		// Get the channel name
-		m_Provider.getServiceName(sid, channelName, sizeof(channelName) / sizeof(channelName[0]));
+		m_Provider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 		// Make a log entry
-		log(2, true, 0, TEXT("Channel=%d was successfully mapped to SID=%hu, Name=\"%s\"\n"), channel, sid, channelName);
+		log(2, true, 0, TEXT("Channel=%d was successfully mapped to SID=%hu on ONID=%hu, Name=\"%s\"\n"), channel, sid, onid, channelName);
 	}
 
 	// Now search for the tuner
@@ -462,7 +478,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	{
 		// Get the transponder
 		Transponder transponder;
-		if(m_Provider.getTransponderForSid(sid, transponder))
+		if(m_Provider.getTransponderForSid(usid, transponder))
 		{
 			// Override the tuning parameters
 			frequency = transponder.frequency;
@@ -470,21 +486,19 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			polarization = transponder.polarization;
 			modulation = transponder.modulation;
 			fecRate = transponder.fec;
+			tid = transponder.tid;
 
 			// Make a log entry
-			log(2, true, 0, TEXT("Autodiscovery results for SID=%hu: TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"), sid,
-				transponder.tid, frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
+			log(2, true, 0, TEXT("Autodiscovery results for SID=%hu on ONID=%hu: TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"), sid, onid,
+				tid, frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
 			// And get the tuner according to these
 			tuner = getTuner(tunerOrdinal, useLogicalTuner, &transponder);
-
-			// Save the TID
-			tid = transponder.tid;
 		}
 		else
 		{
 			// If transponder is not found, report an error
-			log(0, true, 0, TEXT("Autodiscovery requested, but cannot find the transponder for SID \"%hu\" (\"%s\"), no recording done!\n"), sid, channelName);
+			log(0, true, 0, TEXT("Autodiscovery requested, but cannot find the transponder for SID=%hu on ONID=%hu (\"%s\"), no recording done!\n"), sid, onid, channelName);
 
 			// Unlock the parser
 			m_Provider.unlock();
@@ -509,12 +523,12 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	
 	// Make a log entry
 	if(useSid)
-		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu (\"%s\"), Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), sid, channelName, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu on ONID=%hu (\"%s\"), Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), sid, onid, channelName, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 	else
-		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), channel, channelName, sid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu on ONID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), channel, channelName, sid, onid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
 	// If we found the tuner
@@ -557,8 +571,9 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		// Now, start the recording
 		if(tuner->startPlayback(startFullTransponderDump))
 		{
-			// Set the TID if recording was started successfully
-			tuner->setTid(tid);
+			// Set the TID and ONID if the recording was started successfully
+			tuner->setTID(tid);
+			tuner->setONID(onid);
 			// And add the recorder to the global structure
 			m_Recorders.insert(pair<USHORT, Recorder*>((USHORT)tunerOrdinal, recorder));
 		}

@@ -39,8 +39,6 @@ public:
     DVBSFilterGraph(UINT ordinal);
 
 	virtual HRESULT BuildGraph();
-	virtual HRESULT RunGraph();
-    virtual HRESULT StopGraph();
     virtual HRESULT TearDownGraph();
   	
 	bool GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pStrength);	
@@ -55,7 +53,6 @@ public:
 	Polarisation				m_SignalPolarisation;
 	ModulationType				m_Modulation;
 	BinaryConvolutionCodeRate	m_FECRate;
-	USHORT						m_Tid;
 	bool						m_IsHauppauge;				// True if the device is Hauppauge
 	bool						m_IsFireDTV;				// True if the device is FireDTV
 	bool						m_IsTTBDG2;					// True if the device is a TechnoTrend Budget 2
