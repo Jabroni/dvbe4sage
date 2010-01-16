@@ -19,17 +19,17 @@ void ECMCache::add(const BYTE* ecmPacket,
 		for(USHORT i = 0; i < m_AutodeleteChunkSize; i++)
 		{
 			// Find the first hash value to remove
-			unsigned __int32 hashToRemove = m_OrderOfData.front();
+			UINT32 hashToRemove = m_OrderOfData.front();
 
 			// Get the current time stamp
 			time_t earliestTimeStamp = 0;
 			time(&earliestTimeStamp);
 
 			// Initialize iterator with the place for removal
-			hash_multimap<unsigned __int32, ECMDCWPair>::iterator removeIt = m_Data.end();
+			hash_multimap<UINT32, ECMDCWPair>::iterator removeIt = m_Data.end();
 
 			// Find the entry with the matching hash and the earliest time stamp
-			for(hash_multimap<unsigned __int32, ECMDCWPair>::iterator it = m_Data.find(hashToRemove); it != m_Data.end(); it++)
+			for(hash_multimap<UINT32, ECMDCWPair>::iterator it = m_Data.find(hashToRemove); it != m_Data.end(); it++)
 				if(difftime(it->second.timeStamp, earliestTimeStamp) < 0)
 				{
 					// If the earliest time stamp, remember it
@@ -52,15 +52,15 @@ void ECMCache::add(const BYTE* ecmPacket,
 
 	// Copy the data
 	size_t ecmSize = (size_t)ecmPacket[3] + 4;
-	memcpy(newPair.ecm, ecmPacket, ecmSize);
+	memcpy_s(newPair.ecm, sizeof(newPair.ecm), ecmPacket, ecmSize);
 	newPair.dcw = dcw;
 	newPair.isOddKey = isOddKey;
 
 	// Compute the hash
-	unsigned __int32 newHash = _dvb_crc32(ecmPacket, ecmSize);
+	UINT32 newHash = _dvb_crc32(ecmPacket, ecmSize);
 
 	// Let's see if we don't already have this ECM packet
-	for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.find(newHash); it != m_Data.end(); it++)
+	for(hash_multimap<UINT32, ECMDCWPair>::const_iterator it = m_Data.find(newHash); it != m_Data.end(); it++)
 		// Now, check whether the actual packet really matches
 		if(it->second == newPair)
 			return;
@@ -71,7 +71,7 @@ void ECMCache::add(const BYTE* ecmPacket,
 	time(&now);
 
 	// And, finally, add the pair to the map
-	m_Data.insert(pair<unsigned __int32, ECMDCWPair>(newHash, newPair));
+	m_Data.insert(pair<UINT32, ECMDCWPair>(newHash, newPair));
 }
 
 // Find if the packet is in the cache (if no, retrieve a reference to dummy Dcw)
@@ -81,11 +81,11 @@ bool ECMCache::find(const BYTE* ecmPacket,
 	bool res = false;
 
 	// Compute the incoming packet hash
-	size_t ecmSize = (size_t)ecmPacket[3] + 4;
-	__int32 hashInQuestion = _dvb_crc32(ecmPacket, ecmSize);
+	size_t ecmSize = min((size_t)ecmPacket[3] + 4, PACKET_SIZE);
+	UINT32 hashInQuestion = _dvb_crc32(ecmPacket, ecmSize);
 
 	// Find the entry with the matching hash
-	for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.find(hashInQuestion); it != m_Data.end(); it++)
+	for(hash_multimap<UINT32, ECMDCWPair>::const_iterator it = m_Data.find(hashInQuestion); it != m_Data.end(); it++)
 		// Now, check whether the actual packet really matches
 		if(memcmp(it->second.ecm, ecmPacket, ecmSize) == 0)
 		{
@@ -109,7 +109,7 @@ bool ECMCache::DumpToFile(LPCTSTR fileName,
 	{
 		_ftprintf(outFile, TEXT("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"));
 		_ftprintf(outFile, TEXT("<cache>\n"));
-		for(hash_multimap<unsigned __int32, ECMDCWPair>::const_iterator it = m_Data.begin(); it != m_Data.end(); it++)
+		for(hash_multimap<UINT32, ECMDCWPair>::const_iterator it = m_Data.begin(); it != m_Data.end(); it++)
 		{
 			_ftprintf(outFile, TEXT("\t<keypair>\n"));
 			_ftprintf(outFile, TEXT("\t\t<ecm>"));
