@@ -48,7 +48,7 @@ bool NetworkProvider::getTransponderForSid(UINT32 usid,
 	hash_map<UINT32, Service>::const_iterator it1 = m_Services.find(usid);
 	if(it1 != m_Services.end())
 	{
-		hash_map<UINT32, Transponder>::const_iterator it2 = m_Transponders.find(getUniqueSID(it1->second.tid, it1->second.onid));
+		hash_map<UINT32, Transponder>::const_iterator it2 = m_Transponders.find(getUniqueSID(it1->second.onid, it1->second.tid));
 		if(it2 != m_Transponders.end())
 		{
 			transponder = it2->second;

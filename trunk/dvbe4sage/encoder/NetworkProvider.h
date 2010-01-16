@@ -44,6 +44,7 @@ class NetworkProvider
 	CCritSec										m_cs;
 
 public:
+	NetworkProvider() : m_DefaultONID(0)										{}
 	// Common query methods
 	bool getServiceName(UINT32 sid, LPTSTR output, int outputLength) const;
 	bool getSidForChannel(USHORT channel, UINT32& sid) const;

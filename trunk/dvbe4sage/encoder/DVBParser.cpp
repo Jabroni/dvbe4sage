@@ -861,7 +861,7 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 							// Get the service name
 							int serviceNameLength = *(currentDescriptor + DESCR_SERVICE_LEN + serviceInfoDescriptor->provider_name_length);
 							const char* beginName = (const char*)currentDescriptor + DESCR_SERVICE_LEN + serviceInfoDescriptor->provider_name_length + 1;
-							UINT skipCounter = *((const BYTE*)beginName) >= (BYTE)32 ? 0 : 1;
+							UINT skipCounter = (*((const BYTE*)beginName) >= (BYTE)32 || serviceNameLength == 0) ? 0 : 1;
 							string serviceName(beginName + skipCounter, serviceNameLength - skipCounter);
 
 							// Put the name of service in English into the map
@@ -955,7 +955,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			case 0x47:
 			{
 				const char* beginName = (const char*)inputBuffer + DESCR_BOUQUET_NAME_LEN;
-				UINT skipCounter = *((const BYTE*)beginName) >= (BYTE)32 ? 0 : 1;
+				UINT skipCounter = (*((const BYTE*)beginName) >= (BYTE)32 || bouquetDescriptor->descriptor_length == 0) ? 0 : 1;
 				bouquetName = string(beginName + skipCounter, bouquetDescriptor->descriptor_length - skipCounter);
 				log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Found bouquet with name %s\n"), bouquetName.c_str());
 				break;

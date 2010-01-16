@@ -434,6 +434,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		{
 			onid = m_Provider.getDefaultONID();
 			log(2, true, 0, TEXT("A short SID specified, assuming default ONID=%hu\n"), onid);
+			usid = NetworkProvider::getUniqueSID(onid, sid);
 		}
 
 		// Get the channel name
