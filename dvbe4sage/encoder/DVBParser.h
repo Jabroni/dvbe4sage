@@ -67,6 +67,7 @@ private:
 	hash_map<USHORT, hash_set<USHORT>>				m_ESPidsForSid;					// SID to ES PIDs map
 	hash_map<USHORT, hash_set<USHORT>>				m_CAPidsForSid;					// SID to CA PIDs map
 	hash_map<USHORT, SectionBuffer>					m_BufferForPid;					// PID to Table map
+	hash_map<USHORT, BYTE>							m_PidType;						// PID to Type map
 	USHORT											m_CurrentTID;					// Current transponder TID
 	USHORT											m_CurrentONID;					// Current network ONID
 	EMMInfo											m_EMMPids;						// EMM PID to EMM CA types map
@@ -109,6 +110,7 @@ public:
 	bool providerInfoHasBeenCopied() const										{ return m_ProviderInfoHasBeenCopied; }
 	USHORT getCurrentTID() const												{ return m_CurrentTID; }
 	USHORT getCurrentONID() const												{ return m_CurrentONID; }
+	BYTE getTypeForPid(USHORT pid) const;
 
 	// Setter for "Has been copied" flag
 	void setProviderInfoHasBeenCopied()											{ m_ProviderInfoHasBeenCopied = true; }
@@ -205,7 +207,8 @@ private:
 
 	// Assigned PID differentiator
 	hash_map<USHORT, bool>			m_IsESPid;							// PID to bool map, true for ES, false for CA
-	hash_map<USHORT, bool>			m_ValidPacketFound;					// PIT to bool map, true when a first valid packet was found for an ES PID
+	hash_map<USHORT, bool>			m_ValidPacketFound;					// PID to bool map, true when a first valid packet was found for an ES PID
+	hash_map<USHORT, bool>			m_ShouldBeValidated;				// PID to bool map, true when the packets from this PID should be valid PES packets
 	const USHORT					m_Sid;								// SID of the program being recorded
 	const USHORT					m_PmtPid;							// PID of PMT of the program being recorded
 	const hash_set<CAScheme>		m_ECMCATypes;						// ECM CA types of the program being recorded
@@ -254,14 +257,20 @@ public:
 	// Tell PID meaning
 	void setESPid(USHORT pid, bool isESPid);
 
+	// Tell is the PID should be validated
+	void setValidatePid(USHORT pid, bool validate)								{ m_ShouldBeValidated[pid] = validate; }
+
 	// Reset the parser
 	void reset();
 
 	// Get the file length
-	__int64 getFileLength() const	{ return m_FileLength; }
+	__int64 getFileLength() const												{ return m_FileLength; }
 
 	// Get the tuner ordinal
 	int getTunerOrdinal() const;
+
+	// Returns true if a type should be validated
+	static bool validateType(BYTE type)											{ return (type >= (BYTE)0x01 && type <=(BYTE)0x04) || type == (BYTE)0x06; }
 };
 
 // TS stream parser
@@ -328,7 +337,7 @@ public:
 	bool providerInfoHasBeenCopied() const											{ return m_PSIParser.providerInfoHasBeenCopied(); }
 	USHORT getCurrentTID() const													{ return m_PSIParser.getCurrentTID(); }
 	USHORT getCurrentONID() const													{ return m_PSIParser.getCurrentONID(); }
-
+	BYTE getTypeForPid(USHORT pid) const											{ return m_PSIParser.getTypeForPid(pid); }
 
 	// Setter for the internal parser "HasBeenCopied" flag
 	void setProviderInfoHasBeenCopied()												{ m_PSIParser.setProviderInfoHasBeenCopied(); }
