@@ -48,7 +48,7 @@ private:
 		SectionBuffer() : offset(0), expectedLength(0), lastContinuityCounter((BYTE)'\xFF') {}	// Constructor (making sure the offset is 0 in the beginning)
 	};
 
-	// Routines for handling varous tables parsing
+	// Routines for handling various tables parsing
 	void parseTable(const pat_t* const table,  short remainingLength, bool& abandonPacket);
 	void parsePATTable(const pat_t* const table, short remainingLength, bool& abandonPacket);
 	void parsePMTTable(const pmt_t* const table, short remainingLength);
@@ -186,9 +186,10 @@ private:
 
 	// Data members
 	FILE* const						m_pOutFile;							// Output file stream
-	bool							m_ExitWorkerThread;					// Flag for graceful exitting of worker thread
-	Recorder* const					m_pRecorder;						// The owining recorder
+	bool							m_ExitWorkerThread;					// Flag for graceful exiting of worker thread
+	Recorder* const					m_pRecorder;						// The owning recorder
 	LPCTSTR							m_ChannelName;						// The channel name
+	bool							m_firstTimePMTFixMessage;			// True as long as no PMT fix messages have been output
 	
 	// Decryption stuff
 	Decrypter						m_Decrypter;						// Decrypter object
@@ -213,12 +214,6 @@ private:
 	const USHORT					m_PmtPid;							// PID of PMT of the program being recorded
 	const hash_set<CAScheme>		m_ECMCATypes;						// ECM CA types of the program being recorded
 	const EMMInfo					m_EMMCATypes;						// EMM PIDs to EMM CA types map
-
-	// Different dilution stuff
-	USHORT							m_PATCounter;						// Running PAT packet counter
-	USHORT							m_PATContinuityCounter;				// Current PAT continuity counter
-	USHORT							m_PMTCounter;						// Running PMT packet counter
-	USHORT							m_PMTContinuityCounter;				// Current PMT continuity counter
 
 	// Internal write method to handle cyclic buffers
 	int write(const BYTE* const buffer, int bytesToWrite);
@@ -270,7 +265,7 @@ public:
 	int getTunerOrdinal() const;
 
 	// Returns true if a type should be validated
-	static bool validateType(BYTE type)											{ return (type >= (BYTE)0x01 && type <=(BYTE)0x04) || type == (BYTE)0x06; }
+	static bool validateType(BYTE type)											{ return (type >= (BYTE)0x01 && type <=(BYTE)0x04) || type == (BYTE)0x06 || type == (BYTE)0x1B; }
 };
 
 // TS stream parser

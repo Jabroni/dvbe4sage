@@ -635,6 +635,9 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		// Save the PID type
 		m_PidType[ESPid] = streamInfo->stream_type;
 
+		// Log the ES type
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("PID=%hu(0x%hX) has Type=0x%.02hX\n"), ESPid, ESPid, (USHORT)streamInfo->stream_type);
+
 		// Get ES info length
 		USHORT ESInfoLength = HILO(streamInfo->ES_info_length);
 
@@ -1419,16 +1422,6 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	// Skip or fix PAT
 	if(pid == 0)
 	{
-		// First, determine if we need to skip this packet
-		// See if we reach the right packet to round it up
-		m_PATCounter %= g_pConfiguration->getPATDilutionFactor();
-		// If the counter is not 0, increment it and boil out
-		if(m_PATCounter++ != 0)
-			return;
-		// Now, adjust the continuity counter
-		((ts_t* const)currentPacket)->continuity_counter = m_PATContinuityCounter;
-		m_PATContinuityCounter = (m_PATContinuityCounter + 1) % 16;
-
 		// Find the pointer byte - should be the first one after the TS header
 		BYTE pointer = currentPacket[TS_LEN];
 		// Now, find the beginning of the PAT table
@@ -1448,30 +1441,13 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		*pSid = htons(m_Sid);
 		*ppmtPid = htons(m_PmtPid);
 		// Calculate the new CRC and put it there
-		*(long*)((BYTE*)pat + 12) = htonl(_dvb_crc32((const BYTE*)pat, 12));
+		*(UINT32*)((BYTE*)pat + 12) = (UINT32)htonl(_dvb_crc32((const BYTE*)pat, 12));
 		// Pat is fixed!
 	}
-	// Boil out if no PAT packets have been found so far
-	//else if(!m_FoundPATPacket)
-	//	return;
 
-	// Send PMT to CAM as well
-	if(pid == m_PmtPid)
-		sendToCam(currentPacket, pid);
-
-	// Skip or fix PMT
-	if(pid == m_PmtPid && !g_pConfiguration->getDontFixPMT())
+	// Skip or fix PMT (always skip long PMTs)
+	if(pid == m_PmtPid && !g_pConfiguration->getDontFixPMT() && packet->payload_unit_start_indicator)
 	{
-		// First, determine if we need to skip this packet
-		// See if we reach the right packet to round it up
-		m_PMTCounter %= g_pConfiguration->getPMTDilutionFactor();
-		// If the counter is not 0, increment it and boil out
-		if(m_PMTCounter++ != 0)
-			return;
-		// Now, adjust the continuity counter
-		((ts_t* const)currentPacket)->continuity_counter = m_PMTContinuityCounter;
-		m_PMTContinuityCounter = (m_PMTContinuityCounter + 1) % 16;
-
 		// Copy the packet
 		BYTE copyPacket[TS_PACKET_LEN];
 		memcpy_s(copyPacket, sizeof(copyPacket), currentPacket, TS_PACKET_LEN);
@@ -1479,92 +1455,119 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		// Find the pointer byte - should be the first one after the TS header
 		BYTE pointer = currentPacket[TS_LEN];
 
+		// Let's check the pointer isn't bogus, if yes - escape!
+		if(TS_LEN + 1 + pointer + PMT_LEN >= TS_PACKET_LEN)
+		{
+			log(3, true, getTunerOrdinal(), TEXT("Bogus PMT encountered, skipping...\n"));
+			return;
+		}
+
 		// Now, find the beginning of the PMT table
 		pmt_t* const pmt = (pmt_t* const)(copyPacket + TS_LEN + 1 + pointer);
 
 		// And get the remaining length of the table
 		int remainingLength = HILO(pmt->section_length);
 
-		// Adjust input buffer pointer
-		const BYTE* inputBuffer = (const BYTE*)pmt + PMT_LEN;
-
-		// Remove CRC and prefix
-		remainingLength -= CRC_LENGTH + PMT_LEN - 3;
-
-		// Skip program info, if present
-		const USHORT programInfoLength = HILO(pmt->program_info_length);
-		inputBuffer += programInfoLength;
-		remainingLength -= programInfoLength;
-
-		// Save the inputBuffer and the remaining length
-		const BYTE* const saveInputBuffer = inputBuffer;
-		const int saveRemainingLength = remainingLength;
-
-		// Adjust the output buffer pointer
-		BYTE* outputBuffer = currentPacket + (saveInputBuffer - copyPacket);
-
-		// Loop through the stream 4 times
-		for(int i = 0; i < 4; i++)
-		{
-			// Restore the input buffer and the remaining length
-			inputBuffer = saveInputBuffer;
-			remainingLength = saveRemainingLength;
-
-			// For each stream descriptor do
-			while(remainingLength != 0)
+		// Do the internal part only if the rest of the section is within the same packet and if the CRC matches
+		if(remainingLength > 0 && remainingLength + TS_LEN + 1 + pointer - 1 < TS_PACKET_LEN)
+			if((UINT32)htonl(_dvb_crc32(currentPacket + TS_LEN + 1 + pointer, HILO(pmt->section_length) - 1)) == *(UINT32*)((const BYTE*)pmt + remainingLength - 1))
 			{
-				// Get stream info
-				const pmt_info_t* const streamInfo = (const pmt_info_t* const)inputBuffer;
+				// Adjust input buffer pointer
+				const BYTE* inputBuffer = (const BYTE*)pmt + PMT_LEN;
 
-				// Get ES info length
-				USHORT ESInfoLength = HILO(streamInfo->ES_info_length);
+				// Remove CRC and prefix
+				remainingLength -= CRC_LENGTH + PMT_LEN - 3;
 
-				// Copy flag is initially false
-				bool copy = false;
+				// Skip program info, if present
+				const USHORT programInfoLength = HILO(pmt->program_info_length);
+				inputBuffer += programInfoLength;
+				remainingLength -= programInfoLength;
 
-				// Now, depending on the pass
-				switch(i)
+				// Save the inputBuffer and the remaining length
+				const BYTE* const saveInputBuffer = inputBuffer;
+				const int saveRemainingLength = remainingLength;
+
+				// Adjust the output buffer pointer
+				BYTE* outputBuffer = currentPacket + (saveInputBuffer - copyPacket);
+
+				// Loop through the stream 4 times
+				for(int i = 0; i < 4; i++)
 				{
-					// We take care of the video first
-					case 0:
-						copy = (streamInfo->stream_type == 2 || streamInfo->stream_type == 1);
-						break;
-					// Here we take care of the audio in the right language
-					case 1:
-						copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
-										matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
-										ESInfoLength,
-										g_pConfiguration->getPrefferedAudioLanguage()));
-						break;
-					// Here we take care of all other audio streams
-					case 2:
-						copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
-										!matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
-										ESInfoLength,
-										g_pConfiguration->getPrefferedAudioLanguage()));
-						break;
-					// Here we take care of all other streams
-					default:
-						copy = (streamInfo->stream_type != 1 && streamInfo->stream_type != 2 &&
-								streamInfo->stream_type != 3 && streamInfo->stream_type != 4);
-						break;
-				}
+					// Restore the input buffer and the remaining length
+					inputBuffer = saveInputBuffer;
+					remainingLength = saveRemainingLength;
 
-				// If needed, copy the info
-				if(copy)
-				{
-					memcpy(outputBuffer, inputBuffer, PMT_INFO_LEN + ESInfoLength);
-					outputBuffer += PMT_INFO_LEN + ESInfoLength;
-				}
+					// For each stream descriptor do
+					while(remainingLength != 0)
+					{
+						// Get stream info
+						const pmt_info_t* const streamInfo = (const pmt_info_t* const)inputBuffer;
 
-				// Go to next ES info
-				inputBuffer += PMT_INFO_LEN + ESInfoLength;
-				remainingLength -= PMT_INFO_LEN + ESInfoLength;
+						// Get ES info length
+						USHORT ESInfoLength = HILO(streamInfo->ES_info_length);
+
+						// Copy flag is initially false
+						bool copy = false;
+
+						// Now, depending on the pass
+						switch(i)
+						{
+							// We take care of the video first
+							case 0:
+								copy = (streamInfo->stream_type == 2 || streamInfo->stream_type == 1 || streamInfo->stream_type == 0x1B);
+								break;
+							// Here we take care of the audio in the right language
+							case 1:
+								copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
+												matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
+												ESInfoLength,
+												g_pConfiguration->getPrefferedAudioLanguage()));
+								break;
+							// Here we take care of all other audio streams
+							case 2:
+								copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
+												!matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
+												ESInfoLength,
+												g_pConfiguration->getPrefferedAudioLanguage()));
+								break;
+							// Here we take care of all other streams
+							default:
+								copy = (streamInfo->stream_type != 1 && streamInfo->stream_type != 2 &&
+										streamInfo->stream_type != 3 && streamInfo->stream_type != 4);
+								break;
+						}
+
+						// If needed, copy the info
+						if(copy)
+						{
+							memcpy(outputBuffer, inputBuffer, PMT_INFO_LEN + ESInfoLength);
+							outputBuffer += PMT_INFO_LEN + ESInfoLength;
+						}
+
+						// Go to next ES info
+						inputBuffer += PMT_INFO_LEN + ESInfoLength;
+						remainingLength -= PMT_INFO_LEN + ESInfoLength;
+					}
+				}
+				// Calculate the new CRC and put it there
+				*(UINT32*)outputBuffer = (UINT32)htonl(_dvb_crc32(currentPacket + TS_LEN + 1 + pointer, HILO(pmt->section_length) - 1));
 			}
+			else
+			{
+				log(3, true, getTunerOrdinal(), TEXT("Bogus PMT CRC, ignoring...\n"));
+				return;
+			}
+		else if(m_firstTimePMTFixMessage)
+		{
+			log(2, true, getTunerOrdinal(), TEXT("Long PMT table encountered while trying to fix it, ignoring...\n"));
+			m_firstTimePMTFixMessage = false;
 		}
-		// Calculate the new CRC and put it there
-		*(long*)outputBuffer = htonl(_dvb_crc32(currentPacket + TS_LEN + 1 + pointer, HILO(pmt->section_length)  - 1));
+
 	}
+
+	// Send PMT to CAM as well
+	if(pid == m_PmtPid)
+		sendToCam(currentPacket, pid);
 
 	// For all other ES PIDs
 	if(pid != 0 && pid != m_PmtPid && m_IsESPid[pid] && !m_ValidPacketFound[pid])
@@ -1765,6 +1768,7 @@ void ESCAParser::reset()
 
 	// Add a single buffer to the end of the output queue
 	m_OutputBuffers.push_back(new OutputBuffer);
+	m_firstTimePMTFixMessage = true;
 }
 
 // This is the only public constructor
@@ -1791,11 +1795,8 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_FileLength((__int64)0),
 	m_MaxFileLength(maxFileLength),
 	m_CurrentPosition(0),
-	m_PATCounter(0),
-	m_PATContinuityCounter(0),
-	m_PMTCounter(0),
-	m_PMTContinuityCounter(0),
-	m_ResetCounter(0)
+	m_ResetCounter(0),
+	m_firstTimePMTFixMessage(true)
 {
 	// Make sure last ECM packet is zeroed out
 	ZeroMemory(m_LastECMPacket, sizeof(m_LastECMPacket));
