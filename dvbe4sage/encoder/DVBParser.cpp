@@ -1514,7 +1514,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 						{
 							// We take care of the video first
 							case 0:
-								copy = (streamInfo->stream_type == 2 || streamInfo->stream_type == 1 || streamInfo->stream_type == 0x1B);
+								copy = (streamInfo->stream_type == 2 || streamInfo->stream_type == 1);
 								break;
 							// Here we take care of the audio in the right language
 							case 1:
