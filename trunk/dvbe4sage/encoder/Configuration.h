@@ -40,8 +40,6 @@ class Configuration
 	USHORT						m_MaxNumberOfResets;
 
 	// All advanced stuff goes here
-	USHORT						m_PATDilutionFactor;
-	USHORT						m_PMTDilutionFactor;
 	USHORT						m_PMTThreshold;
 	USHORT						m_PSIMaturityTime;
 	bool						m_DontFixPMT;
@@ -90,8 +88,6 @@ public:
 	USHORT getMaxNumberOfResets() const				{ return m_MaxNumberOfResets; }
 
 	// All advanced stuff goes here
-	USHORT getPATDilutionFactor() const				{ return m_PATDilutionFactor; }
-	USHORT getPMTDilutionFactor() const				{ return m_PMTDilutionFactor; }
 	USHORT getPMTThreshold() const					{ return m_PMTThreshold; }
 	USHORT getPSIMaturityTime() const				{ return m_PSIMaturityTime; }
 	bool getDontFixPMT() const						{ return m_DontFixPMT; }

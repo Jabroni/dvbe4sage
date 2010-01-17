@@ -248,11 +248,6 @@ Configuration::Configuration()
 
 	// Advanced section
 	log(0, false, 0, TEXT("[Advanced]\n"));
-	m_PATDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PATDilutionFactor"), 1, iniFileFullPath);
-	log(0, false, 0, TEXT("PATDilutionFactor=%hu\n"), m_PATDilutionFactor);
-
-	m_PMTDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTDilutionFactor"), 1, iniFileFullPath);
-	log(0, false, 0, TEXT("PMTDilutionFactor=%hu\n"), m_PMTDilutionFactor);
 
 	m_PMTThreshold = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 20, iniFileFullPath);
 	log(0, false, 0, TEXT("PMTThreshold=%hu\n"), m_PMTThreshold);
