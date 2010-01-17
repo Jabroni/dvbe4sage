@@ -373,6 +373,7 @@ bool Recorder::changeState()
 						{
 							sourceParser->assignParserToPid(*it, m_pParser);
 							m_pParser->setESPid(*it, true);
+							m_pParser->setValidatePid(*it, ESCAParser::validateType(sourceParser->getTypeForPid(*it)));
 						}
 						// Assign recorder's parser to every relevant CA PID
 						for(hash_set<USHORT>::const_iterator it = caPids.begin(); it != caPids.end(); it++)

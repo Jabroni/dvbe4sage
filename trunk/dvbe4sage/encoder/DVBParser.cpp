@@ -232,6 +232,7 @@ void PSIParser::clear()
 	m_CAPidsForSid.clear();
 	m_EMMPids.clear();
 	m_BufferForPid.clear();
+	m_PidType.clear();
 	m_CurrentTID = 0;
 	m_CurrentONID = 0;
 	m_AllowParsing = true;
@@ -631,6 +632,9 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		// Get the stream PID
 		USHORT ESPid = HILO(streamInfo->elementary_PID);
 
+		// Save the PID type
+		m_PidType[ESPid] = streamInfo->stream_type;
+
 		// Get ES info length
 		USHORT ESInfoLength = HILO(streamInfo->ES_info_length);
 
@@ -701,15 +705,9 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		// Let's see if we had CA descriptors but none was actually used for this ES PID
 		if(caMap.empty() && hasCADescriptors)
 			log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used for PID=%hu, SID=%hu, either you have forgotten to specify \"ServedCAIDs\"/\"ServedPROVIDs\" or this PID is not going to be decoded because it uses a non-default ECM PID, so this PID will not be present in the output!\n"), ESPid, programNumber);
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		// Temporary hack - this is the "Big brother" workaround!
-		// TODO : fixme!
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		else if(streamInfo->stream_type != 11)
+		else
 			// Add this elementary stream information to the set
 			m_ESPidsForSid[programNumber].insert(ESPid);
-		else
-			log(0, true, m_pParent->getTunerOrdinal(), TEXT("The ES PID=%hu, SID=%hu is excluded because of its content type\n"), ESPid, programNumber);
 
 		// Add the CA type into the map only if there were CA descriptors
 		if(hasCADescriptors && !caMap.empty() && m_CATypesForSid.find(programNumber) == m_CATypesForSid.end())
@@ -1376,6 +1374,12 @@ bool PSIParser::getECMCATypesForSid(USHORT sid,
 		return false;
 }
 
+BYTE PSIParser::getTypeForPid(USHORT pid) const
+{
+	hash_map<USHORT, BYTE>::const_iterator it = m_PidType.find(pid);
+	return it != m_PidType.end() ? it->second : 0;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2014,7 +2018,8 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 		// 2. It is encrypted (this already implies the packet is not PMT or PAT)
 		// 3. It contains not only adaptation field
 		// 4. It doesn't have an error
-		if(packet->payload_unit_start_indicator &&
+		if(m_ShouldBeValidated[HILO(packet->PID)] &&
+		   packet->payload_unit_start_indicator &&
 		   packet->adaptation_field_control != 2 &&
 		   !packet->transport_error_indicator &&
 		   (evenKeyInitialized && checkAgainstEvenKey && packet->transport_scrambling_control == 2 ||
