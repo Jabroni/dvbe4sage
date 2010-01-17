@@ -1469,7 +1469,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		int remainingLength = HILO(pmt->section_length);
 
 		// Do the internal part only if the rest of the section is within the same packet and if the CRC matches
-		if(remainingLength > 0 && remainingLength + TS_LEN + 1 + pointer - 1 < TS_PACKET_LEN)
+		if(remainingLength > 0 && remainingLength + TS_LEN + 1 + pointer + 3 <= TS_PACKET_LEN)
 			if((UINT32)htonl(_dvb_crc32(currentPacket + TS_LEN + 1 + pointer, HILO(pmt->section_length) - 1)) == *(UINT32*)((const BYTE*)pmt + remainingLength - 1))
 			{
 				// Adjust input buffer pointer
