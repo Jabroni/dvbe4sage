@@ -12,19 +12,10 @@ struct CAScheme
 	USHORT								pid;
 	DWORD								provId;
 	WORD								caId;
-	/*bool operator ==(const CAScheme& other) const
-	{
-		return pid == other.pid && provId == other.provId && caId == other.caId;
-	}
-
-	bool operator <(const CAScheme& other) const
-	{
-		return caId < other.caId;
-	}*/
 
 	operator size_t() const
 	{
-		return (size_t)caId;
+		return (size_t)(provId << 16) | (size_t)caId;
 	}
 };
 
