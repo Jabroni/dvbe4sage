@@ -1628,6 +1628,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 
 			// Build the right PID order for this SID
 			vector<USHORT> esPidsOrdered;
+			int lastVideoIndex = -1;
 			int lastPreferredAudioIndex = -1;
 			int lastAudioIndex = -1;
 			int lastSubtitleIndex = -1;
@@ -1696,14 +1697,30 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 							break;
 					}
 				}
+				// Take care of the MPEG2 video streams
+				if(info.m_StreamType == 1 || info.m_StreamType == 2)
+				{
+					// Set the last video index
+					lastVideoIndex++;
+					// Increment the last preferred audio, audio and subtitle indexes if needed
+					if(lastPreferredAudioIndex != -1)
+						lastPreferredAudioIndex++;
+					if(lastAudioIndex != -1)
+						lastAudioIndex++;
+					if(lastSubtitleIndex != -1)
+						lastSubtitleIndex++;
+					// Put it in front of the list
+					esPidsOrdered.insert(esPidsOrdered.begin(), *it);
+				}
 				// Take care of the audio streams
-				if(info.m_StreamType == 3 || info.m_StreamType == 4 || (info.m_StreamType == 6 && hasAC3AudioDescriptor))
+				else if(info.m_StreamType == 3 || info.m_StreamType == 4 || (info.m_StreamType == 6 && hasAC3AudioDescriptor))
 				{
 					// See if the audio language matches the preferred one
 					if(languages.count(g_pConfiguration->getPreferredAudioLanguage()) > 0)
 					{
-						// Increment all the indexes
-						lastPreferredAudioIndex++;
+						// Set the last preferred audio index
+						lastPreferredAudioIndex = (lastPreferredAudioIndex == -1 ? lastVideoIndex : lastPreferredAudioIndex) + 1;
+						// Increment the last audio and subtitle indexes if needed
 						if(lastAudioIndex != -1)
 							lastAudioIndex++;
 						if(lastSubtitleIndex != -1)
@@ -1711,11 +1728,11 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 						// Now check if the audio is AC3 and it is also preferred
 						if(hasAC3AudioDescriptor && g_pConfiguration->getPreferredAudioFormat() == "ac3")
 							// If yes, put it in front of the list
-							esPidsOrdered.insert(esPidsOrdered.begin(), *it);
+							esPidsOrdered.insert(esPidsOrdered.begin() + (lastVideoIndex + 1), *it);
 						// Now check if the audio is not AC3 and it is preferred this way
 						else if(!hasAC3AudioDescriptor && g_pConfiguration->getPreferredAudioFormat() != "ac3")
 							// If yes, put it in front of the list
-							esPidsOrdered.insert(esPidsOrdered.begin(), *it);
+							esPidsOrdered.insert(esPidsOrdered.begin() + (lastVideoIndex + 1), *it);
 						else
 							// All other preferred audio goes here
 							esPidsOrdered.insert(esPidsOrdered.begin() + lastPreferredAudioIndex, *it);
@@ -1723,7 +1740,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 					else
 					{
 						// Set the last audio index
-						lastAudioIndex = lastAudioIndex == -1 ? lastPreferredAudioIndex + 1 : lastAudioIndex + 1;
+						lastAudioIndex = (lastAudioIndex == -1 ? (lastPreferredAudioIndex == -1 ? lastVideoIndex : lastPreferredAudioIndex) : lastAudioIndex) + 1;
 						// Increment the last subtitle index if needed
 						if(lastSubtitleIndex != -1)
 							lastSubtitleIndex++;
@@ -1732,7 +1749,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 						if((hasAC3AudioDescriptor && g_pConfiguration->getPreferredAudioFormat() == "ac3") || 
 							(!hasAC3AudioDescriptor && g_pConfiguration->getPreferredAudioFormat() != "ac3"))
 							// If yes, insert it right after the preferred language
-							esPidsOrdered.insert(esPidsOrdered.begin() + (lastPreferredAudioIndex + 1), *it);
+							esPidsOrdered.insert(esPidsOrdered.begin() + ((lastPreferredAudioIndex == -1 ? lastVideoIndex : lastPreferredAudioIndex ) + 1), *it);
 						else
 							// All the rest of the audio streams go to the new audio index
 							esPidsOrdered.insert(esPidsOrdered.begin() + lastAudioIndex, *it);
@@ -1742,11 +1759,11 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 				else if(info.m_StreamType == 6 && (hasTeletextDescriptor || hasSubtitlingDescriptor))
 				{
 					// Set the last subtitles index
-					lastSubtitleIndex = lastSubtitleIndex == -1 ? (lastAudioIndex == -1 ? lastPreferredAudioIndex + 1 : lastAudioIndex + 1) : lastSubtitleIndex + 1;
+					lastSubtitleIndex = (lastSubtitleIndex == -1 ? (lastAudioIndex == -1 ? (lastPreferredAudioIndex == -1 ? lastVideoIndex : lastPreferredAudioIndex) : lastAudioIndex) : lastSubtitleIndex) + 1;
 						
 					// If the subtitle language matches the preferred one, put it at the front of the list
 					if(languages.count(g_pConfiguration->getPreferredSubtitlesLanguage()) > 0)
-						esPidsOrdered.insert(esPidsOrdered.begin() + ((lastAudioIndex == -1 ? lastPreferredAudioIndex : lastAudioIndex) + 1), *it);
+						esPidsOrdered.insert(esPidsOrdered.begin() + ((lastAudioIndex == -1 ? (lastPreferredAudioIndex == -1 ? lastVideoIndex : lastPreferredAudioIndex) : lastAudioIndex) + 1), *it);
 					else
 						// All the rest of the subtitle streams go to the new subtitle index
 						esPidsOrdered.insert(esPidsOrdered.begin() + lastSubtitleIndex, *it);
