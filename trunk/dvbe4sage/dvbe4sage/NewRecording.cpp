@@ -63,7 +63,6 @@ void NewRecording::DoDataExchange(CDataExchange* pDX)
 	DDV_MaxChars(pDX, m_RecordingTunerOrdinal, 2);
 
 	DDX_Text(pDX, IDC_CHANNEL, m_RecordingChannelNumber);
-	DDV_MaxChars(pDX, m_RecordingChannelNumber, 5);
 
 	DDX_Text(pDX, IDC_DURATION, m_RecordingDuration);
 
