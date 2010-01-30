@@ -46,7 +46,6 @@ class Configuration
 	USHORT						m_PATDilutionFactor;
 	USHORT						m_PMTThreshold;
 	USHORT						m_PSIMaturityTime;
-	bool						m_DontFixPMT;
 	bool						m_IsVGCam;
 	USHORT						m_MaxECMCacheSize;
 	USHORT						m_ECMCacheAutodeleteChunkSize;
@@ -98,7 +97,6 @@ public:
 	USHORT getPATDilutionFactor() const					{ return m_PATDilutionFactor; }
 	USHORT getPMTThreshold() const						{ return m_PMTThreshold; }
 	USHORT getPSIMaturityTime() const					{ return m_PSIMaturityTime; }
-	bool getDontFixPMT() const							{ return m_DontFixPMT; }
 	USHORT getMaxECMCacheSize() const					{ return m_MaxECMCacheSize; }
 	USHORT getECMCacheAutodeleteChunkSize() const		{ return m_ECMCacheAutodeleteChunkSize; }
 	bool getEnableECMCache() const						{ return m_EnableECMCache; }

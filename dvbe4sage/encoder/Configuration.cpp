@@ -259,10 +259,10 @@ Configuration::Configuration()
 	// Advanced section
 	log(0, false, 0, TEXT("[Advanced]\n"));
 
-	m_PMTDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTDilutionFactor"), 5, iniFileFullPath);
+	m_PMTDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTDilutionFactor"), 1, iniFileFullPath);
 	log(0, false, 0, TEXT("PMTDilutionFactor=%hu\n"), m_PMTDilutionFactor);
 
-	m_PATDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PATDilutionFactor"), 20, iniFileFullPath);
+	m_PATDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PATDilutionFactor"), 1, iniFileFullPath);
 	log(0, false, 0, TEXT("PATDilutionFactor=%hu\n"), m_PATDilutionFactor);
 
 	m_PMTThreshold = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 20, iniFileFullPath);
@@ -270,9 +270,6 @@ Configuration::Configuration()
 
 	m_PSIMaturityTime = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PSIMaturityTime"), 10, iniFileFullPath);
 	log(0, false, 0, TEXT("PSIMaturityTime=%hu\n"), m_PSIMaturityTime);
-
-	m_DontFixPMT = GetPrivateProfileInt(TEXT("Advanced"), TEXT("DontFixPMT"), 0, iniFileFullPath) == 0 ? false : true;
-	log(0, false, 0, TEXT("DontFixPMT=%u\n"), m_DontFixPMT ? 1 : 0);
 
 	m_MaxECMCacheSize = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("MaxECMCacheSize"), 3000, iniFileFullPath);
 	log(0, false, 0, TEXT("MaxECMCacheSize=%hu\n"), m_MaxECMCacheSize);

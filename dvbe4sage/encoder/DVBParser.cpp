@@ -1665,11 +1665,33 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 							hasAC3AudioDescriptor = true;
 							break;
 						case (BYTE)0x56:
+						{
 							hasTeletextDescriptor = true;
+							// Get the language descriptor
+							const descr_iso_639_language_t* const languageDescriptor = CastIso639LanguageDescriptor(it1->second);
+							// Get the language
+							string language;
+							language += (char)languageDescriptor->lang_code1;
+							language += (char)languageDescriptor->lang_code2;
+							language += (char)languageDescriptor->lang_code3;
+							// Add it to the list of languages for this stream
+							languages.insert(language);
 							break;
+						}
 						case (BYTE)0x59:
+						{
 							hasSubtitlingDescriptor = true;
+							// Get the language descriptor
+							const descr_iso_639_language_t* const languageDescriptor = CastIso639LanguageDescriptor(it1->second);
+							// Get the language
+							string language;
+							language += (char)languageDescriptor->lang_code1;
+							language += (char)languageDescriptor->lang_code2;
+							language += (char)languageDescriptor->lang_code3;
+							// Add it to the list of languages for this stream
+							languages.insert(language);
 							break;
+						}
 						default:
 							break;
 					}
@@ -1720,11 +1742,11 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 				else if(info.m_StreamType == 6 && (hasTeletextDescriptor || hasSubtitlingDescriptor))
 				{
 					// Set the last subtitles index
-					lastSubtitleIndex = lastSubtitleIndex == -1 ? lastAudioIndex + 1 : lastSubtitleIndex + 1;
+					lastSubtitleIndex = lastSubtitleIndex == -1 ? (lastAudioIndex == -1 ? lastPreferredAudioIndex + 1 : lastAudioIndex + 1) : lastSubtitleIndex + 1;
 						
 					// If the subtitle language matches the preferred one, put it at the front of the list
 					if(languages.count(g_pConfiguration->getPreferredSubtitlesLanguage()) > 0)
-						esPidsOrdered.insert(esPidsOrdered.begin() + (lastAudioIndex + 1), *it);
+						esPidsOrdered.insert(esPidsOrdered.begin() + ((lastAudioIndex == -1 ? lastPreferredAudioIndex : lastAudioIndex) + 1), *it);
 					else
 						// All the rest of the subtitle streams go to the new subtitle index
 						esPidsOrdered.insert(esPidsOrdered.begin() + lastSubtitleIndex, *it);
