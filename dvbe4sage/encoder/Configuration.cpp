@@ -244,10 +244,26 @@ Configuration::Configuration()
 	m_PreferredAudioLanguage = buffer;
 	log(0, false, 0, TEXT("PreferredAudioLanguage=%s\n"), m_PreferredAudioLanguage.c_str());
 
+	// Get the preferred audio format
+	GetPrivateProfileString(TEXT("Recording"), TEXT("PreferredAudioFormat"), TEXT("ac3"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	m_PreferredAudioFormat = buffer;
+	log(0, false, 0, TEXT("PreferredAudioFormat=%s\n"), m_PreferredAudioFormat.c_str());
+
+	// Get the preferred subtitles language
+	GetPrivateProfileString(TEXT("Recording"), TEXT("PreferredSubtitlesLanguage"), TEXT("eng"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	m_PreferredSubtitlesLanguage = buffer;
+	log(0, false, 0, TEXT("PreferredSubtitlesLanguage=%s\n"), m_PreferredSubtitlesLanguage.c_str());
+
 	log(0, false, 0, TEXT("\n"));
 
 	// Advanced section
 	log(0, false, 0, TEXT("[Advanced]\n"));
+
+	m_PMTDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTDilutionFactor"), 5, iniFileFullPath);
+	log(0, false, 0, TEXT("PMTDilutionFactor=%hu\n"), m_PMTDilutionFactor);
+
+	m_PATDilutionFactor = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PATDilutionFactor"), 20, iniFileFullPath);
+	log(0, false, 0, TEXT("PATDilutionFactor=%hu\n"), m_PATDilutionFactor);
 
 	m_PMTThreshold = (USHORT)GetPrivateProfileInt(TEXT("Advanced"), TEXT("PMTThreshold"), 20, iniFileFullPath);
 	log(0, false, 0, TEXT("PMTThreshold=%hu\n"), m_PMTThreshold);

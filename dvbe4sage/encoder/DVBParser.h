@@ -16,21 +16,65 @@ class DVBParser;
 // Abstract class for TS packet parser
 class TSPacketParser
 {
+private:
+	//Disallow default and copy constructors
+	TSPacketParser();
+	TSPacketParser(const TSPacketParser&);
+
+protected:
+	// Parent stream parser objects
+	DVBParser* const								m_pParent;
+
 public:
+	// The only allowed constructor
+	TSPacketParser(DVBParser* const pParent) : m_pParent(pParent) {}
+
 	// This is the only common function for all derived parsers
 	virtual void parseTSPacket(const ts_t* const packet, USHORT pid, bool& abandonPacket) = 0;
 };
 
-// Elementary stream types
-enum ESType { ES_TYPE_VIDEO, ES_TYPE_AUDIO, ES_TYPE_DVB_SUBTITLE, ES_TYPE_TELETEXT_SUBTITLE, ES_TYPE_OTHER };
-
 // Elementary Stream Information
-struct ESInfo
+struct StreamInfo
 {
-	ESType							type;
-	string							language;
-	BYTE							streamType;
-	list<BYTE[256]>					descriptors;
+	// Data members
+	BYTE						m_StreamType;
+	USHORT						m_DescriptorsLength;
+	list<pair<BYTE, BYTE*>>		m_Descriptors;
+
+	// Constructor
+	StreamInfo() : m_StreamType(0), m_DescriptorsLength(0) {}
+
+	// Destructor
+	~StreamInfo()
+	{
+		while(!m_Descriptors.empty())
+		{
+			delete [] m_Descriptors.front().second;
+			m_Descriptors.pop_front();
+		}
+	}
+};
+
+// Program Information
+struct ProgramInfo
+{
+	// Data members
+	USHORT						m_PCRPid;
+	USHORT						m_DescriptorsLength;
+	list<pair<BYTE, BYTE*>>		m_Descriptors;
+
+	// Constructor
+	ProgramInfo() : m_PCRPid(0xFFFF), m_DescriptorsLength(0) {}
+
+	// Destructor
+	~ProgramInfo()
+	{
+		while(!m_Descriptors.empty())
+		{
+			delete [] m_Descriptors.front().second;
+			m_Descriptors.pop_front();
+		}
+	}
 };
 
 // PSI tables parser
@@ -63,18 +107,20 @@ private:
 
 	// This is transponder-wide data
 	hash_map<USHORT, USHORT>						m_PMTPids;						// SID to PMT PID map
+	hash_map<USHORT, ProgramInfo>					m_ProgramInfoForSid;			// SID to Program Info map
 	hash_map<USHORT, hash_set<CAScheme>>			m_CATypesForSid;				// SID to CA types map
 	hash_map<USHORT, hash_set<USHORT>>				m_ESPidsForSid;					// SID to ES PIDs map
 	hash_map<USHORT, hash_set<USHORT>>				m_CAPidsForSid;					// SID to CA PIDs map
 	hash_map<USHORT, SectionBuffer>					m_BufferForPid;					// PID to Table map
-	hash_map<USHORT, BYTE>							m_PidType;						// PID to Type map
+	hash_map<USHORT, StreamInfo>					m_PidStreamInfo;				// PID to StreamInfo map
+	hash_map<USHORT, BYTE>							m_PMTVersions;					// SID to PMT version map
 	USHORT											m_CurrentTID;					// Current transponder TID
 	USHORT											m_CurrentONID;					// Current network ONID
 	EMMInfo											m_EMMPids;						// EMM PID to EMM CA types map
 	
 	// Other important data
 	USHORT											m_PMTCounter;					// Number of PMT packets encountered before any CAT packet
-	DVBParser* const								m_pParent;						// Parent stream parser objects
+
 	bool											m_AllowParsing;					// Becomes false before stopping the graph
 	time_t											m_TimeStamp;					// Last update time stamp
 	bool											m_ProviderInfoHasBeenCopied;	// True if the tables have been copied to the encoder
@@ -88,9 +134,9 @@ private:
 public:
 	// Constructor
 	PSIParser(DVBParser* const pParent) : 
+		TSPacketParser(pParent),
 		m_CurrentTID(0),
 		m_CurrentONID(0),
-		m_pParent(pParent),
 		m_AllowParsing(true),
 		m_PMTCounter(0),
 		m_TimeStamp(0),
@@ -104,6 +150,8 @@ public:
 	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const;
 	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids) const;
 	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const;
+	const ProgramInfo& getProgramInfoForSid(USHORT sid) const					{ return m_ProgramInfoForSid.find(sid)->second; }
+	const StreamInfo& getStreamInfoForPid(USHORT pid) const						{ return m_PidStreamInfo.find(pid)->second; }
 	bool getECMCATypesForSid(USHORT sid, hash_set<CAScheme>& ecmCATypes) const;
 	void getEMMCATypes(EMMInfo& emmCATypes) const								{ emmCATypes = m_EMMPids; }
 	time_t getTimeStamp() const													{ return m_TimeStamp; }
@@ -183,37 +231,58 @@ private:
 	void decryptAndWritePending(bool immediately);
 	// Send the CA packet to the CAM
 	void sendToCam(const BYTE* const currentPacket, USHORT caPid);
+	// Put data to the PSI table of this program
+	void addPSIData(const BYTE* const data,	USHORT length, bool topLevel, USHORT pid, BYTE& PSIContinuityCounter);
+	// Indicate this is the end of the PSI table
+	USHORT finishPSI(USHORT pid, BYTE& PSIContinuityCounter);
 
 	// Data members
-	FILE* const						m_pOutFile;							// Output file stream
-	bool							m_ExitWorkerThread;					// Flag for graceful exiting of worker thread
-	Recorder* const					m_pRecorder;						// The owning recorder
-	LPCTSTR							m_ChannelName;						// The channel name
-	bool							m_firstTimePMTFixMessage;			// True as long as no PMT fix messages have been output
+	FILE* const						m_pOutFile;								// Output file stream
+	bool							m_ExitWorkerThread;						// Flag for graceful exiting of worker thread
+	Recorder* const					m_pRecorder;							// The owning recorder
+	LPCTSTR							m_ChannelName;							// The channel name
 	
 	// Decryption stuff
-	Decrypter						m_Decrypter;						// Decrypter object
-	PluginsHandler*	const			m_pPluginsHandler;					// Plugins handler object
-	BYTE							m_LastECMPacket[PACKET_SIZE];		// Last new ECM packet
+	Decrypter						m_Decrypter;							// Decrypter object
+	PluginsHandler*	const			m_pPluginsHandler;						// Plugins handler object
+	BYTE							m_LastECMPacket[PACKET_SIZE];			// Last new ECM packet
 
 	// Output buffer stuff
-	deque<OutputBuffer* const>		m_OutputBuffers;					// Vector of output buffers (one per distinct ECM packet)
-	CCritSec						m_csOutputBuffer;					// Critical section on output buffers structure
-	HANDLE							m_WorkerThread;						// The worker thread handling decryption
-	const bool						m_IsEncrypted;						// True if the ES are encrypted
-	__int64							m_FileLength;						// Contains the output file length so far
-	const __int64					m_MaxFileLength;					// Max file length for cyclic buffer, for regular file -1
-	__int64							m_CurrentPosition;					// Current position in the cyclic buffer, otherwise unused
-	USHORT							m_ResetCounter;						// How many subsequent resets have been encountered?
+	deque<OutputBuffer* const>		m_OutputBuffers;						// Vector of output buffers (one per distinct ECM packet)
+	CCritSec						m_csOutputBuffer;						// Critical section on output buffers structure
+	HANDLE							m_WorkerThread;							// The worker thread handling decryption
+	const bool						m_IsEncrypted;							// True if the ES are encrypted
+	__int64							m_FileLength;							// Contains the output file length so far
+	const __int64					m_MaxFileLength;						// Max file length for cyclic buffer, for regular file -1
+	__int64							m_CurrentPosition;						// Current position in the cyclic buffer, otherwise unused
+	USHORT							m_ResetCounter;							// How many subsequent resets have been encountered?
 
+	// PSI sections writing stuff
+	BYTE							m_PSIOutputBuffer[TS_PACKET_LEN];		// Container for PSI TS packets
+	USHORT							m_PSIOutputBufferOffset;				// Next write offset within the PSI TS packet
+	BOOL							m_PSIFirstTimeFlag;						// True before the first PSI TS packet is written
+	BYTE							m_PSISection[MAX_PSI_SECTION_LENGTH];	// Used for calculation of CRC
+	USHORT							m_PSISectionOffset;						// Offset within the PSI section
+	USHORT							m_PSIOutputPacketsCounter;				// Counts output packets for the current PSI section
+
+	// Specific sections counters
+	BYTE							m_PMTContinuityCounter;					// Used for writing PMT packets
+	BYTE							m_PMTVersion;							// Also used for writing PMT packets
+	USHORT							m_PMTDilutionCounter;					// The current PMT dilution counter
+	USHORT							m_PMTDilutionFactor;					// PMT dilution factor
+	BYTE							m_PATContinuityCounter;					// Used for writing PMT packets
+	BYTE							m_PATVersion;							// Also used for writing PMT packets
+	USHORT							m_PATDilutionCounter;					// The current PAT dilution counter
+	USHORT							m_PATDilutionFactor;					// PAT dilution factor
+	
 	// Assigned PID differentiator
-	hash_map<USHORT, bool>			m_IsESPid;							// PID to bool map, true for ES, false for CA
-	hash_map<USHORT, bool>			m_ValidPacketFound;					// PID to bool map, true when a first valid packet was found for an ES PID
-	hash_map<USHORT, bool>			m_ShouldBeValidated;				// PID to bool map, true when the packets from this PID should be valid PES packets
-	const USHORT					m_Sid;								// SID of the program being recorded
-	const USHORT					m_PmtPid;							// PID of PMT of the program being recorded
-	const hash_set<CAScheme>		m_ECMCATypes;						// ECM CA types of the program being recorded
-	const EMMInfo					m_EMMCATypes;						// EMM PIDs to EMM CA types map
+	hash_map<USHORT, bool>			m_IsESPid;								// PID to bool map, true for ES, false for CA
+	hash_map<USHORT, bool>			m_ValidPacketFound;						// PID to bool map, true when a first valid packet was found for an ES PID
+	hash_map<USHORT, bool>			m_ShouldBeValidated;					// PID to bool map, true when the packets from this PID should be valid PES packets
+	const USHORT					m_Sid;									// SID of the program being recorded
+	const USHORT					m_PmtPid;								// PID of PMT of the program being recorded
+	const hash_set<CAScheme>		m_ECMCATypes;							// ECM CA types of the program being recorded
+	const EMMInfo					m_EMMCATypes;							// EMM PIDs to EMM CA types map
 
 	// Internal write method to handle cyclic buffers
 	int write(const BYTE* const buffer, int bytesToWrite);
@@ -230,7 +299,8 @@ private:
 
 public:
 	// The only valid constructor
-	ESCAParser(Recorder* const pRecorder,
+	ESCAParser(DVBParser* const pParent,
+			   Recorder* const pRecorder,
 			   FILE* const pFile,
 			   PluginsHandler* const pPluginsHandler,
 			   LPCTSTR channelName,
@@ -279,6 +349,9 @@ private:
 	// Stream PID to Parser map
 	hash_map<USHORT, hash_set<TSPacketParser*>>	m_ParserForPid;
 
+	// PMT changed map
+	hash_map<USHORT, bool>						m_PMTChangedForSid;			// True when there was a recent change in PMT for SID
+
 	// We have only one PSI parser
 	PSIParser m_PSIParser;
 
@@ -325,6 +398,8 @@ public:
 	const NetworkProvider& getNetworkProvider() const								{ return m_PSIParser.getNetworkProvider(); }
 	bool getPMTPidForSid(USHORT sid, USHORT& pmtPid) const							{ return m_PSIParser.getPMTPidForSid(sid, pmtPid); }
 	bool getESPidsForSid(USHORT sid, hash_set<USHORT>& esPids) const				{ return m_PSIParser.getESPidsForSid(sid, esPids); }
+	const ProgramInfo& getProgramInfoForSid(USHORT sid) const						{ return m_PSIParser.getProgramInfoForSid(sid); }
+	const StreamInfo& getStreamInfoForPid(USHORT pid) const							{ return m_PSIParser.getStreamInfoForPid(pid); }
 	bool getCAPidsForSid(USHORT sid, hash_set<USHORT>& caPids) const				{ return m_PSIParser.getCAPidsForSid(sid, caPids); }
 	bool getECMCATypesForSid(USHORT sid, hash_set<CAScheme>& ecmCATypes) const		{ return m_PSIParser.getECMCATypesForSid(sid, ecmCATypes); }
 	void getEMMCATypes(EMMInfo& emmCATypes) const									{ m_PSIParser.getEMMCATypes(emmCATypes); }
@@ -342,19 +417,32 @@ public:
 	void unlock();
 
 	// This method stop PSI packets parsing just before stopping the graph to avoid corruption
-	void stopPSIPackets()															{ m_PSIParser.disallowParsing(); }
+	void stopPSIPackets()									{ m_PSIParser.disallowParsing(); }
 	// This method resumes PSI packets parsing just before stopping the graph to avoid corruption
-	void resumePSIPackets()															{ m_PSIParser.allowParsing(); }
+	void resumePSIPackets()									{ m_PSIParser.allowParsing(); }
 
 	// Get HasConnectedClients flag
-	bool getHasConnectedClients() const												{ return m_HasConnectedClients; }
+	bool getHasConnectedClients() const						{ return m_HasConnectedClients; }
 
 	// Set m_HasConnectedClients flag
-	void setHasConnectedClients()													{ m_HasConnectedClients = true; }
+	void setHasConnectedClients()							{ m_HasConnectedClients = true; }
 
 	// Start dumping the full transponder
 	void startTransponderDump();
 
 	// Stop dumping the full transponder
 	void stopTransponderDump();
+
+	// Indicate there was a recent change in PMT for a SID
+	void setPMTChanged(USHORT sid)							{ m_PMTChangedForSid[sid] = true; }
+
+	// Check if there was a recent change of PMT for a SID
+	bool isPMTChanged(USHORT sid) const
+	{
+		hash_map<USHORT, bool>::const_iterator it = m_PMTChangedForSid.find(sid);
+		return it != m_PMTChangedForSid.end() ? it->second : false;
+	}
+
+	// Clear PMT change flag for a SID
+	void clearPMTChanged(USHORT sid)						{ m_PMTChangedForSid[sid] = false; }
 };
