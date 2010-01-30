@@ -83,7 +83,7 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 	// Lock the parser
 	lock();
 
-	// Dump the buffur into the file if needed
+	// Dump the buffer into the file if needed
 	if(m_FullTransponderFile != NULL)
 		if(fwrite(inputBuffer, sizeof(BYTE), inputBufferLength / sizeof(BYTE), m_FullTransponderFile) != inputBufferLength / sizeof(BYTE))
 			log(2, true, m_TunerOrdinal, TEXT("Error while dumping full transponder, some data lost!\n"));
@@ -232,7 +232,7 @@ void PSIParser::clear()
 	m_CAPidsForSid.clear();
 	m_EMMPids.clear();
 	m_BufferForPid.clear();
-	m_PidType.clear();
+	m_PidStreamInfo.clear();
 	m_CurrentTID = 0;
 	m_CurrentONID = 0;
 	m_AllowParsing = true;
@@ -543,9 +543,17 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		return;
 	}
 
-	// Also boil out if PMT for this SID has already been parsed
-	if(m_ESPidsForSid.find(programNumber) != m_ESPidsForSid.end())
+	// Boil out if there is no version change for this program
+	if(m_PMTVersions.find(programNumber) != m_PMTVersions.end() &&
+			(m_PMTVersions[programNumber] == table->version_number && table->current_next_indicator ||
+			!table->current_next_indicator))
 		return;
+
+	// Save the PMT version 
+	m_PMTVersions[programNumber] = table->version_number;
+
+	// Notify the parent parsers there was a change in PMT
+	m_pParent->setPMTChanged(programNumber);
 
 	// Log warning message if EMMPid is still 0
 	if(m_EMMPids.empty())
@@ -556,6 +564,12 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 
 	// Remove CRC and prefix
 	remainingLength -= CRC_LENGTH + PMT_LEN;
+
+	// Here we keep the program info
+	ProgramInfo programInfo;
+
+	// Copy the PCR PID
+	programInfo.m_PCRPid = HILO(table->PCR_PID);
 
 	// Go through the program info, if present
 	USHORT programInfoLength = HILO(table->program_info_length);
@@ -575,7 +589,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 	while(programInfoLength != 0)
 	{
 		const descr_gen_t* const descriptor = CastGenericDescriptor(inputBuffer);
-		if(descriptor->descriptor_tag == '\x09')
+		if(descriptor->descriptor_tag == (BYTE)0x09)
 		{
 			// Set the flag
 			hasCADescriptors = true;
@@ -588,7 +602,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			// Get the CAID
 			caScheme.caId = HILO(caDescriptor->CA_type);
 			// And the PROVID, if present
-			if(caDescriptor->descriptor_length > DESCR_CA_LEN - 2 /*-2 desc+len*/)
+			if(caDescriptor->descriptor_length > DESCR_CA_LEN - 2)
 				caScheme.provId = caDescriptor->CA_provid;
 			else
 				caScheme.provId = 0;
@@ -608,6 +622,14 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 				log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for the entire SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), these CAID/PROVID are NOT served, so ECM packets with this PID will NOT be passed to plugins\n"),
 							programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 		}
+		else
+		{
+			// Just save descriptors of any type other than CA
+			BYTE* tempBuffer = new BYTE[descriptor->descriptor_length + DESCR_GEN_LEN];
+			memcpy_s(tempBuffer, descriptor->descriptor_length + DESCR_GEN_LEN, inputBuffer, descriptor->descriptor_length + DESCR_GEN_LEN);
+			programInfo.m_Descriptors.push_back(pair<BYTE, BYTE*>(descriptor->descriptor_length + DESCR_GEN_LEN, tempBuffer));
+			programInfo.m_DescriptorsLength += descriptor->descriptor_length + DESCR_GEN_LEN;
+		}
 
 		// Go to the next record
 		programInfoLength -= descriptor->descriptor_length + DESCR_GEN_LEN;
@@ -615,6 +637,10 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		inputBuffer += descriptor->descriptor_length + DESCR_GEN_LEN;
 	}
 	
+	// Copy the program info to the global structure
+	m_ProgramInfoForSid[programNumber] = programInfo;
+	programInfo.m_Descriptors.clear();
+
 	// Let's see if we had CA descriptors but none was actually used for this ES PID
 	if(caMap.empty() && hasCADescriptors)
 		log(0, true, m_pParent->getTunerOrdinal(), TEXT("None of the existing CA descriptors are used for the entire SID=%hu, have you forgotten to specify \"ServedCAIDs\"/\"ServedPROVIDs\"?\n"), programNumber);
@@ -632,11 +658,14 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		// Get the stream PID
 		USHORT ESPid = HILO(streamInfo->elementary_PID);
 
+		// Create the new StreamInfo structure
+		StreamInfo info;
+
 		// Save the PID type
-		m_PidType[ESPid] = streamInfo->stream_type;
+		info.m_StreamType = streamInfo->stream_type;
 
 		// Log the ES type
-		log(2, true, m_pParent->getTunerOrdinal(), TEXT("PID=%hu(0x%hX) has Type=0x%.02hX\n"), ESPid, ESPid, (USHORT)streamInfo->stream_type);
+		log(2, true, m_pParent->getTunerOrdinal(), TEXT("PID=%hu(0x%hX) of SID=%hu(0x%hX) has Type=0x%.02hX\n"), ESPid, ESPid, programNumber, programNumber, (USHORT)streamInfo->stream_type);
 
 		// Get ES info length
 		USHORT ESInfoLength = HILO(streamInfo->ES_info_length);
@@ -655,7 +684,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		while(ESInfoLength != 0)
 		{
 			const descr_gen_t* const descriptor = CastGenericDescriptor(inputBuffer);
-			if(descriptor->descriptor_tag == '\x09')
+			if(descriptor->descriptor_tag == (BYTE)0x09)
 			{
 				// Set the flag
 				hasCADescriptors = true;
@@ -668,7 +697,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 				// Get the CAID
 				caScheme.caId = HILO(caDescriptor->CA_type);
 				// And the PROVID, if present
-				if(caDescriptor->descriptor_length > DESCR_CA_LEN - 2 /*-2 desc+len*/)
+				if(caDescriptor->descriptor_length > DESCR_CA_LEN - 2)
 					caScheme.provId = caDescriptor->CA_provid;
 				else
 					caScheme.provId = 0;
@@ -699,6 +728,14 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 					log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found CA descriptor for PID=%hu, SID=%hu, ECM PID=0x%hX(%hu), CAID=0x%hX(%hu), PROVID=0x%X(%u), these CAID/PROVID are NOT served, so ECM packets with this PID will NOT be passed to plugins\n"),
 								ESPid, programNumber, caScheme.pid, caScheme.pid, caScheme.caId, caScheme.caId, caScheme.provId, caScheme.provId);
 			}
+			else
+			{
+				// Just save descriptors of any type other than CA
+				BYTE* tempBuffer = new BYTE[descriptor->descriptor_length + DESCR_GEN_LEN];
+				memcpy_s(tempBuffer, descriptor->descriptor_length + DESCR_GEN_LEN, inputBuffer, descriptor->descriptor_length + DESCR_GEN_LEN);
+				info.m_Descriptors.push_back(pair<BYTE, BYTE*>(descriptor->descriptor_length + DESCR_GEN_LEN, tempBuffer));
+				info.m_DescriptorsLength += descriptor->descriptor_length + DESCR_GEN_LEN;
+			}
 
 			// Go to the next record
 			ESInfoLength -= descriptor->descriptor_length + DESCR_GEN_LEN;
@@ -715,6 +752,11 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 		// Add the CA type into the map only if there were CA descriptors
 		if(hasCADescriptors && !caMap.empty() && m_CATypesForSid.find(programNumber) == m_CATypesForSid.end())
 			m_CATypesForSid[programNumber] = caMap;
+
+		// Save all the descriptors for PID
+		m_PidStreamInfo[ESPid] = info;
+		// Purge descriptors from info, to prevent buffer deletion
+		info.m_Descriptors.clear();
 	}
 
 	// Add the EMM PIDs discovered earlier
@@ -1379,8 +1421,8 @@ bool PSIParser::getECMCATypesForSid(USHORT sid,
 
 BYTE PSIParser::getTypeForPid(USHORT pid) const
 {
-	hash_map<USHORT, BYTE>::const_iterator it = m_PidType.find(pid);
-	return it != m_PidType.end() ? it->second : 0;
+	hash_map<USHORT, StreamInfo>::const_iterator it = m_PidStreamInfo.find(pid);
+	return it != m_PidStreamInfo.end() ? it->second.m_StreamType : 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1405,6 +1447,104 @@ DWORD WINAPI parserWorkerThreadRoutine(LPVOID param)
 	return 0;
 }
 
+
+void ESCAParser::addPSIData(const BYTE* const data,
+							USHORT length,
+							bool topLevel,
+							USHORT pid,
+							BYTE& PSIContinuityCounter)
+{
+	// Let's see if we need to put some initial stuff into the TS packet
+	if(m_PSIOutputBufferOffset == 0)
+	{
+		// Fill the remaining entries of the TS header
+		ts_t* const tsHeader = (ts_t*)m_PSIOutputBuffer;
+		// The continuity counter
+		tsHeader->continuity_counter = PSIContinuityCounter;
+		// Increment it for the next time
+		PSIContinuityCounter = PSIContinuityCounter == 15 ? 0 : PSIContinuityCounter + 1;
+		// Payload unit start indicator is set to 1 for the first time and then to 0
+		tsHeader->payload_unit_start_indicator = m_PSIFirstTimeFlag;
+		// Fill the PID
+		tsHeader->PID_hi = (pid & 0xFF00) >> 8;
+		tsHeader->PID_lo = pid & 0xFF;
+		// Set the output offset
+		m_PSIOutputBufferOffset = TS_LEN;
+		// See if this is the first TS packet for a PSI table
+		if(m_PSIFirstTimeFlag)
+		{
+			// Put empty pointer if this is the first time
+			m_PSIOutputBuffer[m_PSIOutputBufferOffset++] = 0;
+			// First time PSI flag should be FALSE now
+			m_PSIFirstTimeFlag = false;
+		}
+	}
+
+	// Calculate the copy length
+	USHORT copyLength = min(TS_PACKET_LEN - m_PSIOutputBufferOffset, length);
+
+	// Copy the data
+	memcpy(m_PSIOutputBuffer + m_PSIOutputBufferOffset, data, copyLength);
+
+	// Increase the offset in the buffer
+	m_PSIOutputBufferOffset += copyLength;
+
+	// Check if the buffer is full
+	if(m_PSIOutputBufferOffset == TS_PACKET_LEN)
+	{
+		// Send it to the output
+		putToOutputBuffer(m_PSIOutputBuffer);
+		// Reset the offset
+		m_PSIOutputBufferOffset = 0;
+		// Increase output packets counter
+		m_PSIOutputPacketsCounter++;
+	}
+
+	// If there are any remainders, process them again
+	if(copyLength < length)
+		addPSIData(data + copyLength, length - copyLength, false, pid, PSIContinuityCounter);
+
+	// See if we need to add the data to the section for future CRC calculation
+	if(topLevel)
+	{
+		// Copy the data to the section
+		memcpy(m_PSISection + m_PSISectionOffset, data, length);
+		// Increase the offset
+		m_PSISectionOffset += length;
+	}
+}
+
+USHORT ESCAParser::finishPSI(USHORT pid,
+							 BYTE& PSIContinuityCounter)
+{
+	// Get the CRC first
+	UINT32 crc = (UINT32)htonl(_dvb_crc32(m_PSISection, m_PSISectionOffset));
+
+	// Add it to the output, without adding to the section
+	addPSIData((const BYTE* const)&crc, 4, false, pid, PSIContinuityCounter);
+
+	// If there are any remainders
+	if(m_PSIOutputBufferOffset != 0)
+	{
+		// Fill them to the full length
+		memset(m_PSIOutputBuffer + m_PSIOutputBufferOffset, (BYTE)0xFF, TS_PACKET_LEN - m_PSIOutputBufferOffset);
+		// Send to output
+		putToOutputBuffer(m_PSIOutputBuffer);
+		// Reset the offset
+		m_PSIOutputBufferOffset = 0;
+	}
+	// Reset the PSI section offset
+	m_PSISectionOffset = 0;
+	// Reset the first time flag
+	m_PSIFirstTimeFlag = true;
+	// Save the previous value of the output reset counter
+	USHORT result = m_PSIOutputPacketsCounter;
+	// And reset the PSI output packets counter
+	m_PSIOutputPacketsCounter = 0;
+	// And return the total number of output packets
+	return result;
+}
+
 // This is the top level DVB TS stream parsing routine, to be called on a generic TS buffer
 void ESCAParser::parseTSPacket(const ts_t* const packet,
 							   USHORT pid,
@@ -1419,169 +1559,269 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 	// Copy the contents of the current input buffer
 	memcpy_s(currentPacket, sizeof(currentPacket), (BYTE*)packet, TS_PACKET_LEN);
 
-	// Skip or fix PAT
+	// Write or skip PAT
 	if(pid == 0)
 	{
-		// Find the pointer byte - should be the first one after the TS header
-		BYTE pointer = currentPacket[TS_LEN];
-		// Now, find the beginning of the PAT table
-		pat_t* const pat = (pat_t* const)(currentPacket + TS_LEN + 1 + pointer);
-		// Now get the previous length - we need this to stuff the PAT with FF
-		USHORT prevPatLength = HILO(pat->section_length);
-		// Set the new length - should be 13 (5 the remainder of the header + 4 for the single PMT + 4 for CRC
-		pat->section_length_hi = 0;
-		pat->section_length_lo = 13;
-		// Stuff the contents of the PAT with FF
-		memset((BYTE*)pat + PAT_LEN, '\xFF', min(prevPatLength - 5, TS_PACKET_LEN - PAT_LEN - pointer - 1 - TS_LEN));
-		// Get the pointer to the new SID
-		USHORT* pSid = (USHORT*)((BYTE*)pat + PAT_LEN);
-		// Get the pointer to the new PMT PID
-		USHORT* ppmtPid = (USHORT*)((BYTE*)pat + PAT_LEN + 2);
-		// Put them there after host-to-network translation
-		*pSid = htons(m_Sid);
-		*ppmtPid = htons(m_PmtPid);
-		// Calculate the new CRC and put it there
-		*(UINT32*)((BYTE*)pat + 12) = (UINT32)htonl(_dvb_crc32((const BYTE*)pat, 12));
-		// Pat is fixed!
+		// First, deal with dilution
+		if(m_PATDilutionCounter++ != 0)
+		{
+			// If the dilution counter reached the maximum, make it 0
+			if(m_PATDilutionCounter >= m_PATDilutionFactor)
+				m_PATDilutionCounter = 0;
+		}
+		else
+		{
+			// Fill the PMT header
+			pat_t patHeader;
+			// Nullify it
+			ZeroMemory((void*)&patHeader, PAT_LEN);
+			// Syntax indicator is always 1
+			patHeader.section_syntax_indicator = 1;
+			// Current next indicator is 1 (this is the actual PAT)
+			patHeader.current_next_indicator = 1;
+			// The version number
+			patHeader.version_number = m_PATVersion;
+			// Increment it for the next time
+			m_PATVersion = m_PATVersion == 31 ? 0 : m_PATVersion + 1;
+			// Set the TSID
+			SETHILO(patHeader.transport_stream_id, m_pParent->getCurrentTID());
+			// Set the new length - should be 13 (5 the remainder of the header + 4 for the single PMT + 4 for CRC
+			SETHILO(patHeader.section_length, 13);
+			
+			// Output the PAT header
+			addPSIData((const BYTE* const)&patHeader, PAT_LEN, true, pid, m_PATContinuityCounter);
+
+			// Get the SID in network order
+			USHORT nsid = htons(m_Sid);
+			// And output it
+			addPSIData((const BYTE* const)&nsid, 2, true, pid, m_PATContinuityCounter);
+
+			// Get the PMT PID in network order
+			USHORT nPMTPid = htons(m_PmtPid);
+			// And output it
+			addPSIData((const BYTE* const)&nPMTPid, 2, true, pid, m_PATContinuityCounter);
+
+			// Adjust the PAT dilution factor
+			m_PATDilutionFactor = max(finishPSI(pid, m_PATContinuityCounter), m_PATDilutionFactor);
+		}
 	}
 
-	// Skip or fix PMT (always skip long PMTs)
-	if(pid == m_PmtPid && !g_pConfiguration->getDontFixPMT() && packet->payload_unit_start_indicator)
+	// Write or skip PMT depending on dilution
+	if(pid == m_PmtPid)
 	{
-		// Copy the packet
-		BYTE copyPacket[TS_PACKET_LEN];
-		memcpy_s(copyPacket, sizeof(copyPacket), currentPacket, TS_PACKET_LEN);
-
-		// Find the pointer byte - should be the first one after the TS header
-		BYTE pointer = currentPacket[TS_LEN];
-
-		// Let's check the pointer isn't bogus, if yes - escape!
-		if(TS_LEN + 1 + pointer + PMT_LEN >= TS_PACKET_LEN)
+		// First, deal with dilution
+		if(m_PMTDilutionCounter++ != 0 && !m_pParent->isPMTChanged(m_Sid))
 		{
-			log(3, true, getTunerOrdinal(), TEXT("Bogus PMT encountered, skipping...\n"));
-			return;
+			// If the dilution counter reached the maximum, make it 0
+			if(m_PMTDilutionCounter >= m_PMTDilutionFactor)
+				m_PMTDilutionCounter = 0;
 		}
+		else
+		{
+			// Get the list of all ES PIDs for this SID
+			hash_set<USHORT> esPids;
+			m_pParent->getESPidsForSid(m_Sid, esPids);
+			// Remove the PAT PID
+			esPids.erase(0);
+			// Remove the PMT PID
+			esPids.erase(m_PmtPid);
 
-		// Now, find the beginning of the PMT table
-		pmt_t* const pmt = (pmt_t* const)(copyPacket + TS_LEN + 1 + pointer);
-
-		// And get the remaining length of the table
-		int remainingLength = HILO(pmt->section_length);
-
-		// Do the internal part only if the rest of the section is within the same packet and if the CRC matches
-		if(remainingLength > 0 && remainingLength + TS_LEN + 1 + pointer + 3 <= TS_PACKET_LEN)
-			if((UINT32)htonl(_dvb_crc32(currentPacket + TS_LEN + 1 + pointer, HILO(pmt->section_length) - 1)) == *(UINT32*)((const BYTE*)pmt + remainingLength - 1))
+			// Build the right PID order for this SID
+			vector<USHORT> esPidsOrdered;
+			int lastPreferredAudioIndex = -1;
+			int lastAudioIndex = -1;
+			int lastSubtitleIndex = -1;
+			for(hash_set<USHORT>::const_iterator it = esPids.begin(); it != esPids.end(); it++)
 			{
-				// Adjust input buffer pointer
-				const BYTE* inputBuffer = (const BYTE*)pmt + PMT_LEN;
-
-				// Remove CRC and prefix
-				remainingLength -= CRC_LENGTH + PMT_LEN - 3;
-
-				// Skip program info, if present
-				const USHORT programInfoLength = HILO(pmt->program_info_length);
-				inputBuffer += programInfoLength;
-				remainingLength -= programInfoLength;
-
-				// Save the inputBuffer and the remaining length
-				const BYTE* const saveInputBuffer = inputBuffer;
-				const int saveRemainingLength = remainingLength;
-
-				// Adjust the output buffer pointer
-				BYTE* outputBuffer = currentPacket + (saveInputBuffer - copyPacket);
-
-				// Loop through the stream 4 times
-				for(int i = 0; i < 4; i++)
+				// Get the StreamInfo for this PID
+				const StreamInfo& info = m_pParent->getStreamInfoForPid(*it);
+				// Find all language descriptors for this stream
+				hash_set<string> languages;
+				// Various flags
+				bool hasAC3AudioDescriptor = false;
+				bool hasTeletextDescriptor = false;
+				bool hasSubtitlingDescriptor = false;
+				for(list<pair<BYTE, BYTE*>>::const_iterator it1 = info.m_Descriptors.begin(); it1 != info.m_Descriptors.end(); it1++)
 				{
-					// Restore the input buffer and the remaining length
-					inputBuffer = saveInputBuffer;
-					remainingLength = saveRemainingLength;
-
-					// For each stream descriptor do
-					while(remainingLength != 0)
+					// Get the descriptor header
+					const descr_gen_t* const genericDescriptor = CastGenericDescriptor(it1->second);
+					// Take care of different descriptors
+					switch(genericDescriptor->descriptor_tag)
 					{
-						// Get stream info
-						const pmt_info_t* const streamInfo = (const pmt_info_t* const)inputBuffer;
-
-						// Get ES info length
-						USHORT ESInfoLength = HILO(streamInfo->ES_info_length);
-
-						// Copy flag is initially false
-						bool copy = false;
-
-						// Now, depending on the pass
-						switch(i)
+						case (BYTE)0x0A :
 						{
-							// We take care of the video first
-							case 0:
-								copy = (streamInfo->stream_type == 2 || streamInfo->stream_type == 1);
-								break;
-							// Here we take care of the audio in the right language
-							case 1:
-								copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
-												matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
-												ESInfoLength,
-												g_pConfiguration->getPrefferedAudioLanguage()));
-								break;
-							// Here we take care of all other audio streams
-							case 2:
-								copy = ((streamInfo->stream_type == 4 || streamInfo->stream_type == 3) && 
-												!matchAudioLanguage(inputBuffer + PMT_INFO_LEN,
-												ESInfoLength,
-												g_pConfiguration->getPrefferedAudioLanguage()));
-								break;
-							// Here we take care of all other streams
-							default:
-								copy = (streamInfo->stream_type != 1 && streamInfo->stream_type != 2 &&
-										streamInfo->stream_type != 3 && streamInfo->stream_type != 4);
-								break;
+							// Get the language descriptor
+							const descr_iso_639_language_t* const languageDescriptor = CastIso639LanguageDescriptor(it1->second);
+							// Get the language
+							string language;
+							language += (char)languageDescriptor->lang_code1;
+							language += (char)languageDescriptor->lang_code2;
+							language += (char)languageDescriptor->lang_code3;
+							// Add it to the list of languages for this stream
+							languages.insert(language);
+							break;
 						}
-
-						// If needed, copy the info
-						if(copy)
-						{
-							memcpy(outputBuffer, inputBuffer, PMT_INFO_LEN + ESInfoLength);
-							outputBuffer += PMT_INFO_LEN + ESInfoLength;
-						}
-
-						// Go to next ES info
-						inputBuffer += PMT_INFO_LEN + ESInfoLength;
-						remainingLength -= PMT_INFO_LEN + ESInfoLength;
+						case (BYTE)0x6A:
+							hasAC3AudioDescriptor = true;
+							break;
+						case (BYTE)0x56:
+							hasTeletextDescriptor = true;
+							break;
+						case (BYTE)0x59:
+							hasSubtitlingDescriptor = true;
+							break;
+						default:
+							break;
 					}
 				}
-				// Calculate the new CRC and put it there
-				*(UINT32*)outputBuffer = (UINT32)htonl(_dvb_crc32(currentPacket + TS_LEN + 1 + pointer, HILO(pmt->section_length) - 1));
-			}
-			else
-			{
-				log(3, true, getTunerOrdinal(), TEXT("Bogus PMT CRC, ignoring...\n"));
-				return;
-			}
-		else if(m_firstTimePMTFixMessage)
-		{
-			log(2, true, getTunerOrdinal(), TEXT("Long PMT table encountered while trying to fix it, ignoring...\n"));
-			m_firstTimePMTFixMessage = false;
-		}
+				// Take care of the audio streams
+				if(info.m_StreamType == 3 || info.m_StreamType == 4 || (info.m_StreamType == 6 && hasAC3AudioDescriptor))
+				{
+					// See if the audio language matches the preferred one
+					if(languages.count(g_pConfiguration->getPreferredAudioLanguage()) > 0)
+					{
+						// Increment all the indexes
+						lastPreferredAudioIndex++;
+						if(lastAudioIndex != -1)
+							lastAudioIndex++;
+						if(lastSubtitleIndex != -1)
+							lastSubtitleIndex++;
+						// Now check if the audio is AC3 and it is also preferred
+						if(hasAC3AudioDescriptor && g_pConfiguration->getPreferredAudioFormat() == "ac3")
+							// If yes, put it in front of the list
+							esPidsOrdered.insert(esPidsOrdered.begin(), *it);
+						// Now check if the audio is not AC3 and it is preferred this way
+						else if(!hasAC3AudioDescriptor && g_pConfiguration->getPreferredAudioFormat() != "ac3")
+							// If yes, put it in front of the list
+							esPidsOrdered.insert(esPidsOrdered.begin(), *it);
+						else
+							// All other preferred audio goes here
+							esPidsOrdered.insert(esPidsOrdered.begin() + lastPreferredAudioIndex, *it);
+					}
+					else
+					{
+						// Set the last audio index
+						lastAudioIndex = lastAudioIndex == -1 ? lastPreferredAudioIndex + 1 : lastAudioIndex + 1;
+						// Increment the last subtitle index if needed
+						if(lastSubtitleIndex != -1)
+							lastSubtitleIndex++;
 
+						// See if the audio is of the preferred format
+						if((hasAC3AudioDescriptor && g_pConfiguration->getPreferredAudioFormat() == "ac3") || 
+							(!hasAC3AudioDescriptor && g_pConfiguration->getPreferredAudioFormat() != "ac3"))
+							// If yes, insert it right after the preferred language
+							esPidsOrdered.insert(esPidsOrdered.begin() + (lastPreferredAudioIndex + 1), *it);
+						else
+							// All the rest of the audio streams go to the new audio index
+							esPidsOrdered.insert(esPidsOrdered.begin() + lastAudioIndex, *it);
+					}
+				}
+				// Take care of the subtitles streams
+				else if(info.m_StreamType == 6 && (hasTeletextDescriptor || hasSubtitlingDescriptor))
+				{
+					// Set the last subtitles index
+					lastSubtitleIndex = lastSubtitleIndex == -1 ? lastAudioIndex + 1 : lastSubtitleIndex + 1;
+						
+					// If the subtitle language matches the preferred one, put it at the front of the list
+					if(languages.count(g_pConfiguration->getPreferredSubtitlesLanguage()) > 0)
+						esPidsOrdered.insert(esPidsOrdered.begin() + (lastAudioIndex + 1), *it);
+					else
+						// All the rest of the subtitle streams go to the new subtitle index
+						esPidsOrdered.insert(esPidsOrdered.begin() + lastSubtitleIndex, *it);
+				}
+				else
+					// All the rest of the streams go to the back of the list
+					esPidsOrdered.push_back(*it);
+			}
+
+			// Get the program info from the parent
+			const ProgramInfo& programInfo = m_pParent->getProgramInfoForSid(m_Sid);
+
+			// Now, we start filling in the PMT table
+			// Fill the PMT header
+			pmt_t pmtHeader;
+			// Nullify it
+			ZeroMemory((void*)&pmtHeader, PMT_LEN);
+			// Syntax indicator is always 1
+			pmtHeader.section_syntax_indicator = 1;
+			// Fill the program number (== SID)
+			SETHILO(pmtHeader.program_number, m_Sid);
+			// Table ID for PMT is 0x02
+			pmtHeader.table_id = 2;
+			// Current next indicator is 1 (this is the actual PMT)
+			pmtHeader.current_next_indicator = 1;
+			// The version number
+			pmtHeader.version_number = m_PMTVersion;
+			// Increment it for the next time
+			m_PMTVersion = m_PMTVersion == 31 ? 0 : m_PMTVersion + 1;
+			// Fill the program info length
+			SETHILO(pmtHeader.program_info_length, programInfo.m_DescriptorsLength);
+			// Fill the PCR PID
+			SETHILO(pmtHeader.PCR_PID, programInfo.m_PCRPid);
+
+			// Compute the total section length
+			USHORT sectionLength = 13 + programInfo.m_DescriptorsLength;
+			// Add descriptors length for every PID of this program
+			for(hash_set<USHORT>::const_iterator it = esPids.begin(); it != esPids.end(); it++)
+				sectionLength += PMT_INFO_LEN + m_pParent->getStreamInfoForPid(*it).m_DescriptorsLength;
+			SETHILO(pmtHeader.section_length, sectionLength);
+
+			// Output the PMT header
+			addPSIData((const BYTE* const)&pmtHeader, PMT_LEN, true, pid, m_PMTContinuityCounter);
+
+			// Iterate through program descriptors
+			for(list<pair<BYTE, BYTE*>>::const_iterator it = programInfo.m_Descriptors.begin(); it != programInfo.m_Descriptors.end(); it++)
+				addPSIData(it->second, (USHORT)it->first, true, pid, m_PMTContinuityCounter);
+
+			// Iterate through the streams in the right order
+			for(UINT i = 0; i < esPidsOrdered.size(); i++)
+			{
+				// Get stream info for the current stream
+				const StreamInfo& streamInfo = m_pParent->getStreamInfoForPid(esPidsOrdered[i]);
+
+				// Fill stream info structure
+				pmt_info_t pmtInfo;
+				// Nullify it
+				ZeroMemory((void*)&pmtInfo, PMT_INFO_LEN);
+				// Copy the stream type
+				pmtInfo.stream_type = streamInfo.m_StreamType;
+				// Set the PID
+				SETHILO(pmtInfo.elementary_PID, esPidsOrdered[i]);
+				// Set the descriptors length
+				SETHILO(pmtInfo.ES_info_length, streamInfo.m_DescriptorsLength);
+
+				// Output the stream info header
+				addPSIData((const BYTE* const)&pmtInfo, PMT_INFO_LEN, true, pid, m_PMTContinuityCounter);
+
+				// Now, iterate through the descriptors of this stream
+				for(list<pair<BYTE, BYTE*>>::const_iterator it = streamInfo.m_Descriptors.begin(); it != streamInfo.m_Descriptors.end(); it++)
+					addPSIData(it->second, (USHORT)it->first, true, pid, m_PMTContinuityCounter);
+			}
+
+			// Mark the end of PMT section and adjust the PMT dilution factor
+			m_PMTDilutionFactor = max(finishPSI(pid, m_PMTContinuityCounter), m_PMTDilutionFactor);
+
+			// Mark the PMT for this SID as unchanged
+			m_pParent->clearPMTChanged(m_Sid);
+		}
 	}
 
-	// Send PMT to CAM as well
-	if(pid == m_PmtPid)
-		sendToCam(currentPacket, pid);
-
-	// For all other ES PIDs
-	if(pid != 0 && pid != m_PmtPid && m_IsESPid[pid] && !m_ValidPacketFound[pid])
-		if(!packet->payload_unit_start_indicator)
-			return;
-		else
-			m_ValidPacketFound[pid] = true;
-	
 	// If this is an ES PID
 	if(m_IsESPid[pid])
+	{
+		// See if we already had a valid packet
+		if(!m_ValidPacketFound[pid])
+			// If no and the packet is not a beginning of a new packet, boil out
+			if(!packet->payload_unit_start_indicator)
+				return;
+			else
+				// Otherwise set the flag
+				m_ValidPacketFound[pid] = true;
 		// Put the packet to the output queue
 		putToOutputBuffer(currentPacket);
-	else
-		// Otherwise send it to CAM
+	}
+	else if(pid != 0)
+		// Otherwise send it to CAM, if it's not PAT
 		sendToCam(currentPacket, pid);
 }
 
@@ -1768,11 +2008,23 @@ void ESCAParser::reset()
 
 	// Add a single buffer to the end of the output queue
 	m_OutputBuffers.push_back(new OutputBuffer);
-	m_firstTimePMTFixMessage = true;
+	
+	// Fix the PSI auxiliary variables
+	m_PMTContinuityCounter = 0;
+	m_PMTVersion = 0;
+	m_PMTDilutionCounter = 0;
+	m_PATContinuityCounter = 0;
+	m_PATVersion = 0;
+	m_PATDilutionCounter = 0;
+	m_PSIOutputBufferOffset = 0;
+	m_PSIFirstTimeFlag = true;
+	m_PSISectionOffset = 0;
+	m_PSIOutputPacketsCounter = 0;
 }
 
 // This is the only public constructor
-ESCAParser::ESCAParser(Recorder* const pRecorder,
+ESCAParser::ESCAParser(DVBParser* const pParent,
+					   Recorder* const pRecorder,
 					   FILE* const pFile,
 					   PluginsHandler* const pPluginsHandler,
 					   LPCTSTR channelName,
@@ -1781,6 +2033,7 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 					   const hash_set<CAScheme>& ecmCATypes,
 					   const EMMInfo& emmCATypes,
 					   __int64 maxFileLength) :
+	TSPacketParser(pParent),
 	m_WorkerThread(NULL),
 	m_pOutFile(pFile),
 	m_pPluginsHandler(pPluginsHandler),
@@ -1796,13 +2049,34 @@ ESCAParser::ESCAParser(Recorder* const pRecorder,
 	m_MaxFileLength(maxFileLength),
 	m_CurrentPosition(0),
 	m_ResetCounter(0),
-	m_firstTimePMTFixMessage(true)
+	m_PMTContinuityCounter(0),
+	m_PMTVersion(0),
+	m_PMTDilutionCounter(0),
+	m_PMTDilutionFactor(g_pConfiguration->getPMTDilutionFactor()),
+	m_PATContinuityCounter(0),
+	m_PATVersion(0),
+	m_PATDilutionCounter(0),
+	m_PATDilutionFactor(g_pConfiguration->getPATDilutionFactor()),
+	m_PSIOutputBufferOffset(0),
+	m_PSIFirstTimeFlag(true),
+	m_PSISectionOffset(0),
+	m_PSIOutputPacketsCounter(0)
 {
 	// Make sure last ECM packet is zeroed out
 	ZeroMemory(m_LastECMPacket, sizeof(m_LastECMPacket));
 
 	// Add a single buffer to the end of the output queue
 	m_OutputBuffers.push_back(new OutputBuffer);
+
+	// Initialize the PMT output buffer
+	// Nullify the TS header
+	ZeroMemory(m_PSIOutputBuffer, TS_LEN);
+	// Fill the common TS header fields
+	ts_t* tsHeader = (ts_t*)m_PSIOutputBuffer;
+	// Sync byte is always 0x47
+	tsHeader->sync_byte = (BYTE)0x47;
+	// There is no adaptation field
+	tsHeader->adaptation_field_control = 1;
 
 	// Create worker thread
 	m_WorkerThread = CreateThread(NULL, 0, parserWorkerThreadRoutine, this, 0, NULL);

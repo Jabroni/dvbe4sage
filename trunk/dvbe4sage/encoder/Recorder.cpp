@@ -361,13 +361,13 @@ bool Recorder::changeState()
 						EMMInfo emmCATypes;
 						sourceParser->getEMMCATypes(emmCATypes);
 						// Create the parser
-						m_pParser = new ESCAParser(this, m_fout, m_pPluginsHandler, m_ChannelName, m_Sid, pmtPid, ecmCATypes, emmCATypes, m_Size);
+						m_pParser = new ESCAParser(sourceParser, this, m_fout, m_pPluginsHandler, m_ChannelName, m_Sid, pmtPid, ecmCATypes, emmCATypes, m_Size);
 						// Assign recorder's parser to PAT PID
 						sourceParser->assignParserToPid(0, m_pParser);
-						m_pParser->setESPid(0, true);
+						m_pParser->setESPid(0, false);
 						// Assign recorder's parser to PMT PID
 						sourceParser->assignParserToPid(pmtPid, m_pParser);
-						m_pParser->setESPid(pmtPid, true);
+						m_pParser->setESPid(pmtPid, false);
 						// Assign recorder's parser to every relevant ES PID
 						for(hash_set<USHORT>::const_iterator it = esPids.begin(); it != esPids.end(); it++)
 						{

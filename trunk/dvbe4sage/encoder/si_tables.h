@@ -31,6 +31,7 @@
 #pragma once
 
 #define HILO(x) (x##_hi << 8 | x##_lo)
+#define SETHILO(x, y) x##_hi = (y & 0xFF00) >> 8; x##_lo = y & 0xFF
 
 #define MjdToEpochTime(x) (((x##_hi << 8 | x##_lo)-40587)*86400)
 #define BcdTimeToSeconds(x) ((3600 * ((10*((x##_h & 0xF0)>>4)) + (x##_h & 0xF))) + \
