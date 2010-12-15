@@ -17,6 +17,8 @@
 #include "VGPluginHandler.h"
 #include "FileSource.h"
 
+#define READ_BUFFER_SIZE	100000
+
 Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 	m_pPluginsHandler(NULL),
 	m_hWnd(hWnd)
@@ -35,7 +37,7 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 		m_pPluginsHandler = new MDAPIPluginsHandler(hInstance, hWnd, hParentMenu);
 
 	// Initialize tuners, go from 1 trough N
-	for(int i = 1; i <= DVBSFilterGraph::getNumberOfTuners(); i++)
+	for(int i = 1; i <= DVBFilterGraph::getNumberOfTuners(); i++)
 		if(!g_pConfiguration->excludeTuner(i))
 		{
 			DVBSTuner* tuner = new DVBSTuner(this,
@@ -150,7 +152,7 @@ void Encoder::socketOperation(SOCKET socket,
 		case FD_READ:
 		{
 			// Buffer for read (this really should be enough)
-			char buffer[20000];
+			char buffer[READ_BUFFER_SIZE];
 			// Read the command, we assume it comes as one chunk
 			int received = recv(socket, buffer, sizeof(buffer), 0);
 			// If got something
@@ -702,15 +704,33 @@ bool Encoder::loadECMCache(LPCTSTR fileName,
 }
 
 bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
-									 int sid,
+									 int usid,
 									 __int64 duration,
 									 LPCWSTR outFileName)
 {
 	// Create a file source
 	FileSource* source = new FileSource(inFileName);
 
+	USHORT sid = NetworkProvider::getSIDFromUniqueSID((UINT32)usid);
+	USHORT onid = NetworkProvider::getONIDFromUniqueSID((UINT32)usid);
+	if(onid == 0 && m_Provider.getDefaultONID() != 0)
+	{
+		onid = m_Provider.getDefaultONID();
+		log(2, true, 0, TEXT("A short SID specified, assuming default ONID=%hu\n"), onid);
+		usid = NetworkProvider::getUniqueSID(onid, sid);
+	}
+
+	// The channel name will be held here
+	TCHAR channelName[256];
+	channelName[0] = TCHAR('\0');
+
+	// Get the channel name
+	if(m_Provider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0])))		
+		// Make a log entry
+		log(2, true, 0, TEXT("Service SID=%hu on ONID=%hu has Name=\"%s\"\n"), sid, onid, channelName);
+
 	// Create the recorder
-	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, sid, (USHORT)sid, TEXT(""), duration, this, -1, false);
+	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, (int)sid, sid, channelName, duration, this, -1, false);
 
 	// Let's see if the recorder has an error, just delete it and exit
 	if(recorder->hasError())

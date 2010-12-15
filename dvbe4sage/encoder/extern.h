@@ -47,7 +47,8 @@ extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromString(LPCTSTR str);
 extern "C" ENCODER_API Polarisation getPolarizationFromDescriptor(USHORT descriptor);
 extern "C" ENCODER_API LPCTSTR printablePolarization(Polarisation polarization);
 extern "C" ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str);
-extern "C" ENCODER_API ModulationType getModulationFromDescriptor(BYTE modulationSystem, BYTE modulationType);
+extern "C" ENCODER_API ModulationType getDVBSModulationFromDescriptor(BYTE modulationSystem, BYTE modulationType);
+extern "C" ENCODER_API ModulationType getDVBCModulationFromDescriptor(BYTE modulation);
 extern "C" ENCODER_API LPCTSTR printableModulation(ModulationType modulation);
 extern "C" ENCODER_API ModulationType getModulationFromString(LPCTSTR str);
 #endif	// NEED_ACCESS_FUNCTIONS

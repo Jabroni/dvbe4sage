@@ -110,17 +110,21 @@ void PluginsHandler::putCAPacket(ESCAParser* caller,
 	currentClient.sid = sid;
 	currentClient.channelName = channelName;
 	currentClient.pmtPid = pmtPid;
+	int dataSize = (size_t)currentPacket[3] + 4;
 	if(packetType == TYPE_ECM)
-		if((size_t)currentPacket[3] + 4 > PACKET_SIZE)
+		if(dataSize > PACKET_SIZE)
 		{
 			log(2, true, 0, TEXT("Bogus ECM packet received, skipping...\n"));
 			return;
 		}
 		else
 		{
-			log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and put to the queue\n"), sid);
+			TCHAR loggedECM[PACKET_SIZE * 2 + 10];
+			for(int i = 0; i < dataSize; i++)
+				_stprintf_s(&loggedECM[i * 2], sizeof(loggedECM) / sizeof(loggedECM[0]) - i * 2, TEXT("%02X"), (UINT)currentPacket[i]);
+			log(2, true, 0, TEXT("A new ECM packet for SID=%hu received and put to the queue (%s)\n"), sid, loggedECM);
 			currentClient.ecmPid = caPid;
-			memcpy_s(currentClient.ecmPacket, sizeof(currentClient.ecmPacket), currentPacket, (size_t)currentPacket[3] + 4);
+			memcpy_s(currentClient.ecmPacket, sizeof(currentClient.ecmPacket), currentPacket, dataSize);
 		}
 	
 	// Make a new request

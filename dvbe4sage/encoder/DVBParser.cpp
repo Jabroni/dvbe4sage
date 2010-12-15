@@ -15,9 +15,10 @@
 // Our message for communications
 #define WM_ALL_COMMUNICATIONS	WM_USER + 1
 
-#define SKYNZ_ONID			169
-#define FOXTEL_ONID			4096
-#define SKYITALIA_ONID		64511
+#define SKYNZ_ONID(onid)		(onid == 169)
+#define FOXTEL_ONID(onid)		(onid == 4096)
+#define SKYITALIA_ONID(onid)	(onid == 64511)
+#define DISH_ONID(onid)			(onid >= 4097 && onid <= 4106)
 
 // Start dumping the full transponder
 void DVBParser::startTransponderDump()
@@ -430,33 +431,36 @@ void PSIParser::parseTable(const pat_t* const table,
 		// Get the CRC
 		const unsigned __int32 crc = ntohl(*(const UINT*)(inputBuffer + tableLength - CRC_LENGTH));
 
-		// Do all the stuff below only if CRC matches
-		if(crc == _dvb_crc32(inputBuffer, tableLength - CRC_LENGTH))
-		{
-			// If this is a PAT table
-			if(table->table_id == (BYTE)'\0')
-				parsePATTable(table, tableLength, abandonPacket);		// Parse PAT table
-			//Or if this is a SDT table
-			else if(table->table_id == (BYTE)'\x42' || table->table_id == (BYTE)'\x46')
-				parseSDTTable((const sdt_t* const)table, (short)tableLength);	// Parse the SDT table
-			// Or if this is a BAT table
-			else if(table->table_id == (BYTE)'\x4A')
-				parseBATTable((const nit_t* const)table, (short)tableLength);	// Parse the BAT table
-			// Or if this is a PMT table
-			else if(table->table_id == (BYTE)'\x02')
-				parsePMTTable((const pmt_t* const)table, (short)tableLength);	// Parse the PMT table
-			// Or if this is a NIT table
-			else if(table->table_id == (BYTE)'\x40')
-				parseNITTable((const nit_t* const)table, (short)tableLength);	// Parse the NIT table
-			// Or if this is a CAT table
-			else if(table->table_id == (BYTE)'\x01')
-				parseCATTable((const cat_t* const)table, (short)tableLength);	// Parse the CAT table
-			// Of it is everything else
+		// Do all the stuff below only if this is not a stuffing table
+		if(table->table_id != 0x72)
+			// Make sure the CRC matches
+			if(crc == _dvb_crc32(inputBuffer, tableLength - CRC_LENGTH))
+			{
+				// If this is a PAT table
+				if(table->table_id == (BYTE)'\0')
+					parsePATTable(table, tableLength, abandonPacket);		// Parse PAT table
+				//Or if this is a SDT table
+				else if(table->table_id == (BYTE)'\x42' || table->table_id == (BYTE)'\x46')
+					parseSDTTable((const sdt_t* const)table, (short)tableLength);	// Parse the SDT table
+				// Or if this is a BAT table
+				else if(table->table_id == (BYTE)'\x4A')
+					parseBATTable((const nit_t* const)table, (short)tableLength);	// Parse the BAT table
+				// Or if this is a PMT table
+				else if(table->table_id == (BYTE)'\x02')
+					parsePMTTable((const pmt_t* const)table, (short)tableLength);	// Parse the PMT table
+				// Or if this is a NIT table
+				else if(table->table_id == (BYTE)'\x40' || table->table_id == (BYTE)'\x41')
+					parseNITTable((const nit_t* const)table, (short)tableLength);	// Parse the NIT table
+				// Or if this is a CAT table
+				else if(table->table_id == (BYTE)'\x01')
+					parseCATTable((const cat_t* const)table, (short)tableLength);	// Parse the CAT table
+				// Of it is everything else
+				else
+					parseUnknownTable(table, (short)tableLength);					// Parse the unknown table
+			}
 			else
-				parseUnknownTable(table, (short)tableLength);					// Parse the unknown table
-		}
-		else
-			log(2, true, m_pParent->getTunerOrdinal(), TEXT("PSI table CRC error, dropping the table...\n"));
+				// Print a log message on unmatching CRC and drop the table
+				log(2, true, m_pParent->getTunerOrdinal(), TEXT("PSI table CRC error, dropping the table...\n"));
 
 		// Amend input buffer pointer
 		inputBuffer += tableLength;
@@ -952,8 +956,14 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 			}
 			
 			// Insert the new service into the map
-			if(newService.runningStatus != 0 && (onid != FOXTEL_ONID && onid != SKYNZ_ONID && onid != SKYITALIA_ONID || newService.serviceType < 0x80))
+			if((newService.runningStatus != 0 || DISH_ONID(onid)) && (!FOXTEL_ONID(onid) && !SKYNZ_ONID(onid) && !SKYITALIA_ONID(onid) || newService.serviceType < 0x80))
+			{
 				m_Provider.m_Services[usid] = newService;
+
+				// Print log message
+				log(3, true, m_pParent->getTunerOrdinal(), TEXT("Discovered SID=%hu, ONID=%hu, TSID=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+									sid, onid, tid, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+			}
 		}
 
 		// Adjust input buffer pointer
@@ -974,6 +984,9 @@ void PSIParser::parseBATTable(const nit_t* const table,
 	// If the provider info has already been copied, boil out
 	if(m_ProviderInfoHasBeenCopied)
 		return;
+
+	// Get the bouquet ID
+	USHORT bouquetID = HILO(table->network_id);
 
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + NIT_LEN;
@@ -1016,7 +1029,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 
 	// Flags for supported "remote channel number tuning" providers
 	bool isYES = (bouquetName == "Yes Bouquet 1");
-	bool isFoxtel = (bouquetName.empty() || bouquetName == "Austar digital");
+	bool isFoxtel = bouquetID == 25191 || bouquetID == 25184;
 	bool isSkyUK = (bouquetName == g_pConfiguration->getBouquetName());
 	bool isSkyItalia = (bouquetName == "Live bouquet ID");
 	bool isSkyNZ = (bouquetName.find("CA2 ") == 0 && !g_pConfiguration->getPreferSDOverHD() || bouquetName == g_pConfiguration->getBouquetName());
@@ -1064,8 +1077,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 				const descr_gen_t* const genericDescriptor = CastGenericDescriptor(inputBuffer);
 				const USHORT descriptorLength = genericDescriptor->descriptor_length;
 
-				if((isYES || isSkyNZ && g_pConfiguration->getPreferSDOverHD()) && genericDescriptor->descriptor_tag == (BYTE)0xE2 ||
-				   isFoxtel && genericDescriptor->descriptor_tag == (BYTE)0x93 && (!bouquetName.empty() || m_AustarDigitalDone))
+				if((isYES || isSkyNZ && g_pConfiguration->getPreferSDOverHD()) && genericDescriptor->descriptor_tag == (BYTE)0xE2/* ||
+				   isFoxtel && genericDescriptor->descriptor_tag == (BYTE)0x93 && (!bouquetName.empty() || m_AustarDigitalDone)*/)
 				{
 					// This is how YES, Foxtel and SkyNZ (non-HD) keep their channel mapping
 					const int len = descriptorLength / 4;
@@ -1111,7 +1124,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						}
 					}
 				}
-				else if((isSkyUK || isSkyItalia || isSkyNZ) && genericDescriptor->descriptor_tag == (BYTE)0xB1)
+				else if((isSkyUK || isSkyItalia || isSkyNZ || isFoxtel) && genericDescriptor->descriptor_tag == (BYTE)0xB1)
 				{
 					// This is how Sky UK, Sky Italia and Sky NZ (HD) keep their channel mapping
 					const int len = (descriptorLength - 2) / 9;
@@ -1300,6 +1313,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 			{
 				case 0x43:
 				{
+					// This is a satellite transponder descriptor
 					// Construct new transponder
 					Transponder transponder;
 					// Set its TID
@@ -1317,7 +1331,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 					transponder.symbolRate = 10000 * BcdCharToInt(satDescriptor->symbol_rate1) + 100 * BcdCharToInt(satDescriptor->symbol_rate2) +
 											 BcdCharToInt(satDescriptor->symbol_rate3);
 					// Get the modulation type
-					transponder.modulation = getModulationFromDescriptor(satDescriptor->modulationsystem, satDescriptor->modulationtype);
+					transponder.modulation = getDVBSModulationFromDescriptor(satDescriptor->modulationsystem, satDescriptor->modulationtype);
 					// Get the FEC rate
 					transponder.fec = getFECFromDescriptor(satDescriptor->fec_inner);
 					// Get the polarization
@@ -1335,6 +1349,44 @@ void PSIParser::parseNITTable(const nit_t* const table,
 						log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found transponder for ONID=%hu with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 							onid, tid, transponder.frequency, transponder.symbolRate, printablePolarization(transponder.polarization),
 							printableModulation(transponder.modulation), printableFEC(transponder.fec));
+					}
+					break;
+				}
+				case 0x44:
+				{
+					// This is a cable transponder descriptor
+					// Construct new transponder
+					Transponder transponder;
+					// Set its TID
+					transponder.tid = tid;
+					// And ONID
+					transponder.onid = onid;
+					// Get the combined ONID&TID
+					const UINT32 utid = NetworkProvider::getUniqueSID(onid, tid);
+					// Here we have satellite descriptor
+					const descr_cable_delivery_system_t* const cabDescriptor = CastCableDeliverySystemDescriptor(inputBuffer);
+					// Get the frequency
+					transponder.frequency = 100000 * BcdCharToInt(cabDescriptor->frequency1) + 1000 * BcdCharToInt(cabDescriptor->frequency2) +
+											10 * BcdCharToInt(cabDescriptor->frequency3) + 1 * BcdCharToInt(cabDescriptor->frequency4);
+					// Get the symbol rate
+					transponder.symbolRate = 10000 * BcdCharToInt(cabDescriptor->symbol_rate1) + 100 * BcdCharToInt(cabDescriptor->symbol_rate2) +
+											 BcdCharToInt(cabDescriptor->symbol_rate3);
+					// Get the modulation type
+					transponder.modulation = getDVBCModulationFromDescriptor(cabDescriptor->modulation);
+					// Get the FEC rate
+					//transponder.fec = getFECFromDescriptor(cabDescriptor->fec_inner);
+					
+					// Set the transponder info if not set yet
+					hash_map<UINT32, Transponder>::iterator it = m_Provider.m_Transponders.find(utid);
+					if(it == m_Provider.m_Transponders.end())
+					{
+						// Update timestamp
+						time(&m_TimeStamp);
+
+						// Prime transponder data
+						m_Provider.m_Transponders[utid] = transponder;
+						log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found transponder for ONID=%hu with TID=%d, Frequency=%lu, Symbol Rate=%lu, Modulation=%s\n"),
+							onid, tid, transponder.frequency, transponder.symbolRate, printableModulation(transponder.modulation));
 					}
 					break;
 				}

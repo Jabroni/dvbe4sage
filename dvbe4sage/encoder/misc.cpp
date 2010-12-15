@@ -165,8 +165,8 @@ extern "C" ENCODER_API Polarisation getPolarizationFromString(LPCTSTR str)
 	return BDA_POLARISATION_NOT_DEFINED;
 }
 
-extern "C" ENCODER_API ModulationType getModulationFromDescriptor(BYTE modulationSystem,
-																  BYTE modulationType)
+extern "C" ENCODER_API ModulationType getDVBSModulationFromDescriptor(BYTE modulationSystem,
+																	  BYTE modulationType)
 {
 	switch(modulationType)
 	{
@@ -185,6 +185,27 @@ extern "C" ENCODER_API ModulationType getModulationFromDescriptor(BYTE modulatio
 	}
 }
 
+extern "C" ENCODER_API ModulationType getDVBCModulationFromDescriptor(BYTE modulation)
+{
+	switch(modulation)
+	{
+		case 0:
+			return BDA_MOD_NOT_DEFINED;
+		case 1:
+			return BDA_MOD_16QAM;
+		case 2:
+			return BDA_MOD_32QAM;
+		case 3:
+			return BDA_MOD_64QAM;
+		case 4:
+			return BDA_MOD_128QAM;
+		case 5:
+			return BDA_MOD_256QAM;
+		default:
+			return BDA_MOD_NOT_DEFINED;
+	}
+}
+
 extern "C" ENCODER_API LPCTSTR printableModulation(ModulationType modulation)
 {
 	switch(modulation)
@@ -197,6 +218,42 @@ extern "C" ENCODER_API LPCTSTR printableModulation(ModulationType modulation)
 			return TEXT("8PSK (DVB-S2)");
 		case BDA_MOD_16QAM:
 			return TEXT("16QAM");
+		case BDA_MOD_32QAM:
+			return TEXT("32QAM");
+		case BDA_MOD_64QAM:
+			return TEXT("64QAM");
+		case BDA_MOD_80QAM:
+			return TEXT("80QAM");
+		case BDA_MOD_96QAM:
+			return TEXT("96QAM");
+		case BDA_MOD_112QAM:
+			return TEXT("112QAM");
+		case BDA_MOD_128QAM:
+			return TEXT("128QAM");
+		case BDA_MOD_160QAM:
+			return TEXT("160QAM");
+		case BDA_MOD_192QAM:
+			return TEXT("192QAM");
+		case BDA_MOD_224QAM:
+			return TEXT("224QAM");
+		case BDA_MOD_256QAM:
+			return TEXT("256QAM");
+		case BDA_MOD_320QAM:
+			return TEXT("320QAM");
+		case BDA_MOD_384QAM:
+			return TEXT("384QAM");
+		case BDA_MOD_448QAM:
+			return TEXT("448QAM");
+		case BDA_MOD_512QAM:
+			return TEXT("512QAM");
+		case BDA_MOD_640QAM:
+			return TEXT("640QAM");
+		case BDA_MOD_768QAM:
+			return TEXT("768QAM");
+		case BDA_MOD_896QAM:
+			return TEXT("896QAM");
+		case BDA_MOD_1024QAM:
+			return TEXT("1024QAM");
 		default:
 			return TEXT("Not defined");
 	}
@@ -216,5 +273,41 @@ extern "C" ENCODER_API ModulationType getModulationFromString(LPCTSTR str)
 		return BDA_MOD_NBC_QPSK;
 	if(_tcsicmp(str, TEXT("16QAM")) == 0)
 		return BDA_MOD_16QAM;
+	if(_tcsicmp(str, TEXT("32QAM")) == 0)
+		return BDA_MOD_32QAM;
+	if(_tcsicmp(str, TEXT("64QAM")) == 0)
+		return BDA_MOD_64QAM;
+	if(_tcsicmp(str, TEXT("80QAM")) == 0)
+		return BDA_MOD_80QAM;
+	if(_tcsicmp(str, TEXT("96QAM")) == 0)
+		return BDA_MOD_96QAM;
+	if(_tcsicmp(str, TEXT("112QAM")) == 0)
+		return BDA_MOD_112QAM;
+	if(_tcsicmp(str, TEXT("128QAM")) == 0)
+		return BDA_MOD_128QAM;
+	if(_tcsicmp(str, TEXT("160QAM")) == 0)
+		return BDA_MOD_160QAM;
+	if(_tcsicmp(str, TEXT("192QAM")) == 0)
+		return BDA_MOD_192QAM;
+	if(_tcsicmp(str, TEXT("224QAM")) == 0)
+		return BDA_MOD_224QAM;
+	if(_tcsicmp(str, TEXT("256QAM")) == 0)
+		return BDA_MOD_256QAM;
+	if(_tcsicmp(str, TEXT("320QAM")) == 0)
+		return BDA_MOD_320QAM;
+	if(_tcsicmp(str, TEXT("384QAM")) == 0)
+		return BDA_MOD_384QAM;
+	if(_tcsicmp(str, TEXT("448QAM")) == 0)
+		return BDA_MOD_448QAM;
+	if(_tcsicmp(str, TEXT("512QAM")) == 0)
+		return BDA_MOD_512QAM;
+	if(_tcsicmp(str, TEXT("640QAM")) == 0)
+		return BDA_MOD_640QAM;
+	if(_tcsicmp(str, TEXT("768QAM")) == 0)
+		return BDA_MOD_768QAM;
+	if(_tcsicmp(str, TEXT("896QAM")) == 0)
+		return BDA_MOD_896QAM;
+	if(_tcsicmp(str, TEXT("1024QAM")) == 0)
+		return BDA_MOD_1024QAM;
 	return BDA_MOD_NOT_DEFINED;
 }

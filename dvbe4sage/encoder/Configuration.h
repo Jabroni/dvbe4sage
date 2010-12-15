@@ -3,8 +3,11 @@
 using namespace std;
 using namespace stdext;
 
+enum SetupType {SETUP_DVBS, SETUP_DVBT, SETUP_DVBC };
+
 class Configuration
 {
+	SetupType					m_SetupType;
 	UINT						m_LogLevel;
 	UINT						m_DCWTimeout;
 	UINT						m_TSPacketsPerBuffer;
@@ -55,6 +58,7 @@ class Configuration
 public:
 	Configuration();
 	
+	SetupType getSetupType() const						{ return m_SetupType; }
 	bool excludeTuner(UINT tunerOrdinal) const			{ return m_ExcludedTuners.count(tunerOrdinal) > 0; }
 	bool excludeTunersByMAC(const string mac) const		{ return m_ExcludedTunersMAC.count(mac) > 0 ; }
 	bool includeTuner(UINT tunerOrdinal) const			{ return m_IncludedTuners.count(tunerOrdinal) > 0; }

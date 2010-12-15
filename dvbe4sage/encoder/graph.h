@@ -3,7 +3,7 @@
 #include "GenericFilterGraph.h"
 #include "THIOCtrl.h"
 
-class DVBSFilterGraph : public GenericFilterGraph
+class DVBFilterGraph : public GenericFilterGraph
 {
 private:
     CComPtr<ITuningSpace>	m_pITuningSpace;			// The tuning space
@@ -28,20 +28,24 @@ private:
     virtual void ReleaseInterfaces();
 
     HRESULT CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest);
+	HRESULT CreateDVBCTuneRequest(IDVBTuneRequest** pTuneRequest);
+	HRESULT CreateDVBTTuneRequest(IDVBTuneRequest** pTuneRequest);
 
-    HRESULT CreateTuningSpace();
+    HRESULT CreateDVBSTuningSpace();
+	HRESULT CreateDVBCTuningSpace();
+	HRESULT CreateDVBTTuningSpace();
 
 	// No default or copy constructor!
-	DVBSFilterGraph();
-	DVBSFilterGraph(const DVBSFilterGraph&);
+	DVBFilterGraph();
+	DVBFilterGraph(const DVBFilterGraph&);
 
 public:
-    DVBSFilterGraph(UINT ordinal);
+    DVBFilterGraph(UINT ordinal);
 
 	virtual HRESULT BuildGraph();
     virtual HRESULT TearDownGraph();
   	
-	bool GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pStrength);	
+	bool GetTunerStatus(BOOLEAN& locked, long& quality, long& strength);	
 	BOOL ChangeSetting(void);
 
 	LPCTSTR getTunerName() const { return m_TunerName; }
@@ -53,6 +57,7 @@ public:
 	Polarisation				m_SignalPolarisation;
 	ModulationType				m_Modulation;
 	BinaryConvolutionCodeRate	m_FECRate;
+	long						m_Bandwidth;
 	bool						m_IsHauppauge;				// True if the device is Hauppauge
 	bool						m_IsFireDTV;				// True if the device is FireDTV
 	bool						m_IsTTBDG2;					// True if the device is a TechnoTrend Budget 2

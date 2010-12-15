@@ -75,8 +75,7 @@ void Logger::valog(UINT logLevel,
 									(USHORT)currentTime.wHour,
 									(USHORT)currentTime.wMinute,
 									(USHORT)currentTime.wSecond,
-									(USHORT)currentTime.wMilliseconds,
-									tunerOrdinal);
+									(USHORT)currentTime.wMilliseconds);
 			if(tunerOrdinal != 0)
 				_ftprintf(m_LogFile, TEXT("#%u: "), tunerOrdinal);
 		}

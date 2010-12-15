@@ -2,7 +2,7 @@
 
 #include "graph.h"
 
-BOOL DVBSFilterGraph::BDAIOControl( DWORD  dwIoControlCode,
+BOOL DVBFilterGraph::BDAIOControl( DWORD  dwIoControlCode,
 									LPVOID lpInBuffer,
 									DWORD  nInBufferSize,
 									LPVOID lpOutBuffer,
@@ -34,7 +34,7 @@ BOOL DVBSFilterGraph::BDAIOControl( DWORD  dwIoControlCode,
         return TRUE;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_SET_PID_FILTER_INFO_Fun(VOID)
+BOOL DVBFilterGraph::THBDA_IOCTL_SET_PID_FILTER_INFO_Fun(VOID)
 {
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;
@@ -71,7 +71,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_SET_PID_FILTER_INFO_Fun(VOID)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_GET_PID_FILTER_INFO_Fun(VOID)
+BOOL DVBFilterGraph::THBDA_IOCTL_GET_PID_FILTER_INFO_Fun(VOID)
 {
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;
@@ -106,7 +106,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_GET_PID_FILTER_INFO_Fun(VOID)
 //************** Basic IOCTL sets  (must support) ***************//
 //***************************************************************//
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_CHECK_INTERFACE_Fun(void)
+BOOL DVBFilterGraph::THBDA_IOCTL_CHECK_INTERFACE_Fun(void)
 {
     BOOL bResult = FALSE;
     DWORD nBytes = 0;
@@ -121,7 +121,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_CHECK_INTERFACE_Fun(void)
     return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_SET_REG_PARAMS_DATA_Fun(THBDAREGPARAMS *pTHBDAREGPARAMS)
+BOOL DVBFilterGraph::THBDA_IOCTL_SET_REG_PARAMS_DATA_Fun(THBDAREGPARAMS *pTHBDAREGPARAMS)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -135,7 +135,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_SET_REG_PARAMS_DATA_Fun(THBDAREGPARAMS *pTHBDA
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_GET_REG_PARAMS_Fun(THBDAREGPARAMS *pTHBDAREGPARAMS)
+BOOL DVBFilterGraph::THBDA_IOCTL_GET_REG_PARAMS_Fun(THBDAREGPARAMS *pTHBDAREGPARAMS)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -149,7 +149,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_GET_REG_PARAMS_Fun(THBDAREGPARAMS *pTHBDAREGPA
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_GET_DEVICE_INFO_Fun(DEVICE_INFO *pDEVICE_INFO)
+BOOL DVBFilterGraph::THBDA_IOCTL_GET_DEVICE_INFO_Fun(DEVICE_INFO *pDEVICE_INFO)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -163,7 +163,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_GET_DEVICE_INFO_Fun(DEVICE_INFO *pDEVICE_INFO)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_GET_DRIVER_INFO_Fun(DriverInfo *pDriverInfo)
+BOOL DVBFilterGraph::THBDA_IOCTL_GET_DRIVER_INFO_Fun(DriverInfo *pDriverInfo)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -177,7 +177,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_GET_DRIVER_INFO_Fun(DriverInfo *pDriverInfo)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_SET_TUNER_POWER_Fun(BYTE TunerPower)
+BOOL DVBFilterGraph::THBDA_IOCTL_SET_TUNER_POWER_Fun(BYTE TunerPower)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -191,7 +191,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_SET_TUNER_POWER_Fun(BYTE TunerPower)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_GET_TUNER_POWER_Fun(BYTE *pTunerPower)
+BOOL DVBFilterGraph::THBDA_IOCTL_GET_TUNER_POWER_Fun(BYTE *pTunerPower)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -209,7 +209,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_GET_TUNER_POWER_Fun(BYTE *pTunerPower)
 //********************* DVB-S (must support)*********************//
 //***************************************************************//
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_SET_LNB_DATA_Fun(ULONG ulLNBLOFLowBand,        // LOF Low Band, in KHz
+BOOL DVBFilterGraph::THBDA_IOCTL_SET_LNB_DATA_Fun(ULONG ulLNBLOFLowBand,        // LOF Low Band, in KHz
 												   ULONG ulLNBLOFHighBand,       // LOF High Band, in KHz
 												   ULONG ulLNBLOFHiLoSW)         // LOF High/Low Band Switch Freq, in KHz)
 {	
@@ -233,7 +233,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_SET_LNB_DATA_Fun(ULONG ulLNBLOFLowBand,       
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_GET_LNB_DATA_Fun()
+BOOL DVBFilterGraph::THBDA_IOCTL_GET_LNB_DATA_Fun()
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -251,7 +251,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_GET_LNB_DATA_Fun()
 //****************** CI & MMI (must support for CI)**************//
 //***************************************************************//
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_CI_GET_STATE_Fun(THCIState *pTHCIState)
+BOOL DVBFilterGraph::THBDA_IOCTL_CI_GET_STATE_Fun(THCIState *pTHCIState)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -265,7 +265,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_CI_GET_STATE_Fun(THCIState *pTHCIState)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_CI_GET_APP_INFO_Fun(THAppInfo *pTHAppInfo)
+BOOL DVBFilterGraph::THBDA_IOCTL_CI_GET_APP_INFO_Fun(THAppInfo *pTHAppInfo)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -279,7 +279,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_CI_GET_APP_INFO_Fun(THAppInfo *pTHAppInfo)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_CI_INIT_MMI_Fun(void)
+BOOL DVBFilterGraph::THBDA_IOCTL_CI_INIT_MMI_Fun(void)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -293,7 +293,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_CI_INIT_MMI_Fun(void)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_CI_GET_MMI_Fun(THMMIInfo *pTHMMIInfo)
+BOOL DVBFilterGraph::THBDA_IOCTL_CI_GET_MMI_Fun(THMMIInfo *pTHMMIInfo)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -307,7 +307,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_CI_GET_MMI_Fun(THMMIInfo *pTHMMIInfo)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_CI_ANSWER_Fun(THMMIInfo *pTHMMIInfo)
+BOOL DVBFilterGraph::THBDA_IOCTL_CI_ANSWER_Fun(THMMIInfo *pTHMMIInfo)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -321,7 +321,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_CI_ANSWER_Fun(THMMIInfo *pTHMMIInfo)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_CI_CLOSE_MMI_Fun(void)
+BOOL DVBFilterGraph::THBDA_IOCTL_CI_CLOSE_MMI_Fun(void)
 {	
 	BOOL bResult	= FALSE;
 	DWORD   nBytes  = 0;	
@@ -335,7 +335,7 @@ BOOL DVBSFilterGraph::THBDA_IOCTL_CI_CLOSE_MMI_Fun(void)
 	return bResult;
 }
 
-BOOL DVBSFilterGraph::THBDA_IOCTL_CI_SEND_PMT_Fun(PBYTE pBuff, BYTE byBuffSize)
+BOOL DVBFilterGraph::THBDA_IOCTL_CI_SEND_PMT_Fun(PBYTE pBuff, BYTE byBuffSize)
 {
     BOOL bResult = FALSE;
     DWORD nBytes = 0;
