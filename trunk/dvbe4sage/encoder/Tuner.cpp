@@ -22,7 +22,7 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 	m_LockStatus(false)
 {
 	// Create the right filter graph
-	m_pFilterGraph = new DVBSFilterGraph(ordinal);
+	m_pFilterGraph = new DVBFilterGraph(ordinal);
 
 	// Tune to the initial parameters
 	tune(initialFrequency, initialSymbolRate, initialPolarization, initialModulation, initialFec);
@@ -30,7 +30,7 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 	// Build the graph
 	if(FAILED(m_pFilterGraph->BuildGraph()))
 	{
-		log(0, true, ordinal, TEXT("Error: Could not Build the DVB-S BDA filter graph\n"));
+		log(0, true, ordinal, TEXT("Error: Could not Build the BDA filter graph\n"));
 		m_IsSourceOK = false;
 	}
 
@@ -39,7 +39,7 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 	memset(&DevInfo, 0, sizeof(DEVICE_INFO));
 	DriverInfo  DrvInfo;
 	memset(&DrvInfo, 0, sizeof(DriverInfo));
-	if(((DVBSFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_GET_DEVICE_INFO_Fun(&DevInfo) && ((DVBSFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_GET_DRIVER_INFO_Fun(&DrvInfo))
+	if(((DVBFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_GET_DEVICE_INFO_Fun(&DevInfo) && ((DVBFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_GET_DRIVER_INFO_Fun(&DrvInfo))
 	{
 		// Let's get the MAC in a textual form - for Twinhan
 		char MAC[100];
@@ -65,15 +65,15 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 						DrvInfo.Version_Minor);
 
 		// Set the LNB data
-		((DVBSFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_SET_LNB_DATA_Fun(g_pConfiguration->getLNBLOF1(), g_pConfiguration->getLNBLOF2(), g_pConfiguration->getLNBSW());
+		((DVBFilterGraph*)m_pFilterGraph)->THBDA_IOCTL_SET_LNB_DATA_Fun(g_pConfiguration->getLNBLOF1(), g_pConfiguration->getLNBLOF2(), g_pConfiguration->getLNBSW());
 	}
 	// If our device if one of the TechnoTrend kind
-	if(((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 || ((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTUSB2)
+	if(((DVBFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 || ((DVBFilterGraph*)m_pFilterGraph)->m_IsTTUSB2)
 	{
 		// Determine whether it's budget or USB 2.0
-		DEVICE_CAT deviceCategory = ((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? BUDGET_2 : USB_2;
+		DEVICE_CAT deviceCategory = ((DVBFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? BUDGET_2 : USB_2;
 		// Get device handle from TT BDA API
-		HANDLE hTT = bdaapiOpen(deviceCategory, ((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? m_TTBudget2Tuners++ : m_USB2Tuners++);
+		HANDLE hTT = bdaapiOpen(deviceCategory, ((DVBFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? m_TTBudget2Tuners++ : m_USB2Tuners++);
 		// If the handle is not bogus
 		if(hTT != INVALID_HANDLE_VALUE)
 		{
@@ -99,7 +99,7 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 			log(0, true, ordinal, TEXT("Device ordinal=%d, MAC=%s,  type=%s\n"),
 						ordinal,
 						(LPCTSTR)CA2T(MAC),
-						((DVBSFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"));
+						((DVBFilterGraph*)m_pFilterGraph)->m_IsTTBDG2 ? TEXT("TechnoTrend Budget") : TEXT("TechnoTrend USB 2.0"));
 		}
 	}
 }
@@ -120,15 +120,15 @@ void DVBSTuner::tune(ULONG frequency,
 					 BinaryConvolutionCodeRate fecRate)
 {
 	// Set the parameters
-	((DVBSFilterGraph*)m_pFilterGraph)->m_ulCarrierFrequency = frequency;
-	((DVBSFilterGraph*)m_pFilterGraph)->m_ulSymbolRate = symbolRate;
-	((DVBSFilterGraph*)m_pFilterGraph)->m_SignalPolarisation = polarization;
-	((DVBSFilterGraph*)m_pFilterGraph)->m_Modulation = modulation;
-	((DVBSFilterGraph*)m_pFilterGraph)->m_FECRate = fecRate;
+	((DVBFilterGraph*)m_pFilterGraph)->m_ulCarrierFrequency = frequency;
+	((DVBFilterGraph*)m_pFilterGraph)->m_ulSymbolRate = symbolRate;
+	((DVBFilterGraph*)m_pFilterGraph)->m_SignalPolarisation = polarization;
+	((DVBFilterGraph*)m_pFilterGraph)->m_Modulation = modulation;
+	((DVBFilterGraph*)m_pFilterGraph)->m_FECRate = fecRate;
 
 	// Fix the modulation type for S2 tuning of Hauppauge devices
-	if(!((DVBSFilterGraph*)m_pFilterGraph)->m_IsHauppauge && !((DVBSFilterGraph*)m_pFilterGraph)->m_IsFireDTV && (modulation == BDA_MOD_8PSK || modulation == BDA_MOD_NBC_QPSK))
-		((DVBSFilterGraph*)m_pFilterGraph)->m_Modulation = BDA_MOD_8VSB;
+	if(!((DVBFilterGraph*)m_pFilterGraph)->m_IsHauppauge && !((DVBFilterGraph*)m_pFilterGraph)->m_IsFireDTV && (modulation == BDA_MOD_8PSK || modulation == BDA_MOD_NBC_QPSK))
+		((DVBFilterGraph*)m_pFilterGraph)->m_Modulation = BDA_MOD_8VSB;
 
 	m_LockStatus = false;
 }
@@ -140,7 +140,7 @@ bool DVBSTuner::startPlayback(bool startFullTransponderDump)
 		m_pFilterGraph->BuildGraph();
 
 	// Perform the tuning
-	((DVBSFilterGraph*)m_pFilterGraph)->ChangeSetting();
+	((DVBFilterGraph*)m_pFilterGraph)->ChangeSetting();
 
 	// Start full transponder dump if requested
  	if(startFullTransponderDump && m_pFilterGraph->getParser() != NULL)
@@ -164,11 +164,11 @@ bool DVBSTuner::getLockStatus()
 	{
 		// Get lock status
 		BOOLEAN bLocked = FALSE;
-		LONG lSignalQuality = 0;		
-		LONG lSignalStrength = 0;
+		long lSignalQuality = 0;		
+		long lSignalStrength = 0;
 
 		// Get the tuner status
-		((DVBSFilterGraph*)m_pFilterGraph)->GetTunerStatus(&bLocked, &lSignalQuality, &lSignalStrength);
+		((DVBFilterGraph*)m_pFilterGraph)->GetTunerStatus(bLocked, lSignalQuality, lSignalStrength);
 
 		// If lock succeeded, print the log message and set the flag
 		if(bLocked)

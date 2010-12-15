@@ -34,7 +34,24 @@ Configuration::Configuration()
 	m_LogLevel = GetPrivateProfileInt(TEXT("General"), TEXT("LogLevel"), 2, iniFileFullPath);
 	log(0, false, 0, TEXT("LogLevel=%u\n"), m_LogLevel);
 
-	m_NumberOfVirtualTuners = (USHORT)GetPrivateProfileInt(TEXT("General"), TEXT("NumberOfVirtualTuners"), 3, iniFileFullPath);
+	GetPrivateProfileString(TEXT("General"), TEXT("SetupType"), TEXT("DVBS"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	if(_tcsicmp(buffer, TEXT("DVBS")) == 0)
+	{
+		m_SetupType = SETUP_DVBS;
+		log(0, false, 0, TEXT("SetupType=DVBS\n"), m_LogLevel);
+	}
+	else if(_tcsicmp(buffer, TEXT("DVBC")) == 0)
+	{
+		m_SetupType = SETUP_DVBC;
+		log(0, false, 0, TEXT("SetupType=DVBC\n"), m_LogLevel);
+	}
+	else if(_tcsicmp(buffer, TEXT("DVBT")) == 0)
+	{
+		m_SetupType = SETUP_DVBT;
+		log(0, false, 0, TEXT("SetupType=DVBT\n"), m_LogLevel);
+	}
+	
+	m_NumberOfVirtualTuners = (USHORT)GetPrivateProfileInt(TEXT("General"), TEXT("NumberOfVirtualTuners"), 1, iniFileFullPath);
 	log(0, false, 0, TEXT("NumberOfVirtualTuners=%hu\n"), m_NumberOfVirtualTuners);
 
 	log(0, false, 0, TEXT("\n"));

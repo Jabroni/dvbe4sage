@@ -9,7 +9,7 @@
 
 // Constructor, initializes member variables
 // and calls InitializeGraphBuilder
-DVBSFilterGraph::DVBSFilterGraph(UINT ordinal):
+DVBFilterGraph::DVBFilterGraph(UINT ordinal):
 	m_IsHauppauge(false),
 	m_IsFireDTV(false),
 	m_IsTTBDG2(false),
@@ -18,7 +18,7 @@ DVBSFilterGraph::DVBSFilterGraph(UINT ordinal):
 	m_iTunerNumber = ordinal;
 }
 
-void DVBSFilterGraph::ReleaseInterfaces()
+void DVBFilterGraph::ReleaseInterfaces()
 {
 	if(m_pITuningSpace)
 		m_pITuningSpace = NULL;
@@ -42,7 +42,7 @@ void DVBSFilterGraph::ReleaseInterfaces()
 }
 
 // BuildGraph sets up devices, adds and connects filters
-HRESULT DVBSFilterGraph::BuildGraph()
+HRESULT DVBFilterGraph::BuildGraph()
 {
 	HRESULT hr = S_OK;
 
@@ -75,16 +75,41 @@ HRESULT DVBSFilterGraph::BuildGraph()
 
 	// create a tune request to initialize the network provider
 	// before connecting other filters
-	CComPtr <IDVBTuneRequest> pDVBSTuneRequest;
-	if(FAILED(hr = CreateDVBSTuneRequest(&pDVBSTuneRequest)))
-	{
-		log(0, true, m_iTunerNumber, TEXT("Cannot create tune request, error 0x%.08X\n"), hr);
-		BuildGraphError();
-		return hr;
-	}
+	CComPtr <IDVBTuneRequest> pDVBTuneRequest;
 
+	// Create tuning request according to the setup type
+	switch(g_pConfiguration->getSetupType())
+	{
+		case SETUP_DVBS:
+			if (FAILED(hr = CreateDVBSTuneRequest(&pDVBTuneRequest)))
+			{
+				log(0, true, m_iTunerNumber, TEXT("Cannot create DVB-S tune request, error 0x%.08X\n"), hr);
+				BuildGraphError();
+				return hr;
+			}
+			break;
+		case SETUP_DVBC:
+			if (FAILED(hr = CreateDVBCTuneRequest(&pDVBTuneRequest)))
+			{
+				log(0, true, m_iTunerNumber, TEXT("Cannot create DVB-C tune request, error 0x%.08X\n"), hr);
+				BuildGraphError();
+				return hr;
+			}
+			break;
+		case SETUP_DVBT:
+			if (FAILED(hr = CreateDVBTTuneRequest(&pDVBTuneRequest)))
+			{
+				log(0, true, m_iTunerNumber, TEXT("Cannot create DVB-T tune request, error 0x%.08X\n"), hr);
+				BuildGraphError();
+				return hr;
+			}
+			break;
+		default:
+			break;
+	
+	}
 	//submit the tune request to the network provider
-	hr = m_pITuner->put_TuneRequest(pDVBSTuneRequest);
+	hr = m_pITuner->put_TuneRequest(pDVBTuneRequest);
 	if(FAILED(hr)) {
 		log(0, true, m_iTunerNumber, TEXT("Cannot submit the tune request, error 0x%.08X\n"), hr);
 		BuildGraphError();
@@ -116,11 +141,29 @@ HRESULT DVBSFilterGraph::BuildGraph()
 			m_IsFireDTV = true;
 
 		// Let's see if this is a TT Budget 2 device
-		if(_tcsstr(m_TunerName, BDG2_NAME_S_TUNER) != NULL)
+		if(_tcsstr(m_TunerName, BDG2_NAME) != NULL ||
+		   _tcsstr(m_TunerName, BDG2_NAME_C_TUNER) != NULL || 
+		   _tcsstr(m_TunerName, BDG2_NAME_C_TUNER_FAKE) != NULL ||
+		   _tcsstr(m_TunerName, BDG2_NAME_S_TUNER) != NULL ||
+		   _tcsstr(m_TunerName, BDG2_NAME_S_TUNER_FAKE) != NULL ||
+		   _tcsstr(m_TunerName, BDG2_NAME_T_TUNER) != NULL ||
+		   _tcsstr(m_TunerName, BDG2_NAME_NEW) != NULL ||
+		   _tcsstr(m_TunerName, BDG2_NAME_C_TUNER_NEW) != NULL ||
+		   _tcsstr(m_TunerName, BDG2_NAME_S_TUNER_NEW) != NULL ||
+		   _tcsstr(m_TunerName, BDG2_NAME_T_TUNER_NEW) != NULL)
 			m_IsTTBDG2 = true;
 
 		// Let's see if this is a TT USB 2.0 device
-		if(_tcsstr(m_TunerName, USB2BDA_DVB_NAME_S_TUNER ) != NULL)
+		if(_tcsstr(m_TunerName, USB2BDA_DVB_NAME) != NULL ||
+		   _tcsstr(m_TunerName, USB2BDA_DSS_NAME) != NULL || 
+		   _tcsstr(m_TunerName, USB2BDA_DSS_NAME_TUNER) != NULL || 
+		   _tcsstr(m_TunerName, USB2BDA_DVB_NAME_C_TUNER) != NULL ||
+		   _tcsstr(m_TunerName, USB2BDA_DVB_NAME_C_TUNER_FAKE) != NULL ||
+		   _tcsstr(m_TunerName, USB2BDA_DVB_NAME_S_TUNER) != NULL ||
+		   _tcsstr(m_TunerName, USB2BDA_DVB_NAME_S_TUNER_FAKE) != NULL ||
+		   _tcsstr(m_TunerName, USB2BDA_DVB_NAME_T_TUNER) != NULL ||
+		   _tcsstr(m_TunerName, USB2BDA_DVBS_NAME_PIN) != NULL ||
+		   _tcsstr(m_TunerName, USB2BDA_DVBS_NAME_PIN_TUNER) != NULL)
 			m_IsTTUSB2 = true;
 	}
 
@@ -179,7 +222,7 @@ HRESULT DVBSFilterGraph::BuildGraph()
 }
 
 // This creates a new DVBS Tuning Space entry in the registry.
-HRESULT DVBSFilterGraph::CreateTuningSpace()
+HRESULT DVBFilterGraph::CreateDVBSTuningSpace()
 {
 	// We're optimistic in the beginning
 	HRESULT hr = S_OK;
@@ -188,7 +231,7 @@ HRESULT DVBSFilterGraph::CreateTuningSpace()
 	hr = m_pITuningSpace.CoCreateInstance(__uuidof(DVBSTuningSpace));
 	if (FAILED(hr) || m_pITuningSpace == NULL)
 	{
-		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : failed to create a DVB-S system tuning space, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuningSpace : failed to create a DVB-S system tuning space, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -196,21 +239,21 @@ HRESULT DVBSFilterGraph::CreateTuningSpace()
 	CComQIPtr<IDVBSTuningSpace> pIDVBTuningSpace(m_pITuningSpace);
 	if(pIDVBTuningSpace == NULL)
 	{
-		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : Cannot QI for IDVBSTuningSpace\n"));
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuningSpace : Cannot QI for IDVBSTuningSpace\n"));
 		return E_FAIL;
 	}
 
 	hr = pIDVBTuningSpace->put_SystemType(DVB_Satellite);
 	if(FAILED(hr))
 	{
-		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace: failed to set system type DVB_Satellite, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuningSpace: failed to set system type DVB_Satellite, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
 	hr = pIDVBTuningSpace->put__NetworkType(CLSID_DVBSNetworkProvider);
 	if(FAILED(hr))
 	{
-		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : failed to set network type CLSID_DVBSNetworkProvider, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuningSpace : failed to set network type CLSID_DVBSNetworkProvider, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -219,7 +262,7 @@ HRESULT DVBSFilterGraph::CreateTuningSpace()
 	hr = pIDVBSLocator.CoCreateInstance(__uuidof(DVBSLocator));
 	if(FAILED(hr) || !pIDVBSLocator)
 	{
-		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : failed to create a DVB-S locator, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuningSpace : failed to create a DVB-S locator, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -235,15 +278,136 @@ HRESULT DVBSFilterGraph::CreateTuningSpace()
 	hr = pIDVBTuningSpace->put_DefaultLocator(pIDVBSLocator);
 	if(FAILED(hr))
 	{
-		log(0, true, m_iTunerNumber, TEXT("CreateTuningSpace : failed to set the locator to the tuning space, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuningSpace : failed to set the locator to the tuning space, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
 	return hr;
 }
 
-// Creates an DVBT Tune Request
-HRESULT DVBSFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
+// This creates a new DVBC Tuning Space entry in the registry.
+HRESULT DVBFilterGraph::CreateDVBCTuningSpace()
+{
+	// We're optimistic in the beginning
+	HRESULT hr = S_OK;
+
+	// Create an empty DVB-S tuning space
+	hr = m_pITuningSpace.CoCreateInstance(__uuidof(DVBTuningSpace));
+	if (FAILED(hr) || m_pITuningSpace == NULL)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuningSpace : failed to create a DVB system tuning space, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	// Get QI from the tuning space
+	CComQIPtr<IDVBTuningSpace> pIDVBTuningSpace(m_pITuningSpace);
+	if(pIDVBTuningSpace == NULL)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuningSpace : Cannot QI for IDVBSTuningSpace\n"));
+		return E_FAIL;
+	}
+
+	hr = pIDVBTuningSpace->put_SystemType(DVB_Cable);
+	if(FAILED(hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuningSpace: failed to set system type DVB_Cable, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	hr = pIDVBTuningSpace->put__NetworkType(CLSID_DVBCNetworkProvider);
+	if(FAILED(hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuningSpace : failed to set network type CLSID_DVBCNetworkProvider, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	// Create a DVB-C Locator
+	CComPtr<IDVBCLocator> pIDVBCLocator;
+	hr = pIDVBCLocator.CoCreateInstance(__uuidof(DVBCLocator));
+	if(FAILED(hr) || !pIDVBCLocator)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuningSpace : failed to create a DVB-C locator, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	// Set the initial Tuner parameters
+	hr = pIDVBCLocator->put_CarrierFrequency(m_ulCarrierFrequency);
+	hr = pIDVBCLocator->put_SymbolRate(m_ulSymbolRate);
+	hr = pIDVBCLocator->put_Modulation(m_Modulation);
+
+	// Set this a default locator
+	hr = pIDVBTuningSpace->put_DefaultLocator(pIDVBCLocator);
+	if(FAILED(hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuningSpace : failed to set the locator to the tuning space, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	return hr;
+}
+
+// This creates a new DVBT Tuning Space entry in the registry.
+HRESULT DVBFilterGraph::CreateDVBTTuningSpace()
+{
+	// We're optimistic in the beginning
+	HRESULT hr = S_OK;
+
+	// Create an empty DVB-S tuning space
+	hr = m_pITuningSpace.CoCreateInstance(__uuidof(DVBTuningSpace));
+	if (FAILED(hr) || m_pITuningSpace == NULL)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuningSpace : failed to create a DVB system tuning space, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	// Get QI from the tuning space
+	CComQIPtr<IDVBTuningSpace> pIDVBTuningSpace(m_pITuningSpace);
+	if(pIDVBTuningSpace == NULL)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTuningSpace : Cannot QI for IDVBTuningSpace\n"));
+		return E_FAIL;
+	}
+
+	hr = pIDVBTuningSpace->put_SystemType(DVB_Terrestrial);
+	if(FAILED(hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuningSpace: failed to set system type DVB_Terrestrial, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	hr = pIDVBTuningSpace->put__NetworkType(CLSID_DVBTNetworkProvider);
+	if(FAILED(hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuningSpace : failed to set network type CLSID_DVBTNetworkProvider, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	// Create a DVB-T Locator
+	CComPtr<IDVBTLocator> pIDVBTLocator;
+	hr = pIDVBTLocator.CoCreateInstance(__uuidof(DVBTLocator));
+	if(FAILED(hr) || !pIDVBTLocator)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuningSpace : failed to create a DVB-T locator, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	// Set the initial Tuner parameters
+	hr = pIDVBTLocator->put_CarrierFrequency(m_ulCarrierFrequency);
+	hr = pIDVBTLocator->put_Bandwidth(m_Bandwidth);
+
+	// Set this a default locator
+	hr = pIDVBTuningSpace->put_DefaultLocator(pIDVBTLocator);
+	if(FAILED(hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuningSpace : failed to set the locator to the tuning space, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	return hr;
+}
+
+// Creates a DVB-S Tune Request
+HRESULT DVBFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 {
 	HRESULT hr = S_OK;
 
@@ -253,11 +417,16 @@ HRESULT DVBSFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 		return E_POINTER;
 	}
 
-	// Making sure we have a valid tuning space
+	// Let's see if we already have an empty tuning space for this type
 	if (m_pITuningSpace == NULL)
 	{
-		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest : the tuning Space is NULL\n"));
-		return E_FAIL;
+		// so we create one.
+		hr = CreateDVBSTuningSpace();
+		if (FAILED(hr) || !m_pITuningSpace)
+		{
+			log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest : cannot create tuning space, error 0x%.08X\n"), hr);
+			return E_FAIL;
+		}
 	}
 
 	//  Create an instance of the DVBS tuning space
@@ -268,25 +437,17 @@ HRESULT DVBSFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 		return E_FAIL;
 	}
 
-	//=====================================================================================================
-	//			Added by Michael
-	//=====================================================================================================
-
 	pDVBSTuningSpace->put_LNBSwitch(g_pConfiguration->getLNBSW());
 	pDVBSTuningSpace->put_LowOscillator(g_pConfiguration->getLNBLOF1());
 	pDVBSTuningSpace->put_HighOscillator(g_pConfiguration->getLNBLOF2());
 	pDVBSTuningSpace->put_SpectralInversion(BDA_SPECTRAL_INVERSION_AUTOMATIC);
-
-	//=====================================================================================================
-	//			End of added by Michael
-	//=====================================================================================================
 
 	//  Create an empty tune request.
 	CComPtr<ITuneRequest> pNewTuneRequest;
 	hr = pDVBSTuningSpace->CreateTuneRequest(&pNewTuneRequest);
 	if(FAILED (hr))
 	{
-		log(0, true, m_iTunerNumber, TEXT("CreateTuneRequest : cannot create a tuninig request, error 0x%.08X\n"), hr);
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBSTuneRequest : cannot create a tuninig request, error 0x%.08X\n"), hr);
 		return hr;
 	}
 
@@ -328,9 +489,157 @@ HRESULT DVBSFilterGraph::CreateDVBSTuneRequest(IDVBTuneRequest** pTuneRequest)
 	return hr;
 }
 
+// Creates a DVB-C Tune Request
+HRESULT DVBFilterGraph::CreateDVBCTuneRequest(IDVBTuneRequest** pTuneRequest)
+{
+	HRESULT hr = S_OK;
+
+	if (pTuneRequest == NULL)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuneRequest : invalid pointer\n"));
+		return E_POINTER;
+	}
+
+	// Let's see if we already have an empty tuning space for this type
+	if (m_pITuningSpace == NULL)
+	{
+		// so we create one.
+		hr = CreateDVBCTuningSpace();
+		if (FAILED(hr) || !m_pITuningSpace)
+		{
+			log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuneRequest : cannot create tuning space, error 0x%.08X\n"), hr);
+			return E_FAIL;
+		}
+	}
+
+	//  Create an instance of the DVBC tuning space
+	CComQIPtr<IDVBTuningSpace> pDVBCTuningSpace (m_pITuningSpace);
+	if(!pDVBCTuningSpace)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuneRequest : cannot QI for an IDVBTuningSpace\n"));
+		return E_FAIL;
+	}
+
+	//  Create an empty tune request.
+	CComPtr<ITuneRequest> pNewTuneRequest;
+	hr = pDVBCTuningSpace->CreateTuneRequest(&pNewTuneRequest);
+	if(FAILED (hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuneRequest : cannot create a tuninig request, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	//query for an IDVBTuneRequest interface pointer
+	CComQIPtr<IDVBTuneRequest> pDVBCTuneRequest(pNewTuneRequest);
+	if(!pDVBCTuneRequest)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuneRequest: cannot QI for IDVBTuneRequest, error 0x%.08X\n"), hr);
+		return E_FAIL;
+	}
+
+	CComPtr<IDVBCLocator> pDVBCLocator;
+	hr = pDVBCLocator.CoCreateInstance(__uuidof(DVBCLocator));	
+	if (FAILED(hr) || !pDVBCLocator)
+		return hr;
+
+	if(FAILED(hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuneRequest : cannot create a DVB-C locator, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	hr = pDVBCLocator->put_CarrierFrequency(m_ulCarrierFrequency);
+	hr = pDVBCLocator->put_SymbolRate(m_ulSymbolRate);
+	hr = pDVBCLocator->put_Modulation(m_Modulation);
+
+	hr = pDVBCTuneRequest->put_Locator(pDVBCLocator);
+	if(FAILED (hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBCTuneRequest : cannot put the locator to the tuning space, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	hr = pDVBCTuneRequest.QueryInterface(pTuneRequest);
+
+	return hr;
+}
+
+// Creates a DVB-T Tune Request
+HRESULT DVBFilterGraph::CreateDVBTTuneRequest(IDVBTuneRequest** pTuneRequest)
+{
+	HRESULT hr = S_OK;
+
+	if (pTuneRequest == NULL)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuneRequest : invalid pointer\n"));
+		return E_POINTER;
+	}
+
+	// Let's see if we already have an empty tuning space for this type
+	if (m_pITuningSpace == NULL)
+	{
+		// so we create one.
+		hr = CreateDVBTTuningSpace();
+		if (FAILED(hr) || !m_pITuningSpace)
+		{
+			log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuneRequest : cannot create tuning space, error 0x%.08X\n"), hr);
+			return E_FAIL;
+		}
+	}
+
+	//  Create an instance of the DVBT tuning space
+	CComQIPtr<IDVBTuningSpace> pDVBTTuningSpace (m_pITuningSpace);
+	if(!pDVBTTuningSpace)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuneRequest : cannot QI for an IDVBTuningSpace\n"));
+		return E_FAIL;
+	}
+
+	//  Create an empty tune request.
+	CComPtr<ITuneRequest> pNewTuneRequest;
+	hr = pDVBTTuningSpace->CreateTuneRequest(&pNewTuneRequest);
+	if(FAILED (hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuneRequest : cannot create a tuninig request, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	//query for an IDVBTuneRequest interface pointer
+	CComQIPtr<IDVBTuneRequest> pDVBTTuneRequest(pNewTuneRequest);
+	if(!pDVBTTuneRequest)
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuneRequest: cannot QI for IDVBTuneRequest, error 0x%.08X\n"), hr);
+		return E_FAIL;
+	}
+
+	CComPtr<IDVBTLocator> pDVBTLocator;
+	hr = pDVBTLocator.CoCreateInstance(__uuidof(DVBTLocator));	
+	if (FAILED(hr) || !pDVBTLocator)
+		return hr;
+
+	if(FAILED(hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuneRequest : cannot create a DVB-T locator, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	hr = pDVBTLocator->put_CarrierFrequency(m_ulCarrierFrequency);
+	hr = pDVBTLocator->put_Bandwidth(m_Bandwidth);
+
+	hr = pDVBTTuneRequest->put_Locator(pDVBTLocator);
+	if(FAILED (hr))
+	{
+		log(0, true, m_iTunerNumber, TEXT("CreateDVBTTuneRequest : cannot put the locator to the tuning space, error 0x%.08X\n"), hr);
+		return hr;
+	}
+
+	hr = pDVBTTuneRequest.QueryInterface(pTuneRequest);
+
+	return hr;
+}
 
 // LoadNetworkProvider loads network provider
-HRESULT DVBSFilterGraph::LoadNetworkProvider()
+HRESULT DVBFilterGraph::LoadNetworkProvider()
 {
 	HRESULT  hr = S_OK;
 	CLSID    CLSIDNetworkType;
@@ -339,7 +648,21 @@ HRESULT DVBSFilterGraph::LoadNetworkProvider()
 	if (m_pITuningSpace == NULL)
 	{
 		// so we create one.
-		hr = CreateTuningSpace();
+		switch(g_pConfiguration->getSetupType())
+		{
+			case SETUP_DVBS:
+				hr = CreateDVBSTuningSpace();
+				break;
+			case SETUP_DVBC:
+				hr = CreateDVBCTuningSpace();
+				break;
+			case SETUP_DVBT:
+				hr = CreateDVBTTuningSpace();
+				break;
+			default:
+				break;
+		}
+
 		if (FAILED(hr) || !m_pITuningSpace)
 		{
 			log(0, true, m_iTunerNumber, TEXT("LoadNetworkProvider : cannot create tuning space, error 0x%.08X\n"), hr);
@@ -355,7 +678,7 @@ HRESULT DVBSFilterGraph::LoadNetworkProvider()
 		return hr;
 	}
 
-	// create the network provider based on the clsid obtained from the tuning space
+	// Create the generic network provider
 	hr = m_pNetworkProvider.CoCreateInstance(CLSIDNetworkType);
 	if (FAILED(hr))
 	{
@@ -363,14 +686,14 @@ HRESULT DVBSFilterGraph::LoadNetworkProvider()
 		return hr;
 	}
 
-	//add the Network Provider filter to the graph
+	//Add the Network Provider filter to the graph
 	hr = m_pFilterGraph->AddFilter(m_pNetworkProvider, L"Network Provider");
 
 	return hr;
 }
 
 // Removes each filter from the graph and un-registers the filter.
-HRESULT DVBSFilterGraph::TearDownGraph()
+HRESULT DVBFilterGraph::TearDownGraph()
 {
 	if(m_fGraphBuilt || m_fGraphFailure)
 	{
@@ -404,12 +727,14 @@ HRESULT DVBSFilterGraph::TearDownGraph()
 	return GenericFilterGraph::TearDownGraph();
 }
 
-bool DVBSFilterGraph::GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pStrength)
+bool DVBFilterGraph::GetTunerStatus(BOOLEAN& locked,
+									long& quality,
+									long& strength)
 {
 	bool bRet = false;
-	BOOLEAN locked=false;
-	LONG quality=0;
-	LONG strength=0;
+	locked = FALSE;
+	quality = 0;
+	strength = 0;
 
 	CComQIPtr<IBDA_Topology> pBDATopology(m_pTunerDemodDevice);
 	if (pBDATopology)
@@ -425,14 +750,10 @@ bool DVBSFilterGraph::GetTunerStatus(BOOLEAN *pLocked, LONG *pQuality, LONG *pSt
 		}
 	}
 
-	*pLocked = locked;
-	*pQuality = quality;
-	*pStrength = strength;
-
 	return bRet;
 }
 
-BOOL DVBSFilterGraph::ChangeSetting(void)
+BOOL DVBFilterGraph::ChangeSetting(void)
 {
 	HRESULT hr = S_OK;
 
@@ -442,16 +763,41 @@ BOOL DVBSFilterGraph::ChangeSetting(void)
 
 		// create a tune request to initialize the network provider
 		// before connecting other filters
-		CComPtr <IDVBTuneRequest> pDVBSTuneRequest;
-		if (FAILED(hr = CreateDVBSTuneRequest(&pDVBSTuneRequest)))
+		CComPtr <IDVBTuneRequest> pDVBTuneRequest;
+
+		// Create tuning request according to the setup type
+		switch(g_pConfiguration->getSetupType())
 		{
-			log(0, true, m_iTunerNumber, TEXT("Cannot create tune request, error 0x%.08X\n"), hr);
-			BuildGraphError();
-			return FALSE;
+			case SETUP_DVBS:
+				if (FAILED(hr = CreateDVBSTuneRequest(&pDVBTuneRequest)))
+				{
+					log(0, true, m_iTunerNumber, TEXT("Cannot create DVB-S tune request, error 0x%.08X\n"), hr);
+					BuildGraphError();
+					return FALSE;
+				}
+				break;
+			case SETUP_DVBC:
+				if (FAILED(hr = CreateDVBCTuneRequest(&pDVBTuneRequest)))
+				{
+					log(0, true, m_iTunerNumber, TEXT("Cannot create DVB-C tune request, error 0x%.08X\n"), hr);
+					BuildGraphError();
+					return FALSE;
+				}
+				break;
+			case SETUP_DVBT:
+				if (FAILED(hr = CreateDVBTTuneRequest(&pDVBTuneRequest)))
+				{
+					log(0, true, m_iTunerNumber, TEXT("Cannot create DVB-T tune request, error 0x%.08X\n"), hr);
+					BuildGraphError();
+					return FALSE;
+				}
+				break;
+			default:
+				break;
 		}
 
 		//submit the tune request to the network provider
-		hr = m_pITuner->put_TuneRequest(pDVBSTuneRequest);
+		hr = m_pITuner->put_TuneRequest(pDVBTuneRequest);
 		if (FAILED(hr))
 		{
 			log(0, true, m_iTunerNumber, TEXT("Cannot submit the tune request, error 0x%.08X\n"), hr);
@@ -615,7 +961,7 @@ BOOL DVBSFilterGraph::ChangeSetting(void)
 	return TRUE;
 }
 
-int DVBSFilterGraph::getNumberOfTuners()
+int DVBFilterGraph::getNumberOfTuners()
 {
 	// Get instance of device enumberator
 	CComPtr<ICreateDevEnum>	pICreateDevEnum;
@@ -654,7 +1000,7 @@ int DVBSFilterGraph::getNumberOfTuners()
 // Demodulator (MPEG2 Transport) pins on the Tuner/Demod filter.
 // Then gets the IKsPropertySet interfaces for the pins.
 //
-BOOL DVBSFilterGraph::GetTunerDemodPropertySetInterfaces()
+BOOL DVBFilterGraph::GetTunerDemodPropertySetInterfaces()
 {
     if (!m_pTunerDemodDevice) {
         return FALSE;

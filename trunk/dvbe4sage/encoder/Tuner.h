@@ -33,7 +33,7 @@ public:
 	virtual ~DVBSTuner(void);
 
 	virtual bool startPlayback(bool startFullTransponderDump);
-	virtual LPCTSTR getSourceFriendlyName() const	{ return ((DVBSFilterGraph*)m_pFilterGraph)->getTunerName(); }
+	virtual LPCTSTR getSourceFriendlyName() const	{ return ((DVBFilterGraph*)m_pFilterGraph)->getTunerName(); }
 	virtual bool getLockStatus();
 
 	const string& getTunerMac() const				{ return m_MAC; }
@@ -47,9 +47,9 @@ public:
 	void copyProviderDataAndStopRecording();
 
 	// Tuning data getters
-	ULONG getFrequency() const						{ return ((DVBSFilterGraph*)m_pFilterGraph)->m_ulCarrierFrequency; }
-	ULONG getSymbolRate() const						{ return ((DVBSFilterGraph*)m_pFilterGraph)->m_ulSymbolRate; }
-	Polarisation getPolarization() const			{ return ((DVBSFilterGraph*)m_pFilterGraph)->m_SignalPolarisation; }
-	ModulationType getModulation() const			{ return ((DVBSFilterGraph*)m_pFilterGraph)->m_Modulation; }
-	BinaryConvolutionCodeRate getFECRate() const	{ return ((DVBSFilterGraph*)m_pFilterGraph)->m_FECRate; }
+	ULONG getFrequency() const						{ return ((DVBFilterGraph*)m_pFilterGraph)->m_ulCarrierFrequency; }
+	ULONG getSymbolRate() const						{ return ((DVBFilterGraph*)m_pFilterGraph)->m_ulSymbolRate; }
+	Polarisation getPolarization() const			{ return ((DVBFilterGraph*)m_pFilterGraph)->m_SignalPolarisation; }
+	ModulationType getModulation() const			{ return ((DVBFilterGraph*)m_pFilterGraph)->m_Modulation; }
+	BinaryConvolutionCodeRate getFECRate() const	{ return ((DVBFilterGraph*)m_pFilterGraph)->m_FECRate; }
 };

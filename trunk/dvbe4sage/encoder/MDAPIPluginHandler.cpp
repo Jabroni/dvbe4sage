@@ -6,7 +6,7 @@
 #include "logger.h"
 #include "configuration.h"
 
-char* const MDAPIVersion = "MD-API Version 01.03 - 01.06";
+char const MDAPIVersion[] = "MD-API Version 01.03 - 01.06";
 
 // This is the constructor of a class that has been exported.
 // see MDAPIPluginsHandler.h for the class definition
@@ -72,7 +72,7 @@ MDAPIPluginsHandler::MDAPIPluginsHandler(HINSTANCE hInstance,
 					// Initialize it
 					char hotKey;
 					int keepRunning = 1;
-					plugin.m_fpInit(hInstance, hWnd, FALSE, counter, &hotKey, MDAPIVersion, &keepRunning);
+					plugin.m_fpInit(hInstance, hWnd, FALSE, counter, &hotKey, (char*)&MDAPIVersion[0], &keepRunning);
 
 					// Check if it keeps running
 					if(keepRunning == -999)
