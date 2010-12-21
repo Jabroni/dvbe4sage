@@ -846,6 +846,10 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 	// Get TID of the transponder
 	const USHORT tid = HILO(table->transport_stream_id);
 
+	// Boil out if the transponder is not found in NIT(s)
+	if(m_Provider.getTransponders().find(NetworkProvider::getUniqueSID(onid, tid)) == m_Provider.getTransponders().end())
+		return;
+
 	// Adjust input buffer pointer
 	const BYTE* inputBuffer = (const BYTE*)table + SDT_LEN;
 
@@ -1302,112 +1306,119 @@ void PSIParser::parseNITTable(const nit_t* const table,
 		// Length of remaining descriptors
 		short remainingDescriptorsLength = transportDescriptorsLength;
 
-		// Loop through descriptors
-		while(remainingDescriptorsLength != 0)
+		// Skip if the transponder is excluded
+		if(!g_pConfiguration->isExcludedTID(tid))
 		{
-			// Get generic descriptor
-			const descr_gen_t* const generalDescriptor = CastGenericDescriptor(inputBuffer);
-			const USHORT descriptorLength = generalDescriptor->descriptor_length;
-
-			switch(generalDescriptor->descriptor_tag)
+			// Loop through descriptors
+			while(remainingDescriptorsLength != 0)
 			{
-				case 0x43:
-				{
-					// This is a satellite transponder descriptor
-					// Construct new transponder
-					Transponder transponder;
-					// Set its TID
-					transponder.tid = tid;
-					// And ONID
-					transponder.onid = onid;
-					// Get the combined ONID&TID
-					const UINT32 utid = NetworkProvider::getUniqueSID(onid, tid);
-					// Here we have satellite descriptor
-					const descr_satellite_delivery_system_t* const satDescriptor = CastSatelliteDeliverySystemDescriptor(inputBuffer);
-					// Get the frequency
-					transponder.frequency = 10000000 * BcdCharToInt(satDescriptor->frequency1) + 100000 * BcdCharToInt(satDescriptor->frequency2) +
-											1000 * BcdCharToInt(satDescriptor->frequency3) + 10 * BcdCharToInt(satDescriptor->frequency4);
-					// Get the symbol rate
-					transponder.symbolRate = 10000 * BcdCharToInt(satDescriptor->symbol_rate1) + 100 * BcdCharToInt(satDescriptor->symbol_rate2) +
-											 BcdCharToInt(satDescriptor->symbol_rate3);
-					// Get the modulation type
-					transponder.modulation = getDVBSModulationFromDescriptor(satDescriptor->modulationsystem, satDescriptor->modulationtype);
-					// Get the FEC rate
-					transponder.fec = getFECFromDescriptor(satDescriptor->fec_inner);
-					// Get the polarization
-					transponder.polarization = getPolarizationFromDescriptor(satDescriptor->polarization);
-					
-					// Set the transponder info if not set yet
-					hash_map<UINT32, Transponder>::iterator it = m_Provider.m_Transponders.find(utid);
-					if(it == m_Provider.m_Transponders.end())
-					{
-						// Update timestamp
-						time(&m_TimeStamp);
+				// Get generic descriptor
+				const descr_gen_t* const generalDescriptor = CastGenericDescriptor(inputBuffer);
+				const USHORT descriptorLength = generalDescriptor->descriptor_length;
 
-						// Prime transponder data
-						m_Provider.m_Transponders[utid] = transponder;
-						log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found transponder for ONID=%hu with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-							onid, tid, transponder.frequency, transponder.symbolRate, printablePolarization(transponder.polarization),
-							printableModulation(transponder.modulation), printableFEC(transponder.fec));
-					}
-					break;
-				}
-				case 0x44:
+				switch(generalDescriptor->descriptor_tag)
 				{
-					// This is a cable transponder descriptor
-					// Construct new transponder
-					Transponder transponder;
-					// Set its TID
-					transponder.tid = tid;
-					// And ONID
-					transponder.onid = onid;
-					// Get the combined ONID&TID
-					const UINT32 utid = NetworkProvider::getUniqueSID(onid, tid);
-					// Here we have satellite descriptor
-					const descr_cable_delivery_system_t* const cabDescriptor = CastCableDeliverySystemDescriptor(inputBuffer);
-					// Get the frequency
-					transponder.frequency = 100000 * BcdCharToInt(cabDescriptor->frequency1) + 1000 * BcdCharToInt(cabDescriptor->frequency2) +
-											10 * BcdCharToInt(cabDescriptor->frequency3) + 1 * BcdCharToInt(cabDescriptor->frequency4);
-					// Get the symbol rate
-					transponder.symbolRate = 10000 * BcdCharToInt(cabDescriptor->symbol_rate1) + 100 * BcdCharToInt(cabDescriptor->symbol_rate2) +
-											 BcdCharToInt(cabDescriptor->symbol_rate3);
-					// Get the modulation type
-					transponder.modulation = getDVBCModulationFromDescriptor(cabDescriptor->modulation);
-					// Get the FEC rate
-					//transponder.fec = getFECFromDescriptor(cabDescriptor->fec_inner);
-					
-					// Set the transponder info if not set yet
-					hash_map<UINT32, Transponder>::iterator it = m_Provider.m_Transponders.find(utid);
-					if(it == m_Provider.m_Transponders.end())
+					case 0x43:
 					{
-						// Update timestamp
-						time(&m_TimeStamp);
+						// This is a satellite transponder descriptor
+						// Construct new transponder
+						Transponder transponder;
+						// Set its TID
+						transponder.tid = tid;
+						// And ONID
+						transponder.onid = onid;
+						// Get the combined ONID&TID
+						const UINT32 utid = NetworkProvider::getUniqueSID(onid, tid);
+						// Here we have satellite descriptor
+						const descr_satellite_delivery_system_t* const satDescriptor = CastSatelliteDeliverySystemDescriptor(inputBuffer);
+						// Get the frequency
+						transponder.frequency = 10000000 * BcdCharToInt(satDescriptor->frequency1) + 100000 * BcdCharToInt(satDescriptor->frequency2) +
+												1000 * BcdCharToInt(satDescriptor->frequency3) + 10 * BcdCharToInt(satDescriptor->frequency4);
+						// Get the symbol rate
+						transponder.symbolRate = 10000 * BcdCharToInt(satDescriptor->symbol_rate1) + 100 * BcdCharToInt(satDescriptor->symbol_rate2) +
+												 BcdCharToInt(satDescriptor->symbol_rate3);
+						// Get the modulation type
+						transponder.modulation = getDVBSModulationFromDescriptor(satDescriptor->modulationsystem, satDescriptor->modulationtype);
+						// Get the FEC rate
+						transponder.fec = getFECFromDescriptor(satDescriptor->fec_inner);
+						// Get the polarization
+						transponder.polarization = getPolarizationFromDescriptor(satDescriptor->polarization);
+						
+						// Set the transponder info if not set yet
+						hash_map<UINT32, Transponder>::iterator it = m_Provider.m_Transponders.find(utid);
+						if(it == m_Provider.m_Transponders.end())
+						{
+							// Update timestamp
+							time(&m_TimeStamp);
 
-						// Prime transponder data
-						m_Provider.m_Transponders[utid] = transponder;
-						log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found transponder for ONID=%hu with TID=%d, Frequency=%lu, Symbol Rate=%lu, Modulation=%s\n"),
-							onid, tid, transponder.frequency, transponder.symbolRate, printableModulation(transponder.modulation));
+							// Prime transponder data
+							m_Provider.m_Transponders[utid] = transponder;
+							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found transponder for ONID=%hu with TID=%d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+								onid, tid, transponder.frequency, transponder.symbolRate, printablePolarization(transponder.polarization),
+								printableModulation(transponder.modulation), printableFEC(transponder.fec));
+						}
+						break;
 					}
-					break;
+					case 0x44:
+					{
+						// This is a cable transponder descriptor
+						// Construct new transponder
+						Transponder transponder;
+						// Set its TID
+						transponder.tid = tid;
+						// And ONID
+						transponder.onid = onid;
+						// Get the combined ONID&TID
+						const UINT32 utid = NetworkProvider::getUniqueSID(onid, tid);
+						// Here we have satellite descriptor
+						const descr_cable_delivery_system_t* const cabDescriptor = CastCableDeliverySystemDescriptor(inputBuffer);
+						// Get the frequency
+						transponder.frequency = 100000 * BcdCharToInt(cabDescriptor->frequency1) + 1000 * BcdCharToInt(cabDescriptor->frequency2) +
+												10 * BcdCharToInt(cabDescriptor->frequency3) + 1 * BcdCharToInt(cabDescriptor->frequency4);
+						// Get the symbol rate
+						transponder.symbolRate = 10000 * BcdCharToInt(cabDescriptor->symbol_rate1) + 100 * BcdCharToInt(cabDescriptor->symbol_rate2) +
+												 BcdCharToInt(cabDescriptor->symbol_rate3);
+						// Get the modulation type
+						transponder.modulation = getDVBCModulationFromDescriptor(cabDescriptor->modulation);
+						// Get the FEC rate
+						//transponder.fec = getFECFromDescriptor(cabDescriptor->fec_inner);
+						
+						// Set the transponder info if not set yet
+						hash_map<UINT32, Transponder>::iterator it = m_Provider.m_Transponders.find(utid);
+						if(it == m_Provider.m_Transponders.end())
+						{
+							// Update timestamp
+							time(&m_TimeStamp);
+
+							// Prime transponder data
+							m_Provider.m_Transponders[utid] = transponder;
+							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found transponder for ONID=%hu with TID=%d, Frequency=%lu, Symbol Rate=%lu, Modulation=%s\n"),
+								onid, tid, transponder.frequency, transponder.symbolRate, printableModulation(transponder.modulation));
+						}
+						break;
+					}
+					case 0x41:
+						// Do nothing
+						break;
+					default:
+						log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
+										(UINT)generalDescriptor->descriptor_tag, descriptorLength);
+						break;
 				}
-				case 0x41:
-					// Do nothing
-					break;
-				default:
-					log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Unknown transport stream descriptor with TAG=%02X and lenght=%d\n"),
-									(UINT)generalDescriptor->descriptor_tag, descriptorLength);
-					break;
+
+				// Adjust input Buffer
+				inputBuffer += descriptorLength + DESCR_GEN_LEN;
+
+				// Adjust remaining length
+				remainingDescriptorsLength -= descriptorLength + DESCR_GEN_LEN;
 			}
-
-			// Adjust input Buffer
-			inputBuffer += descriptorLength + DESCR_GEN_LEN;
-
-			// Adjust remaining length
-			remainingDescriptorsLength -= descriptorLength + DESCR_GEN_LEN;
 		}
 
 		// Adjust the length
 		transportLoopLength -= transportDescriptorsLength + NIT_TS_LEN;
+
+		// Adjust the input buffer (should not change if TID not excluded)
+		inputBuffer += remainingDescriptorsLength;
 	}
 }
 

@@ -55,6 +55,7 @@ class Configuration
 	bool						m_EnableECMCache;
 	string						m_BouquetName;
 	bool						m_PreferSDOverHD;
+	hash_set<USHORT>			m_ExcludedTIDs;
 public:
 	Configuration();
 	
@@ -106,6 +107,7 @@ public:
 	bool getEnableECMCache() const						{ return m_EnableECMCache; }
 	const string& getBouquetName() const				{ return m_BouquetName; }
 	bool getPreferSDOverHD() const						{ return m_PreferSDOverHD; }
+	bool isExcludedTID(USHORT tid) const				{ return m_ExcludedTIDs.count(tid) > 0; }
 };
 
 extern Configuration* g_pConfiguration;
