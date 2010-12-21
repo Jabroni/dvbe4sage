@@ -304,6 +304,19 @@ Configuration::Configuration()
 	m_PreferSDOverHD = GetPrivateProfileInt(TEXT("Advanced"), TEXT("PreferSDOverHD"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("PreferSDOverHD=%u\n"), m_PreferSDOverHD ? 1 : 0);
 
+	// List of transponders to be excluded by their TIDs
+	GetPrivateProfileString(TEXT("Advanced"), TEXT("ExcludeTIDs"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		m_ExcludedTIDs.insert((USHORT)_ttoi(token));
+
+	log(0, false, 0, TEXT("ExcludeTIDs="));
+	for(hash_set<USHORT>::const_iterator it = m_ExcludedTIDs.begin(); it != m_ExcludedTIDs.end();)
+	{
+		log(0, false, 0, TEXT("%hu"), (USHORT)*it);
+		if(++it != m_ExcludedTIDs.end())
+			log(0, false, 0, TEXT(","));
+	}
+
 	log(0, false, 0, TEXT("\n"));
 
 	log(0, false, 0, TEXT("End of configuration file dump\n"));
