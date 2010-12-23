@@ -1529,8 +1529,7 @@ void ESCAParser::addPSIData(const BYTE* const data,
 		// Payload unit start indicator is set to 1 for the first time and then to 0
 		tsHeader->payload_unit_start_indicator = m_PSIFirstTimeFlag;
 		// Fill the PID
-		tsHeader->PID_hi = (pid & 0xFF00) >> 8;
-		tsHeader->PID_lo = pid & 0xFF;
+		SETHILO(tsHeader->PID, pid);
 		// Set the output offset
 		m_PSIOutputBufferOffset = TS_LEN;
 		// See if this is the first TS packet for a PSI table
@@ -1634,7 +1633,7 @@ void ESCAParser::parseTSPacket(const ts_t* const packet,
 		}
 		else
 		{
-			// Fill the PMT header
+			// Fill the PAT header
 			pat_t patHeader;
 			// Nullify it
 			ZeroMemory((void*)&patHeader, PAT_LEN);
