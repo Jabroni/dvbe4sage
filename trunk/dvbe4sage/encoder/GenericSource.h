@@ -13,7 +13,7 @@ public:
 	GenericSource();
 	virtual ~GenericSource();
 
-	virtual bool startPlayback(bool startFullTransponderDump) = 0;
+	virtual bool startPlayback(USHORT onid, bool startFullTransponderDump) = 0;
 	void stopPlayback();
 	virtual LPCTSTR getSourceFriendlyName() const = 0;
 	virtual bool getLockStatus() = 0;

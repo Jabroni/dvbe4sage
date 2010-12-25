@@ -23,7 +23,7 @@ class Encoder
 	};
 
 	PluginsHandler*						m_pPluginsHandler;
-	vector<DVBSTuner*>						m_Tuners;
+	vector<DVBSTuner*>					m_Tuners;
 	vector<VirtualTuner*>				m_VirtualTuners;
 	hash_map<SOCKET, VirtualTuner*>		m_VirtualTunersMap;
 	hash_multimap<USHORT, Recorder*>	m_Recorders;			// Map from logical tuner to recorder

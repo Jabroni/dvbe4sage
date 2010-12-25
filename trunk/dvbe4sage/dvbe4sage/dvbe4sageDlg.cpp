@@ -189,7 +189,7 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 						   getModulationFromString(newRecording.m_TunerModulation),
 						   getFECFromString(newRecording.m_TunerFEC),
 						   _ttoi(newRecording.m_RecordingTunerOrdinal),
-						   _ttoi(newRecording.m_RecordingChannelNumber),
+						   (_ttoi(newRecording.m_RecordingNetworkNumber) << 16) +_ttoi(newRecording.m_RecordingChannelNumber),
 						   newRecording.m_UseSID ? true : false,
 						   _ttoi64(newRecording.m_RecordingDuration),
 						   CT2CW(newRecording.m_OutputFileName),
@@ -197,7 +197,7 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 						   newRecording.m_DumpFullTransponder ? true : false);
 		else
 			startRecordingFromFile(CT2CW(newRecording.m_InputFileName),
-								   _ttoi(newRecording.m_RecordingChannelNumber),
+								   (_ttoi(newRecording.m_RecordingNetworkNumber) << 16) +_ttoi(newRecording.m_RecordingChannelNumber),
 								   _ttoi64(newRecording.m_RecordingDuration),
 								   CT2CW(newRecording.m_OutputFileName));
 								   

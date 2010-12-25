@@ -17,11 +17,11 @@ class Configuration
 	UINT						m_TuningTimeout;
 	UINT						m_TuningLockTimeout;
 	USHORT						m_ListeningPort;
-	ULONG						m_InitialFrequency;
-	ULONG						m_InitialSymbolRate;
-	Polarisation				m_InitialPolarization;
-	ModulationType				m_InitialModulation;
-	BinaryConvolutionCodeRate	m_InitialFEC;
+	hash_map<int, ULONG>						m_InitialFrequency;
+	hash_map<int, ULONG>						m_InitialSymbolRate;
+	hash_map<int, Polarisation>					m_InitialPolarization;
+	hash_map<int, ModulationType>				m_InitialModulation;
+	hash_map<int, BinaryConvolutionCodeRate>	m_InitialFEC;
 	UINT						m_InitialRunningTime;
 	bool						m_UseSidForTuning;
 	USHORT						m_NumberOfVirtualTuners;
@@ -43,6 +43,8 @@ class Configuration
 	hash_set<USHORT>			m_ServedCAIDs;
 	hash_set<UINT>				m_ServededProvIds;
 	USHORT						m_MaxNumberOfResets;
+	bool						m_IsNorthAmerica;
+	bool						m_UseDiseqc;
 
 	// All advanced stuff goes here
 	USHORT						m_PMTDilutionFactor;
@@ -70,6 +72,7 @@ public:
 	bool isPROVIDServed(UINT provid) const				{ return m_ServededProvIds.empty() || m_ServededProvIds.count(provid) > 0; }
 	bool isVGCam() const								{ return m_IsVGCam; };
 	bool scanAllTransponders() const					{ return m_ScanAllTransponders; }
+	bool isNorthAmerica() const							{ return m_IsNorthAmerica; };
 	UINT getLogLevel() const							{ return m_LogLevel; }
 	UINT getDCWTimeout() const							{ return m_DCWTimeout; }
 	UINT getTSPacketsPerBuffer() const					{ return m_TSPacketsPerBuffer; }
@@ -79,11 +82,11 @@ public:
 	UINT getTuningTimeout() const						{ return m_TuningTimeout; }
 	UINT getTuningLockTimeout() const					{ return m_TuningLockTimeout; }
 	USHORT getListeningPort() const						{ return m_ListeningPort; }
-	ULONG getInitialFrequency() const					{ return m_InitialFrequency; }
-	ULONG getInitialSymbolRate() const					{ return m_InitialSymbolRate; }
-	Polarisation getInitialPolarization() const			{ return m_InitialPolarization; }
-	ModulationType getInitialModulation() const			{ return m_InitialModulation; }
-	BinaryConvolutionCodeRate getInitialFEC() const		{ return m_InitialFEC; }
+	ULONG getInitialFrequency(int onidIndex = 0) const;
+	ULONG getInitialSymbolRate(int onidIndex = 0) const;
+	Polarisation getInitialPolarization(int onidIndex = 0) const;
+	ModulationType getInitialModulation(int onidIndex = 0) const;
+	BinaryConvolutionCodeRate getInitialFEC(int onidIndex = 0) const;
 	UINT getInitialRunningTime() const					{ return m_InitialRunningTime; }
 	bool getUseSidForTuning() const						{ return m_UseSidForTuning; }
 	USHORT getNumberOfVirtualTuners() const				{ return m_NumberOfVirtualTuners; }
@@ -94,8 +97,12 @@ public:
 	ULONG getLNBSW() const								{ return m_LNBSW; }
 	ULONG getLNBLOF1() const							{ return m_LNBLOF1; }
 	ULONG getLNBLOF2() const							{ return m_LNBLOF2; }
+	void setLNBSW(ULONG val)							{ m_LNBSW = val; }
+	void setLNBLOF1(ULONG val)							{ m_LNBLOF1 = val; }
+	void setLNBLOF2(ULONG val)							{ m_LNBLOF2 = val; }
 	bool getUseNewTuningMethod() const					{ return m_UseNewTuningMethod; }
 	USHORT getMaxNumberOfResets() const					{ return m_MaxNumberOfResets; }
+	bool getUseDiseqc() const							{ return m_UseDiseqc; };
 
 	// All advanced stuff goes here
 	USHORT getPMTDilutionFactor() const					{ return m_PMTDilutionFactor; }

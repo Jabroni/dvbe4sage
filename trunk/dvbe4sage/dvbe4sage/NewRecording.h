@@ -34,6 +34,7 @@ public:
 	CString m_TunerFEC;
 	CString m_RecordingTunerOrdinal;
 	CString m_RecordingChannelNumber;
+	CString m_RecordingNetworkNumber;
 	CString m_RecordingDuration;
 	CString m_OutputFileName;
 	afx_msg void OnBnClickedBrowse();

@@ -138,8 +138,23 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 		// Sanity check - the sync byte!
 		if(header->sync_byte != '\x47')
 		{	
-			log(2, true, m_TunerOrdinal, TEXT("Catastrophic error - TS packet has wrong sync_byte, dropping the buffer...\n"));
-			break;
+			log(2, true, m_TunerOrdinal, TEXT("Catastrophic error - TS packet has wrong sync_byte, searching for start of next packet...\n"));
+			
+			// Things are very out of sync.  Find the start of the next packet		
+			m_LeftoverLength = 0;
+			ts_t* tempHeader = (ts_t*)header;
+			while(inputBufferLength > 0 && tempHeader->sync_byte != '\x47')
+			{
+				// Adjust the input buffer to the next byte
+				inputBuffer++;
+
+				// And the remaining length
+				inputBufferLength--;
+
+				tempHeader = (ts_t*)inputBuffer;
+			}
+
+			continue;
 		}
 
 		// Handle the packet only if it doesn't have an error
@@ -946,6 +961,25 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 						}
 						break;
 					}
+
+					// Ones we don't handle quite yet (and may never)
+					case 0x4A:		// Linkage Descriptor
+					case 0x86:		// Tier info for subscriptions
+					case 0x93:		// Channel rights
+					case 0x84:		// Unknown
+					case 0x85:		// Unknown
+					case 0x82:		// Dish and Bev EMM
+					case 0x83:		// Dish and Bev EMM
+					case 0x80:		// Dish ECM
+					case 0x8C:		// Unknown
+					case 0x8E:		// Bev ECM
+					case 0x9B:		// Unknown
+					case 0x9E:		// Unknown
+					case 0x99:		// Subchannel information for local channels ...
+									// If a channel has a digital subchannel, it and all its subchannels gets this descriptor	
+					case 0xA3:		// Unknown
+						break;
+
 					default:
 						log(4, true, m_pParent->getTunerOrdinal(), TEXT("!!! Unknown Service Descriptor, type=%02X\n"),
 										(UINT)genericDescriptor->descriptor_tag); 
@@ -959,14 +993,29 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 				descriptorLoopRemainingLength -= genericDescriptor->descriptor_length + DESCR_GEN_LEN;
 			}
 			
-			// Insert the new service into the map
-			if((newService.runningStatus != 0 || DISH_ONID(onid)) && (!FOXTEL_ONID(onid) && !SKYNZ_ONID(onid) && !SKYITALIA_ONID(onid) || newService.serviceType < 0x80))
+			// Insert the new service into the map - filter out certain ones only for non north americans 
+			if(g_pConfiguration->isNorthAmerica())
 			{
-				m_Provider.m_Services[usid] = newService;
+				log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+						newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
 
-				// Print log message
-				log(3, true, m_pParent->getTunerOrdinal(), TEXT("Discovered SID=%hu, ONID=%hu, TSID=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
-									sid, onid, tid, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+				m_Provider.m_Services[usid] = newService;
+			}
+			else
+			{
+				if((newService.runningStatus != 0 || DISH_ONID(onid)) && (!FOXTEL_ONID(onid) && !SKYNZ_ONID(onid) && !SKYITALIA_ONID(onid) || newService.serviceType < 0x80))
+				{
+					m_Provider.m_Services[usid] = newService;
+
+					// Print log message
+					log(3, true, m_pParent->getTunerOrdinal(), TEXT("Discovered SID=%hu, ONID=%hu, TSID=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+										sid, onid, tid, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+				}
+				else
+				{
+					log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered but disallowed: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+							newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+				}
 			}
 		}
 

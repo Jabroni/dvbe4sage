@@ -13,13 +13,23 @@ DVBFilterGraph::DVBFilterGraph(UINT ordinal):
 	m_IsHauppauge(false),
 	m_IsFireDTV(false),
 	m_IsTTBDG2(false),
-	m_IsTTUSB2(false)
+	m_IsTTUSB2(false),
+	m_IsProf7500(false),
+	m_IsGenpix(false),
+	m_diseqc(NULL),
+	m_TTDevID(0)
 {
 	m_iTunerNumber = ordinal;
+
+	if(g_pConfiguration->getUseDiseqc())
+		m_diseqc = new DiSEqC;
 }
 
 void DVBFilterGraph::ReleaseInterfaces()
 {
+	if(m_diseqc)
+		free(m_diseqc);
+
 	if(m_pITuningSpace)
 		m_pITuningSpace = NULL;
 
@@ -165,6 +175,20 @@ HRESULT DVBFilterGraph::BuildGraph()
 		   _tcsstr(m_TunerName, USB2BDA_DVBS_NAME_PIN) != NULL ||
 		   _tcsstr(m_TunerName, USB2BDA_DVBS_NAME_PIN_TUNER) != NULL)
 			m_IsTTUSB2 = true;
+
+		// Let's see if this is a Prof 7500 device
+		if(_tcsstr(m_TunerName, TEXT("Prof 7500")) != NULL)
+		{
+			m_IsProf7500 = true;
+			log(3, true, m_iTunerNumber, TEXT("Recognized the tuner as a Prof 7500\n"));
+		}
+
+		// Let's see if this is a Genpix device
+		if(_tcsstr(m_TunerName, TEXT("Genpix")) != NULL)
+		{
+			m_IsGenpix = true;
+			log(3, true, m_iTunerNumber, TEXT("Recognized the tuner as a Genpix\n"));
+		}
 	}
 
 	// Step3: load capture device and connect to tuner/demod device
@@ -753,6 +777,59 @@ bool DVBFilterGraph::GetTunerStatus(BOOLEAN& locked,
 	return bRet;
 }
 
+BOOL DVBFilterGraph::SendDiseqc(USHORT onid)
+{
+	log(3, true, m_iTunerNumber, TEXT("Sending DiSEqC for ONID %d ... "), onid);
+
+	struct diseqcRecord	rec = m_diseqc->GetDiseqcRecord(onid);
+
+	if(rec.ONID == -1)
+	{
+		log(3, false, m_iTunerNumber, TEXT("ONID not found in diseqc.ini file.\n"));
+		return FALSE;
+	}
+
+	log(3, false, m_iTunerNumber, TEXT("(%s)\n"), rec.name.c_str());
+
+	// If we need to move the motor, get that started right away
+	if(rec.gotox != 0)
+	{
+		// USALS?
+		if(rec.gotox == -1) 
+		{
+			if(m_diseqc->SendUsalsCommand(m_KsTunerPropSet, this, m_pTunerDemodDevice, rec.satpos) == false)
+				return FALSE;
+		}
+		else
+		{
+			if(m_diseqc->SendPositionCommand(m_KsTunerPropSet, this, m_pTunerDemodDevice, rec.gotox) == false)
+				return FALSE;
+		}
+	}
+
+	// Send the first diseqc port command if needed
+	if(rec.diseqc1 > DISEQC_NONE && rec.diseqc1 <= DISEQC_UNCOMMITTED_16)
+	{
+		if(m_diseqc->SendDiseqcCommand(m_KsTunerPropSet, this, m_pTunerDemodDevice, 2, (DISEQC_PORT)rec.diseqc1, m_SignalPolarisation, (rec.is22kHz == 0) ? false : true) == false)
+			return FALSE;
+	}
+
+	// Send the second diseqc port command if needed
+	if(rec.diseqc2 > DISEQC_NONE && rec.diseqc2 <= DISEQC_UNCOMMITTED_16)
+	{
+		if(m_diseqc->SendDiseqcCommand(m_KsTunerPropSet, this, m_pTunerDemodDevice, 3, (DISEQC_PORT)rec.diseqc2, m_SignalPolarisation, (rec.is22kHz == 0) ? false : true) == false)
+			return FALSE;
+	}
+
+	// Set the parameters for the LNB associated with this network ID
+	log(3, true, m_iTunerNumber, TEXT("Setting LNB parameters SW=%lu  LOF1=%lu  LOF2=%lu\n"), rec.sw, rec.lof1, rec.lof2);
+	g_pConfiguration->setLNBSW(rec.sw);
+	g_pConfiguration->setLNBLOF2(rec.lof1);
+	g_pConfiguration->setLNBLOF2(rec.lof2);
+
+	return TRUE;
+}
+
 BOOL DVBFilterGraph::ChangeSetting(void)
 {
 	HRESULT hr = S_OK;
@@ -1022,7 +1099,7 @@ BOOL DVBFilterGraph::GetTunerDemodPropertySetInterfaces()
         return FALSE;
     }
 
-    HRESULT hr = m_pTunerPin->QueryInterface(IID_IKsPropertySet,
+    HRESULT hr = m_pTunerDemodDevice->QueryInterface(IID_IKsPropertySet,
                                    reinterpret_cast<void**>(&m_KsTunerPropSet));
     if (FAILED(hr)) {
         printf(TEXT("QI of IKsPropertySet failed, error 0x%.08X\n"), hr);
