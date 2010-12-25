@@ -54,6 +54,9 @@ Configuration::Configuration()
 	m_NumberOfVirtualTuners = (USHORT)GetPrivateProfileInt(TEXT("General"), TEXT("NumberOfVirtualTuners"), 1, iniFileFullPath);
 	log(0, false, 0, TEXT("NumberOfVirtualTuners=%hu\n"), m_NumberOfVirtualTuners);
 
+	m_IsNorthAmerica = GetPrivateProfileInt(TEXT("General"), TEXT("NorthAmerica"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("NorthAmerica=%u\n"), m_IsNorthAmerica ? 1 : 0);
+
 	log(0, false, 0, TEXT("\n"));
 
 	// Plugins section
@@ -117,26 +120,107 @@ Configuration::Configuration()
 	m_LNBLOF2 = GetPrivateProfileInt(TEXT("Tuning"), TEXT("LNB_LOF2"), 10600000, iniFileFullPath);
 	log(0, false, 0, TEXT("LNBLOF2=%lu\n"), m_LNBLOF2);
 
-	m_InitialFrequency = GetPrivateProfileInt(TEXT("Tuning"), TEXT("InitialFrequency"), 10842000, iniFileFullPath);
-	log(0, false, 0, TEXT("InitialFrequency=%lu\n"), m_InitialFrequency);
+	// Get the initial frequency setting
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialFrequency"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	if(buffer[0] != TCHAR(0))
+	{
+		int idx = 0;
+		for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		{
+			ULONG val;
+			_stscanf_s(token, TEXT("%lu"), &val);
+			m_InitialFrequency[idx++] = val;
+		}
+	}
+	log(0, false, 0, TEXT("InitialFrequency="));
+	for(hash_map<int, ULONG>::iterator it = m_InitialFrequency.begin(); it != m_InitialFrequency.end();)
+	{
+		log(0, false, 0, TEXT("%lu"), it->second);
+		if(++it != m_InitialFrequency.end())
+			log(0, false, 0, TEXT(","));
+	}
+	log(0, false, 0, TEXT("\n"));
 
-	m_InitialSymbolRate = GetPrivateProfileInt(TEXT("Tuning"), TEXT("InitialSymbolRate"), 27500, iniFileFullPath);
-	log(0, false, 0, TEXT("InitialSymbolRate=%lu\n"), m_InitialSymbolRate);
+	// Get the initial symbol rate setting
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialSymbolRate"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	if(buffer[0] != TCHAR(0))
+	{
+		int idx = 0;
+		for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		{
+			ULONG val;
+			_stscanf_s(token, TEXT("%lu"), &val);
+			m_InitialSymbolRate[idx++] = val;
+		}
+	}
+	log(0, false, 0, TEXT("InitialSymbolRate="));
+	for(hash_map<int, ULONG>::iterator it = m_InitialSymbolRate.begin(); it != m_InitialSymbolRate.end();)
+	{
+		log(0, false, 0, TEXT("%lu"), it->second);
+		if(++it != m_InitialSymbolRate.end())
+			log(0, false, 0, TEXT(","));
+	}
+	log(0, false, 0, TEXT("\n"));
 
 	// Get the initial polarization setting
-	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialPolarization"), TEXT("V"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
-	m_InitialPolarization = getPolarizationFromString(buffer);
-	log(0, false, 0, TEXT("InitialPolarization=%s\n"), printablePolarization(m_InitialPolarization));
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialPolarization"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	if(buffer[0] != TCHAR(0))
+	{
+		int idx = 0;
+		for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		{
+			Polarisation val = getPolarizationFromString(token);			
+			m_InitialPolarization[idx++] = val;
+		}
+	}
+	log(0, false, 0, TEXT("InitialPolarization="));
+	for(hash_map<int, Polarisation>::iterator it = m_InitialPolarization.begin(); it != m_InitialPolarization.end();)
+	{
+		log(0, false, 0, TEXT("%s"), printablePolarization(it->second));
+		if(++it != m_InitialPolarization.end())
+			log(0, false, 0, TEXT(","));
+	}
+	log(0, false, 0, TEXT("\n"));
 
 	// Get the initial modulation setting
-	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialModulation"), TEXT("QPSK"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
-	m_InitialModulation = getModulationFromString(buffer);
-	log(0, false, 0, TEXT("InitialModulation=%s\n"), printableModulation(m_InitialModulation));
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialModulation"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	if(buffer[0] != TCHAR(0))
+	{
+		int idx = 0;
+		for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		{
+			ModulationType val = getModulationFromString(token);			
+			m_InitialModulation[idx++] = val;
+		}
+	}
+	log(0, false, 0, TEXT("InitialModulation="));
+	for(hash_map<int, ModulationType>::iterator it = m_InitialModulation.begin(); it != m_InitialModulation.end();)
+	{
+		log(0, false, 0, TEXT("%s"), printableModulation(it->second));
+		if(++it != m_InitialModulation.end())
+			log(0, false, 0, TEXT(","));
+	}
+	log(0, false, 0, TEXT("\n"));
 
 	// Get the initial FEC setting
-	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialFEC"), TEXT("3/4"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
-	m_InitialFEC = getFECFromString(buffer);
-	log(0, false, 0, TEXT("InitialFEC=%s\n"), printableFEC(m_InitialFEC));
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("InitialFEC"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	if(buffer[0] != TCHAR(0))
+	{
+		int idx = 0;
+		for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		{
+			BinaryConvolutionCodeRate val = getFECFromString(token);			
+			m_InitialFEC[idx++] = val;
+		}
+	}
+	log(0, false, 0, TEXT("InitialFEC="));
+	for(hash_map<int, BinaryConvolutionCodeRate>::iterator it = m_InitialFEC.begin(); it != m_InitialFEC.end();)
+	{
+		log(0, false, 0, TEXT("%s"), printableFEC(it->second));
+		if(++it != m_InitialFEC.end())
+			log(0, false, 0, TEXT(","));
+	}
+	log(0, false, 0, TEXT("\n"));
 
 	// Get the list of DVB-S2 tuners
 	GetPrivateProfileString(TEXT("Tuning"), TEXT("DVBS2Tuners"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
@@ -232,6 +316,9 @@ Configuration::Configuration()
 	}
 	log(0, false, 0, TEXT("\n"));
 
+	m_UseDiseqc = GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseDiseqc"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("UseDiseqc=%u\n"), m_UseDiseqc ? 1 : 0);
+
 	log(0, false, 0, TEXT("\n"));
 
 	// Output section
@@ -321,4 +408,49 @@ Configuration::Configuration()
 
 	log(0, false, 0, TEXT("End of configuration file dump\n"));
 	log(0, false, 0, TEXT("=========================================================\n"));
+}
+
+ULONG Configuration::getInitialFrequency(int onidIndex) const
+{ 
+	hash_map<int, ULONG>::const_iterator it = m_InitialFrequency.find(onidIndex); 
+	if(it != m_InitialFrequency.end())
+		return it->second;
+	else 
+		return 0;
+}
+
+ULONG Configuration::getInitialSymbolRate(int onidIndex) const
+{ 
+	hash_map<int, ULONG>::const_iterator it = m_InitialSymbolRate.find(onidIndex); 
+	if(it != m_InitialSymbolRate.end())
+		return it->second;
+	else 
+		return 0;
+}
+
+Polarisation Configuration::getInitialPolarization(int onidIndex) const
+{ 
+	hash_map<int, Polarisation>::const_iterator it = m_InitialPolarization.find(onidIndex); 
+	if(it != m_InitialPolarization.end())
+		return it->second;
+	else 
+		return BDA_POLARISATION_NOT_SET;
+}
+
+ModulationType Configuration::getInitialModulation(int onidIndex) const
+{ 
+	hash_map<int, ModulationType>::const_iterator it = m_InitialModulation.find(onidIndex); 
+	if(it != m_InitialModulation.end())
+		return it->second;
+	else 
+		return BDA_MOD_NOT_SET;
+}
+
+BinaryConvolutionCodeRate Configuration::getInitialFEC(int onidIndex) const
+{ 
+	hash_map<int, BinaryConvolutionCodeRate>::const_iterator it = m_InitialFEC.find(onidIndex); 
+	if(it != m_InitialFEC.end())
+		return it->second;
+	else 
+		return BDA_BCC_RATE_NOT_SET;
 }

@@ -2,6 +2,7 @@
 
 #include "GenericFilterGraph.h"
 #include "THIOCtrl.h"
+#include "Diseqc.h"
 
 class DVBFilterGraph : public GenericFilterGraph
 {
@@ -35,6 +36,8 @@ private:
 	HRESULT CreateDVBCTuningSpace();
 	HRESULT CreateDVBTTuningSpace();
 
+	DiSEqC *m_diseqc;
+
 	// No default or copy constructor!
 	DVBFilterGraph();
 	DVBFilterGraph(const DVBFilterGraph&);
@@ -42,10 +45,13 @@ private:
 public:
     DVBFilterGraph(UINT ordinal);
 
+	DiSEqC * getDiseqc() const { return m_diseqc; }
+
 	virtual HRESULT BuildGraph();
     virtual HRESULT TearDownGraph();
   	
 	bool GetTunerStatus(BOOLEAN& locked, long& quality, long& strength);	
+	BOOL SendDiseqc(USHORT onid);
 	BOOL ChangeSetting(void);
 
 	LPCTSTR getTunerName() const { return m_TunerName; }
@@ -62,6 +68,9 @@ public:
 	bool						m_IsFireDTV;				// True if the device is FireDTV
 	bool						m_IsTTBDG2;					// True if the device is a TechnoTrend Budget 2
 	bool						m_IsTTUSB2;					// True if the device is a TechnoTrend USB 2.0
+	bool						m_IsProf7500;				// True if the device is Prof Revolution
+	bool						m_IsGenpix;					// True if the device is Genpix Slywalker
+	UINT						m_TTDevID;					// If Technotrend device, it's device ID
 
 	// Twinhan specific stuff
 	BOOL GetTunerDemodPropertySetInterfaces();

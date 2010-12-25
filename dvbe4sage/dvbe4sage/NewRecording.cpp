@@ -21,6 +21,7 @@ NewRecording::NewRecording(CWnd* pParent /*=NULL*/)
 	, m_TunerFEC(_T("3/4"))
 	, m_RecordingTunerOrdinal(_T(""))
 	, m_RecordingChannelNumber(_T("1"))
+	, m_RecordingNetworkNumber(_T("0"))
 	, m_RecordingDuration(_T("60"))
 	, m_OutputFileName(_T("Channel1.ts"))
 	, m_TunerName(_T(""))
@@ -63,6 +64,7 @@ void NewRecording::DoDataExchange(CDataExchange* pDX)
 	DDV_MaxChars(pDX, m_RecordingTunerOrdinal, 2);
 
 	DDX_Text(pDX, IDC_CHANNEL, m_RecordingChannelNumber);
+	DDX_Text(pDX, IDC_ONID, m_RecordingNetworkNumber);
 
 	DDX_Text(pDX, IDC_DURATION, m_RecordingDuration);
 

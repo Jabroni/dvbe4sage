@@ -20,7 +20,7 @@ private:
 public:
 	FileSource(LPCWSTR inFileName);
 
-	virtual bool startPlayback(bool startFullTransponderDump);
+	virtual bool startPlayback(USHORT onid, bool startFullTransponderDump);
 	virtual LPCTSTR getSourceFriendlyName() const					{ return m_CInFileName.c_str(); }
 	virtual bool getLockStatus()									{ return true; }
 };

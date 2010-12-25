@@ -19,7 +19,7 @@ FileSource::FileSource(LPCWSTR inFileName) :
 	}
 }
 
-bool FileSource::startPlayback(bool startFullTransponderDump)
+bool FileSource::startPlayback(USHORT onid, bool startFullTransponderDump)
 {
 	// Run the graph
 	HRESULT hr = S_OK;

@@ -32,7 +32,7 @@ public:
 			  BinaryConvolutionCodeRate initialFecRate);
 	virtual ~DVBSTuner(void);
 
-	virtual bool startPlayback(bool startFullTransponderDump);
+	virtual bool startPlayback(USHORT onid, bool startFullTransponderDump);
 	virtual LPCTSTR getSourceFriendlyName() const	{ return ((DVBFilterGraph*)m_pFilterGraph)->getTunerName(); }
 	virtual bool getLockStatus();
 

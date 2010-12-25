@@ -68,7 +68,7 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 				continue;
 			}
 			
-			if(tuner->isSourceOK() && tuner->startPlayback(false))
+			if(tuner->isSourceOK())
 			{
 				// Let's see if this is a DVB-S2 tuner and put it into the list accordingly
 				if(g_pConfiguration->isDVBS2Tuner(tuner->getSourceOrdinal()))
@@ -76,7 +76,7 @@ Encoder::Encoder(HINSTANCE hInstance, HWND hWnd, HMENU hParentMenu) :
 				else
 					m_Tuners.insert(m_Tuners.begin(), tuner);
 
-				// Run the tuner on idle
+				// Run the tuner on idle (also does the tuning)
 				tuner->runIdle();
 			}
 		}
@@ -572,7 +572,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		tuner->tune(frequency, symbolRate, polarization, modulation, fecRate);
 
 		// Now, start the recording
-		if(tuner->startPlayback(startFullTransponderDump))
+		if(tuner->startPlayback(onid, startFullTransponderDump))
 		{
 			// Set the TID and ONID if the recording was started successfully
 			tuner->setTID(tid);
@@ -745,7 +745,7 @@ bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 
 	// Let's try to start playback
 	bool succeeded = true;
-	if(source->startPlayback(false))
+	if(source->startPlayback(onid, false))
 		// If succeeded, add the recorder to the global structure
 		m_Recorders.insert(pair<USHORT, Recorder*>(0, recorder));
 	else

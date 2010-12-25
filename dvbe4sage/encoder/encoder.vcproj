@@ -54,7 +54,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\3rdparty\FFdecsa\src;..\3rdparty\baseclasses\src;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS;AM_NOVTABLE=__declspec(novtable)"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1;XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS;AM_NOVTABLE=__declspec(novtable);_USE_MATH_DEFINES"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -140,7 +140,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="..\3rdparty\FFdecsa\src;..\3rdparty\baseclasses\src;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS; XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS;AM_NOVTABLE=__declspec(novtable)"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS;AM_NOVTABLE=__declspec(novtable);_USE_MATH_DEFINES"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				EnableEnhancedInstructionSet="2"
@@ -385,6 +385,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Diseqc.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\DVBFilter.cpp"
 				>
 			</File>
@@ -466,6 +470,10 @@
 			</File>
 			<File
 				RelativePath=".\graph.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\IniFile.cpp"
 				>
 			</File>
 			<File
@@ -577,6 +585,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\USALS.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\VGPluginHandler.cpp"
 				>
 			</File>
@@ -627,6 +639,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Diseqc.h"
+				>
+			</File>
+			<File
 				RelativePath=".\DVBFilter.h"
 				>
 			</File>
@@ -671,7 +687,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GenpixCustomKsPropertySet.h"
+				>
+			</File>
+			<File
 				RelativePath=".\graph.h"
+				>
+			</File>
+			<File
+				RelativePath=".\IniFile.h"
 				>
 			</File>
 			<File
@@ -692,6 +716,10 @@
 			</File>
 			<File
 				RelativePath=".\pluginshandler.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ProfExtensions.h"
 				>
 			</File>
 			<File
@@ -731,6 +759,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\USALS.h"
+				>
+			</File>
+			<File
 				RelativePath=".\VGHandler.h"
 				>
 			</File>
@@ -753,6 +785,26 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath="..\Distributive\diseqc.ini"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				ExcludedFromBuild="true"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				ExcludedFromBuild="true"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+				/>
+			</FileConfiguration>
+		</File>
 		<File
 			RelativePath="..\Distributive\dvbe4sage.ini"
 			>

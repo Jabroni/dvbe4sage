@@ -28,6 +28,8 @@ SERVICE_STATUS_HANDLE hStatus;
 HWND hWnd;
 int globalArgc = 1;
 TCHAR** globalArgv = NULL;
+HANDLE	WaitWorkerThread = NULL;
+bool WeHaveInitialized = false;
 
 // Control handler function
 void ControlHandler(DWORD request) 
@@ -59,6 +61,21 @@ LRESULT CALLBACK myWndProc(HWND hwnd,
 		default:
 			return encoderWindowProc(uMsg, wParam, lParam);
 	}
+}
+
+// Keeps informing the SPM that we are still initializing (until we are done)
+DWORD WINAPI waitForFullInitializationThreadRoutine(LPVOID param)
+{
+	while(WeHaveInitialized == false)
+	{
+		ServiceStatus.dwCheckPoint++;
+		ServiceStatus.dwCurrentState = SERVICE_START_PENDING; 
+		SetServiceStatus(hStatus, &ServiceStatus);
+
+		Sleep(10000);
+	}
+
+	return 0;
 }
 
 void ServiceMain(int argc,
@@ -105,7 +122,9 @@ void ServiceMain(int argc,
 
 	// Initialize the encoder
 	createEncoder(GetModuleHandle(NULL), hWnd, NULL);
+	WaitWorkerThread = CreateThread(NULL, 0, waitForFullInitializationThreadRoutine, NULL, 0, NULL);
 	waitForFullInitialization();
+	WeHaveInitialized = true;
 
 	// Now, we can report the running status to SCM. 
 	ServiceStatus.dwCurrentState = SERVICE_RUNNING; 

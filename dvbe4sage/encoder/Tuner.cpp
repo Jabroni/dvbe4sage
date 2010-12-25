@@ -126,18 +126,27 @@ void DVBSTuner::tune(ULONG frequency,
 	((DVBFilterGraph*)m_pFilterGraph)->m_Modulation = modulation;
 	((DVBFilterGraph*)m_pFilterGraph)->m_FECRate = fecRate;
 
-	// Fix the modulation type for S2 tuning of Hauppauge devices
-	if(!((DVBFilterGraph*)m_pFilterGraph)->m_IsHauppauge && !((DVBFilterGraph*)m_pFilterGraph)->m_IsFireDTV && (modulation == BDA_MOD_8PSK || modulation == BDA_MOD_NBC_QPSK))
+
+	// Fix the modulation type for S2 tuning of Hauppauge devices ... skip entirely for genpix
+	if(!((DVBFilterGraph*)m_pFilterGraph)->m_IsGenpix && !((DVBFilterGraph*)m_pFilterGraph)->m_IsHauppauge && !((DVBFilterGraph*)m_pFilterGraph)->m_IsFireDTV && (modulation == BDA_MOD_8PSK || modulation == BDA_MOD_NBC_QPSK))
+	{
+		log(3, true, m_pFilterGraph->getTunerOrdinal(), TEXT("DVBSTuner::tune is changing the modulation from %s to BDA_MOD_8VSB\n"), printableModulation(modulation));
 		((DVBFilterGraph*)m_pFilterGraph)->m_Modulation = BDA_MOD_8VSB;
+	}
 
 	m_LockStatus = false;
 }
 
-bool DVBSTuner::startPlayback(bool startFullTransponderDump)
+bool DVBSTuner::startPlayback(USHORT onid, bool startFullTransponderDump)
 {
 	// Build the graph, but only if needed
 	if(!m_pFilterGraph->m_fGraphBuilt)
-		m_pFilterGraph->BuildGraph();
+		if(m_pFilterGraph->BuildGraph() != S_OK || !m_pFilterGraph->m_fGraphBuilt)
+			return false;
+
+	// Send diseqc/mptor command(s) if configured to do so ...
+	if(g_pConfiguration->getUseDiseqc())
+		((DVBFilterGraph*)m_pFilterGraph)->SendDiseqc(onid);
 
 	// Perform the tuning
 	((DVBFilterGraph*)m_pFilterGraph)->ChangeSetting();
@@ -150,7 +159,7 @@ bool DVBSTuner::startPlayback(bool startFullTransponderDump)
 	HRESULT hr = S_OK;
 	if(FAILED(hr = m_pFilterGraph->RunGraph()))
 	{
-		log(0, true, m_pFilterGraph->getTunerOrdinal(), TEXT("Error: Could not play the DVB-S filter graph, error 0x%.08X\n"), hr);
+		log(0, true, m_pFilterGraph->getTunerOrdinal(), TEXT("Error: Could not play the DVB filter graph, error 0x%.08X\n"), hr);
 		return false;
 	}
 	else
@@ -216,63 +225,83 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 	// Get the tuner
 	DVBSTuner* pTuner = (DVBSTuner*)vpTuner;
 
-	// Log entry
-	log(0, true, pTuner->getSourceOrdinal(), TEXT("Starting initial run for autodiscovery, transponder data: Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
-		pTuner->getFrequency(), pTuner->getSymbolRate(), printablePolarization(pTuner->getPolarization()), printableModulation(pTuner->getModulation()), printableFEC(pTuner->getFECRate()));
+	DiSEqC *pDiseqc = ((DVBFilterGraph*)pTuner->m_pFilterGraph)->getDiseqc();
 
-	// Sleep for the initial running time
-	Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
-
-	// Log entry
-	log(0, true, pTuner->getSourceOrdinal(), TEXT("The initial run for autodiscovery finished\n"));
-
-	// Log tuner lock status
-	if(!pTuner->getLockStatus())
-		log(0, true, pTuner->getSourceOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
-
-	// Get current transponder TID and ONID
-	const USHORT currentTID = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentTID() : 0;
-	const USHORT currentONID = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentONID() : 0;
-	const UINT32 utid = NetworkProvider::getUniqueSID(currentONID, currentTID);
-
-	// Copy provider data and stop recording, for the first time
-	pTuner->copyProviderDataAndStopRecording();
-
-	// Get the list of transponders from the encoder network providers
-	const hash_map<UINT32, Transponder> transponders = pTuner->m_pEncoder->getNetworkProvider().getTransponders();
-
-	// If asked for, loop through all the transponders
-	if(g_pConfiguration->scanAllTransponders())
+	// Loop for all configured network IDs
+	for(int onidIndex = 0; onidIndex < (pDiseqc != NULL ? pDiseqc->GetInitialONIDCount() : 1); onidIndex++)
 	{
-		// Log entry
-		log(0, true, pTuner->getSourceOrdinal(), TEXT("Full transponder scan at initialization requested, starting...\n"));
+		// Tune to the configured transponder
+		pTuner->tune(g_pConfiguration->getInitialFrequency(onidIndex),
+					 g_pConfiguration->getInitialSymbolRate(onidIndex),
+					 g_pConfiguration->getInitialPolarization(onidIndex),
+					 g_pConfiguration->getInitialModulation(onidIndex),
+					 g_pConfiguration->getInitialFEC(onidIndex));
 
-		for(hash_map<UINT32, Transponder>::const_iterator it = transponders.begin(); it != transponders.end(); it++)
+		if(pTuner->startPlayback((pDiseqc != NULL ? pDiseqc->GetInitialONID(onidIndex) : 0), false))
 		{
-			// Log transponder data
-			log(0, true, pTuner->getSourceOrdinal(), TEXT("Transponder with ONID=%hu, TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s - %s"),
-				NetworkProvider::getONIDFromUniqueSID(it->first), NetworkProvider::getSIDFromUniqueSID(it->first), it->second.frequency, it->second.symbolRate,
-				printablePolarization(it->second.polarization), printableModulation(it->second.modulation), printableFEC(it->second.fec),
-				it->first != utid ? TEXT("scanning started!\n") : TEXT("skipped, because it's the same transponder as the initial one!\n"));
-			// For any transponder other than the initial one
-			if(it->first != utid)
+			// Log entry
+			log(0, true, pTuner->getSourceOrdinal(), TEXT("Starting initial run for autodiscovery, transponder data: Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+				pTuner->getFrequency(), pTuner->getSymbolRate(), printablePolarization(pTuner->getPolarization()), printableModulation(pTuner->getModulation()), printableFEC(pTuner->getFECRate()));
+
+			// Sleep for the initial running time
+			Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
+
+			// Log entry
+			log(0, true, pTuner->getSourceOrdinal(), TEXT("The initial run for autodiscovery finished\n"));
+
+			// Log tuner lock status
+			if(!pTuner->getLockStatus())
+				log(0, true, pTuner->getSourceOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
+
+			// Get current transponder TID and ONID
+			const USHORT currentTID = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentTID() : 0;
+			const USHORT currentONID = pTuner->getParser() != NULL ? pTuner->getParser()->getCurrentONID() : 0;
+			const UINT32 utid = NetworkProvider::getUniqueSID(currentONID, currentTID);
+
+			// Copy provider data and stop recording, for the first time
+			pTuner->copyProviderDataAndStopRecording();
+
+			// Get the list of transponders from the encoder network providers
+			const hash_map<UINT32, Transponder> transponders = pTuner->m_pEncoder->getNetworkProvider().getTransponders();
+
+			// If asked for, loop through all the transponders
+			if(g_pConfiguration->scanAllTransponders())
 			{
-				
-				// Tune to its parameters
-				pTuner->tune(it->second.frequency, it->second.symbolRate, it->second.polarization, it->second.modulation, it->second.fec);
-				// Start the recording
-				pTuner->startPlayback(false);
-				// Sleep for the same time as the initial running time
-				Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
-				// Log tuner lock status
-				if(!pTuner->getLockStatus())
-					log(0, true, pTuner->getSourceOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
-				// And, finally, copy the provider data and stop the recording
-				pTuner->copyProviderDataAndStopRecording();
+				// Log entry
+				log(0, true, pTuner->getSourceOrdinal(), TEXT("Full transponder scan at initialization requested, starting...\n"));
+
+				for(hash_map<UINT32, Transponder>::const_iterator it = transponders.begin(); it != transponders.end(); it++)
+				{
+					// Log transponder data
+					log(0, true, pTuner->getSourceOrdinal(), TEXT("Transponder with ONID=%hu, TID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s - %s"),
+						NetworkProvider::getONIDFromUniqueSID(it->first), NetworkProvider::getSIDFromUniqueSID(it->first), it->second.frequency, it->second.symbolRate,
+						printablePolarization(it->second.polarization), printableModulation(it->second.modulation), printableFEC(it->second.fec),
+						it->first != utid ? TEXT("scanning started!\n") : TEXT("skipped, because it's the same transponder as the initial one!\n"));
+					// For any transponder other than the initial one
+					if(it->first != utid)
+					{
+						
+						// Tune to its parameters
+						pTuner->tune(it->second.frequency, it->second.symbolRate, it->second.polarization, it->second.modulation, it->second.fec);
+						// Start the recording
+						pTuner->startPlayback(NetworkProvider::getONIDFromUniqueSID(it->first), false);
+						// Sleep for the same time as the initial running time
+						Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
+						// Log tuner lock status
+						if(!pTuner->getLockStatus())
+							log(0, true, pTuner->getSourceOrdinal(), TEXT("The tuner failed to acquire the signal\n"));
+						// And, finally, copy the provider data and stop the recording
+						pTuner->copyProviderDataAndStopRecording();
+					}
+				}
+				// Log entry
+				log(0, true, pTuner->getSourceOrdinal(), TEXT("Full transponder scan at initialization finished!\n"));
 			}
 		}
-		// Log entry
-		log(0, true, pTuner->getSourceOrdinal(), TEXT("Full transponder scan at initialization finished!\n"));
+		else
+		{
+			log(0, true, pTuner->getSourceOrdinal(), TEXT("Autodiscovery of ONID %hu failed.\n"), onidIndex);
+		}
 	}
 
 	// Now we can set the initialization event, as the initialization of the tuner is fully complete
