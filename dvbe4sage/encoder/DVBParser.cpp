@@ -1117,6 +1117,9 @@ void PSIParser::parseBATTable(const nit_t* const table,
 			// Get the ONID
 			const USHORT onid = HILO(transportStream->original_network_id);
 
+			// Get the TID
+			const USHORT tid = HILO(transportStream->transport_stream_id);
+
 			// Update inputBuffer
 			inputBuffer += NIT_TS_LEN;
 			
@@ -1196,15 +1199,22 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						// And build the combined ONID&SID
 						const UINT32 usid = NetworkProvider::getUniqueSID(onid, sid);
 
+						// Get the transponder data for this USID
+						Transponder transponder;
+
 						// And then get channel number
 						const USHORT channelNumber = ntohs(*(USHORT*)(pointer + 5));
 
-						if(sid == (USHORT)0xFFFF || sid == 0 || channelNumber == (USHORT)0xFFFF || channelNumber == 0)
+						// Bail out if weird data has been detected, including non-matching TIDs between the SDT and the BAT information, which could suggest the BAT
+						// information is misinterpreted, as it's not formally well-defined
+						if(sid == (USHORT)0xFFFF || sid == 0 || channelNumber == (USHORT)0xFFFF || channelNumber == 0 || !m_Provider.getTransponderForSid(usid, transponder) || transponder.tid != tid)
 							continue;
 
 						// See if service ID already initialized
 						hash_map<UINT32, Service>::iterator it = m_Provider.m_Services.find(usid);
-						if(it != m_Provider.m_Services.end() && it->second.channelNumber == -1 && !it->second.serviceNames["eng"].empty())
+						if(it != m_Provider.m_Services.end() &&																		// If the service USID has already been found in the STD tables
+							(it->second.channelNumber == -1 || it->second.tid != tid && g_pConfiguration->isPreferredTID(tid)) &&	// AND it hasn't been assigned the channel number yet OR the current transponder is the preferred one
+							!it->second.serviceNames["eng"].empty())																// AND the service has a non-empty English name
 						{
 							// Get the service
 							Service& myService = it->second;
@@ -1217,7 +1227,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 								{
 									Service& otherService = m_Provider.m_Services[otherServiceUsid];
 									if(myService.serviceType != otherService.serviceType)
-										if(g_pConfiguration->getPreferSDOverHD() ^  (myService.serviceType != 25))
+										if(g_pConfiguration->getPreferSDOverHD() ^ (myService.serviceType != 25 && myService.serviceType != 17))			// 25 or 17 means the service has HD video
 											continue;
 										else
 										{
@@ -1242,7 +1252,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 							// Print log message
 							if(firstTime)
 							{
-								log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found in Bouquet=\"%s\"\n"), bouquetName.c_str());
+								log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found in Bouquet=\"%s\", BouquetID=%hu\n"), bouquetName.c_str(), bouquetID);
 								firstTime = false;
 							}
 

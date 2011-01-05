@@ -404,6 +404,19 @@ Configuration::Configuration()
 			log(0, false, 0, TEXT(","));
 	}
 
+	// List of preferred transponders by their TID
+	GetPrivateProfileString(TEXT("Advanced"), TEXT("PreferredTIDs"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		m_PreferredTIDs.insert((USHORT)_ttoi(token));
+
+	log(0, false, 0, TEXT("PreferredTIDs="));
+	for(hash_set<USHORT>::const_iterator it = m_PreferredTIDs.begin(); it != m_PreferredTIDs.end();)
+	{
+		log(0, false, 0, TEXT("%hu"), (USHORT)*it);
+		if(++it != m_PreferredTIDs.end())
+			log(0, false, 0, TEXT(","));
+	}
+
 	log(0, false, 0, TEXT("\n"));
 
 	log(0, false, 0, TEXT("End of configuration file dump\n"));
