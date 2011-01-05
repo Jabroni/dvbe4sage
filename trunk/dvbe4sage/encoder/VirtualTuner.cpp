@@ -5,7 +5,8 @@
 
 VirtualTuner::VirtualTuner(USHORT port,
 						   HWND hWnd) :
-	m_pRecorder(NULL)
+	m_pRecorder(NULL),
+	m_GetFileSizeCounter(0)
 {
 	// Create the server socket
 	m_ServerSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);

@@ -37,8 +37,8 @@
 
 
 const LONGLONG MILLISECONDS = (1000);            // 10 ^ 3
-const LONGLONG NANOSECONDS = (1000000000);       // 10 ^ 9
-const LONGLONG UNITS = (NANOSECONDS / 100);      // 10 ^ 7
+const LONGLONG NANOSECS = (1000000000);       // 10 ^ 9
+const LONGLONG UNITS = (NANOSECS / 100);      // 10 ^ 7
 
 /*  Unfortunately an inline function here generates a call to __allmul
     - even for constants!

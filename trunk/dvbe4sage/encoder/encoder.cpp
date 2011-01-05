@@ -169,11 +169,14 @@ void Encoder::socketOperation(SOCKET socket,
 					int fullCommandLength = MultiByteToWideChar(CP_UTF8, 0, buffer, received, fullCommandUTF16, sizeof(fullCommandUTF16) / sizeof(fullCommandUTF16[0]));
 					wstring fullCommand(fullCommandUTF16, fullCommandLength);
 
-					// Print the command received
-					log(1, true, 0, TEXT("Received command: \"%.*S\"\n"), fullCommand.length() - 2, fullCommand.c_str());
-
 					// Determine the command itself
 					wstring command(fullCommandUTF16, fullCommand.find_first_of(L" \r\n"));
+
+					// Print the command received, with "GET_FILE_SIZE" print only one each GET_FILE_SIZE_COUNTER_THRESHOLD times
+					USHORT getFileSizeCounter;
+
+					if(command != L"GET_FILE_SIZE" || (getFileSizeCounter = virtualTuner->incrementGetFileSizeCounter()) == 0)
+						log(1, true, 0, TEXT("Received command: \"%.*S\"\n"), fullCommand.length() - 2, fullCommand.c_str());
 
 					// If the command is START
 					if(command == L"START")
@@ -294,7 +297,11 @@ void Encoder::socketOperation(SOCKET socket,
 							// Send the length as a response
 							char buffer[100];
 							int length = sprintf_s(buffer, sizeof(buffer), "%I64u\r\n", recorder->getFileLength());
-							log(0, true, 0, TEXT("Replied %.*s\n"), length - 2, buffer);
+
+							// Log only if required
+							if(getFileSizeCounter == 0)
+								log(1, true, 0, TEXT("Replied %.*s\n"), length - 2, buffer);
+
 							send(socket, buffer, length, 0);
 						}
 						else
@@ -372,8 +379,8 @@ DVBSTuner* Encoder::getTuner(int tunerOrdinal,
 			for(UINT i = 0; i < m_Tuners.size(); i++)
 				// The tuner we're looking for should be not running and if the program requires DVB-S2
 				// we should pick only a compatible tuner
-				if(!m_Tuners[i]->running() && (pTransponder->modulation == BDA_MOD_QPSK || 
-					g_pConfiguration->isDVBS2Tuner(m_Tuners[i]->getSourceOrdinal())))
+				if(!m_Tuners[i]->running() && (g_pConfiguration->getSetupType() == SETUP_DVBS &&										// Check for DVB-S2 tuners only if the setup type is DVBS
+					(pTransponder->modulation == BDA_MOD_QPSK || g_pConfiguration->isDVBS2Tuner(m_Tuners[i]->getSourceOrdinal()))))
 					{
 						tuner = m_Tuners[i];
 						break;
@@ -520,7 +527,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// Boil out if an appropriate tuner is not found
 	if(tuner == NULL)
 	{
-		log(0, true, 0, TEXT("Cannot start recording for %s=%d (\"%s\"), no sutable source found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel, channelName);
+		log(0, true, 0, TEXT("Cannot start recording for %s=%d (\"%s\"), no suitable source found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel, channelName);
 		return false;
 	}
 	

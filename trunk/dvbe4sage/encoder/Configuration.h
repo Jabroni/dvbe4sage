@@ -58,6 +58,7 @@ class Configuration
 	string						m_BouquetName;
 	bool						m_PreferSDOverHD;
 	hash_set<USHORT>			m_ExcludedTIDs;
+	hash_set<USHORT>			m_PreferredTIDs;
 public:
 	Configuration();
 	
@@ -115,6 +116,7 @@ public:
 	const string& getBouquetName() const				{ return m_BouquetName; }
 	bool getPreferSDOverHD() const						{ return m_PreferSDOverHD; }
 	bool isExcludedTID(USHORT tid) const				{ return m_ExcludedTIDs.count(tid) > 0; }
+	bool isPreferredTID(USHORT tid) const				{ return m_PreferredTIDs.count(tid) > 0; }
 };
 
 extern Configuration* g_pConfiguration;
