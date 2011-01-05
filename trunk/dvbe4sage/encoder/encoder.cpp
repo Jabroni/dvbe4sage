@@ -379,7 +379,7 @@ DVBSTuner* Encoder::getTuner(int tunerOrdinal,
 			for(UINT i = 0; i < m_Tuners.size(); i++)
 				// The tuner we're looking for should be not running and if the program requires DVB-S2
 				// we should pick only a compatible tuner
-				if(!m_Tuners[i]->running() && (g_pConfiguration->getSetupType() == SETUP_DVBS &&										// Check for DVB-S2 tuners only if the setup type is DVBS
+				if(!m_Tuners[i]->running() && (g_pConfiguration->getSetupType() != SETUP_DVBS ||										// Check for DVB-S2 tuners only if the setup type is DVBS
 					(pTransponder->modulation == BDA_MOD_QPSK || g_pConfiguration->isDVBS2Tuner(m_Tuners[i]->getSourceOrdinal()))))
 					{
 						tuner = m_Tuners[i];
