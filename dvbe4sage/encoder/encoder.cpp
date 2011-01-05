@@ -173,7 +173,7 @@ void Encoder::socketOperation(SOCKET socket,
 					wstring command(fullCommandUTF16, fullCommand.find_first_of(L" \r\n"));
 
 					// Print the command received, with "GET_FILE_SIZE" print only one each GET_FILE_SIZE_COUNTER_THRESHOLD times
-					USHORT getFileSizeCounter;
+					USHORT getFileSizeCounter = 0;
 
 					if(command != L"GET_FILE_SIZE" || (getFileSizeCounter = virtualTuner->incrementGetFileSizeCounter()) == 0)
 						log(1, true, 0, TEXT("Received command: \"%.*S\"\n"), fullCommand.length() - 2, fullCommand.c_str());
