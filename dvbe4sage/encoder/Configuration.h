@@ -29,6 +29,8 @@ class Configuration
 	hash_set<UINT>				m_IncludedTuners;
 	hash_set<string>			m_ExcludedTunersMAC;
 	hash_set<string>			m_IncludedTunersMAC;
+	hash_set<USHORT>			m_IncludedONIDs;
+	hash_set<USHORT>			m_ExcludedONIDs;
 	bool						m_ScanAllTransponders;
 
 	hash_set<UINT>				m_DVBS2Tuners;
@@ -45,6 +47,7 @@ class Configuration
 	USHORT						m_MaxNumberOfResets;
 	bool						m_IsNorthAmerica;
 	bool						m_UseDiseqc;
+	bool						m_AutoDiscoverONID;
 
 	// All advanced stuff goes here
 	USHORT						m_PMTDilutionFactor;
@@ -68,6 +71,9 @@ public:
 	bool includeTuner(UINT tunerOrdinal) const			{ return m_IncludedTuners.count(tunerOrdinal) > 0; }
 	bool includeTunersByMAC(const string mac) const		{ return m_IncludedTunersMAC.count(mac) > 0 ; }
 	bool includeTuners() const							{ return !m_IncludedTuners.empty() || !m_IncludedTunersMAC.empty(); }
+	bool includeONID(const USHORT onid) const			{ return m_IncludedONIDs.count(onid) > 0 ; }
+	bool excludeONID(const USHORT onid) const			{ return m_ExcludedONIDs.count(onid) > 0 ; }
+	bool includeONIDs() const							{ return !m_IncludedONIDs.empty(); }
 	bool isDVBS2Tuner(UINT tunerOrdinal) const			{ return m_DVBS2Tuners.count(tunerOrdinal) > 0; }
 	bool isCAIDServed(USHORT caid) const				{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
 	bool isPROVIDServed(UINT provid) const				{ return m_ServededProvIds.empty() || m_ServededProvIds.count(provid) > 0; }
@@ -104,6 +110,7 @@ public:
 	bool getUseNewTuningMethod() const					{ return m_UseNewTuningMethod; }
 	USHORT getMaxNumberOfResets() const					{ return m_MaxNumberOfResets; }
 	bool getUseDiseqc() const							{ return m_UseDiseqc; };
+	bool getAutoDiscoverONID() const					{ return m_AutoDiscoverONID; };
 
 	// All advanced stuff goes here
 	USHORT getPMTDilutionFactor() const					{ return m_PMTDilutionFactor; }

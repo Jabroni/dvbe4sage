@@ -821,6 +821,9 @@ BOOL DVBFilterGraph::SendDiseqc(USHORT onid)
 			return FALSE;
 	}
 
+	// Send the raw diseqc port command if configured (SendRawDiseqcCommand figures out whether to send it or not)
+	m_diseqc->SendRawDiseqcCommand(m_KsTunerPropSet, this, m_pTunerDemodDevice, 4, onid);
+
 	// Set the parameters for the LNB associated with this network ID
 	log(3, true, m_iTunerNumber, TEXT("Setting LNB parameters SW=%lu  LOF1=%lu  LOF2=%lu\n"), rec.sw, rec.lof1, rec.lof2);
 	g_pConfiguration->setLNBSW(rec.sw);

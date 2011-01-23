@@ -21,6 +21,7 @@ m_CurrentPosition(-1)
 
 DiSEqC::~DiSEqC(void)
 {
+	m_rawDiseqcCommands.clear();
 	m_diseqcRecords.clear();
 }
 
@@ -65,7 +66,7 @@ void DiSEqC::ParseIniFile(void)
 			}
 			
 			log(0, false, 0, TEXT("[General]\n"));
-			log(0, false, 0, TEXT("InitialONID="));
+			log(0, false, 0, TEXT("InitialONID = "));
 			for(hash_map<int, USHORT>::iterator it = m_initialONID.begin(); it != m_initialONID.end();)
 			{
 				log(0, false, 0, TEXT("%hu"), it->second);
@@ -93,6 +94,7 @@ void DiSEqC::ParseIniFile(void)
 			log(0, false, 0, TEXT("\n"));
 		}
 		else
+		if(sections[i].compare("Raw") != 0)
 		{
 			struct diseqcRecord newrec;
 			newrec.ONID = atoi(sections[i].c_str());
@@ -105,6 +107,7 @@ void DiSEqC::ParseIniFile(void)
 			newrec.sw = atol(CIniFile::GetValue("LNB_SW", sections[i], fileName).c_str());
 			newrec.lof1 = atol(CIniFile::GetValue("LNB_LOF1", sections[i], fileName).c_str());
 			newrec.lof2 = atol(CIniFile::GetValue("LNB_LOF2", sections[i], fileName).c_str());
+			newrec.raw = CIniFile::GetValue("raw", sections[i], fileName);
 
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
 			log(0, false, 0, TEXT("Name = %s\n"), newrec.name.c_str());
@@ -116,14 +119,56 @@ void DiSEqC::ParseIniFile(void)
 			log(0, false, 0, TEXT("LNB_SW = %lu\n"), newrec.sw);
 			log(0, false, 0, TEXT("LNB_LOF1 = %lu\n"), newrec.lof1);
 			log(0, false, 0, TEXT("LNB_LOF2 = %lu\n"), newrec.lof2);
+			log(0, false, 0, TEXT("Raw = %s\n"), newrec.raw.c_str());
 			log(0, false, 0, TEXT("\n"));
 
 			m_diseqcRecords.push_back(newrec);
 		}
 	}
 
+	// Read and validate any specified raw diseqc commands
+	log(0, false, 0, TEXT("[Raw]\n"));
+	for (vector<diseqcRecord>::iterator iter = m_diseqcRecords.begin(); iter != m_diseqcRecords.end(); iter++)
+	{
+		if(!(*iter).raw.empty())
+		{
+			struct rawDiseqcCommand newCommand;
+			newCommand.name = (*iter).raw;
+			newCommand.command = CIniFile::GetValue((*iter).raw.c_str(), "Raw", fileName);
+
+			if(!(*iter).raw.empty())
+			{
+				if(!RawRecordExists(newCommand.name))
+				{
+					m_rawDiseqcCommands.push_back(newCommand);
+					log(0, false, 0, TEXT("%s ="), (*iter).raw.c_str());
+					log(0, false, 0, TEXT(" %s\n"), newCommand.command.c_str());
+				}
+			}
+			else
+			{
+				log(0, false, 0, TEXT("!!! Not Found !!!\n"));
+			}
+		}
+	}
+	
+	log(0, false, 0, TEXT("\n"));
+
 	log(0, false, 0, TEXT("End of DiSEqC file dump\n"));
 	log(0, false, 0, TEXT("=========================================================\n\n"));
+}
+
+bool DiSEqC::RawRecordExists(string name)
+{
+	bool found = false;
+
+	for (vector<rawDiseqcCommand>::iterator iter = m_rawDiseqcCommands.begin(); iter != m_rawDiseqcCommands.end() && !found; iter++)
+	{
+		if((*iter).name == name)
+			found = true;
+	}
+
+	return found;
 }
 
 USHORT DiSEqC::GetInitialONID(int onidIndex)
@@ -148,7 +193,7 @@ bool DiSEqC::SendUsalsCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pF
 
 	int length = CUSALS::GetUsalsDiseqcCommand(orbitalLocation/10.00, command, m_latitude, m_longitude);
 
-	bool retval = SendRawDiseqcCommand(ksTunerPropSet, pFilterGraph, pTunerDemodDevice, 1, length, command);
+	bool retval = SendRawDiseqcCommandToDriver(ksTunerPropSet, pFilterGraph, pTunerDemodDevice, 1, length, command);
 
 	if(retval == true && m_currentOrbitalLocation != orbitalLocation)
 	{
@@ -169,7 +214,7 @@ bool DiSEqC::SendPositionCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph*
 	command[2] = 0x6b;  
 	command[3] = (BYTE)position;  
 
-	bool retval = SendRawDiseqcCommand(ksTunerPropSet, pFilterGraph, pTunerDemodDevice, 1, sizeof(command), command);
+	bool retval = SendRawDiseqcCommandToDriver(ksTunerPropSet, pFilterGraph, pTunerDemodDevice, 1, sizeof(command), command);
 
 	if(retval == true && m_CurrentPosition != position)
 	{
@@ -206,11 +251,11 @@ bool DiSEqC::SendDiseqcCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* p
 		command[3] += (BYTE)(0x04 * (diseqcPort - DISEQC_PORT_1));
    }
 
-	return SendRawDiseqcCommand(ksTunerPropSet, pFilterGraph, pTunerDemodDevice, requestID, 4, command);
+	return SendRawDiseqcCommandToDriver(ksTunerPropSet, pFilterGraph, pTunerDemodDevice, requestID, 4, command);
 }
 
 // Because of this, the windows SDK needs to be >= version 7
-bool DiSEqC::SendRawDiseqcCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter*pTunerDemodDevice, ULONG requestID, ULONG commandLength, BYTE *command)
+bool DiSEqC::SendRawDiseqcCommandToDriver(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter*pTunerDemodDevice, ULONG requestID, ULONG commandLength, BYTE *command)
 {
 	ULONG nNodesTypeNum = 0;
 	ULONG NodesType[10]; 
@@ -249,7 +294,7 @@ bool DiSEqC::SendRawDiseqcCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph
 		}
 	}
 
-	log(3, false, 0, TEXT("\nNo IBDA_DiseqCommand interface could be found (running Windows XP?) trying old way.\n"));
+	log(3, true, 0, TEXT("\nNo IBDA_DiseqCommand interface could be found (running Windows XP?) trying old way.\n"));
 
 	if(((DVBFilterGraph*)pFilterGraph)->m_IsGenpix)
 		return SendCustomGenpixCommand(ksTunerPropSet, pFilterGraph, pTunerDemodDevice, commandLength, command);
@@ -404,8 +449,45 @@ struct diseqcRecord DiSEqC::GetDiseqcRecord(int onid)
 			ret.sw = (*iter).sw;
 			ret.lof1 = (*iter).lof1;
 			ret.lof2 = (*iter).lof2;
+			ret.raw = (*iter).raw;
 		}
 	}
 
 	return ret;	
+}
+
+bool DiSEqC::SendRawDiseqcCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter* pTunerDemodDevice, ULONG requestID, int onid)
+{
+	bool found = false;
+	BYTE command[7];
+	int commandLength = 0;
+	LPTSTR context;
+	TCHAR buffer[1024];
+
+	struct diseqcRecord dRec = GetDiseqcRecord(onid);
+
+	if(dRec.ONID == -1 || dRec.raw.empty())
+		return false;
+
+	for (vector<rawDiseqcCommand>::iterator iter = m_rawDiseqcCommands.begin(); iter != m_rawDiseqcCommands.end() && !found; iter++)
+	{
+		if((*iter).name == dRec.raw)
+		{
+			found = true;
+
+			// Create the byte aray from the command string	
+			std::copy((*iter).command.begin(),(*iter).command.end(), buffer);
+			for(LPCTSTR token = _tcstok_s(buffer, TEXT(" "), &context); token != NULL; token = _tcstok_s(NULL, TEXT(" "), &context))
+			{
+				USHORT cmd;
+				_stscanf_s(token, TEXT("%hx"), &cmd);
+				command[commandLength++] = (BYTE)cmd;
+			}
+		}
+	}
+
+	if(!found)
+		return false;
+	
+	return SendRawDiseqcCommandToDriver(ksTunerPropSet, pFilterGraph, pTunerDemodDevice, requestID, commandLength, command);
 }

@@ -439,6 +439,21 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		// Get SID and ONID for the service
 		sid = NetworkProvider::getSIDFromUniqueSID(usid);
 		onid = NetworkProvider::getONIDFromUniqueSID(usid);
+		if(onid == 0 && g_pConfiguration->getAutoDiscoverONID())
+		{
+			if(m_Provider.getOnidForSid(sid, onid))
+			{
+				log(2, true, 0, TEXT("A short SID specified, discovered ONID=%hu\n"), onid);	
+				usid = NetworkProvider::getUniqueSID(onid, sid);
+			}
+			else
+			{
+				// Couldn't auto discover ONID so try the default
+				log(2, true, 0, TEXT("A short SID was specified, but no ONID could be auto discovered.  Will try default ONID.\n"));
+				onid = 0;
+			}		
+		}
+
 		if(onid == 0 && m_Provider.getDefaultONID() != 0)
 		{
 			onid = m_Provider.getDefaultONID();

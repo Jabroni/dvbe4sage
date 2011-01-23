@@ -43,6 +43,13 @@ using namespace stdext;
 		ULONG sw;
 		ULONG lof1;
 		ULONG lof2;
+		string raw;
+	};
+
+	struct rawDiseqcCommand
+	{
+		string name;
+		string command;
 	};
 
 class DiSEqC
@@ -51,11 +58,13 @@ public:
 	DiSEqC(void);
 	~DiSEqC(void);
 
-	bool SendRawDiseqcCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter*pTunerDemodDevice, ULONG requestID, ULONG commandLength, BYTE *command);
+	bool SendRawDiseqcCommandToDriver(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter*pTunerDemodDevice, ULONG requestID, ULONG commandLength, BYTE *command);
 	bool SendDiseqcCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter* pTunerDemodDevice, ULONG requestID, DISEQC_PORT diseqcPort, Polarisation polarity, bool Is22kHzOn);
 	bool SendUsalsCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter* pTunerDemodDevice, double orbitalLocation);
 	bool SendPositionCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter* pTunerDemodDevice, int position);
 	struct diseqcRecord GetDiseqcRecord(int onid);
+	bool SendRawDiseqcCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter* pTunerDemodDevice, ULONG requestID, int onid);
+	bool RawRecordExists(string name);
 	USHORT GetInitialONID(int onidIndex);
 	int GetInitialONIDCount(void);
 
@@ -66,6 +75,7 @@ private:
 	bool SendCustomTechnotrendCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGraph* pFilterGraph, IBaseFilter* pTunerDemodDevice, ULONG commandLength, BYTE *command);
 
 	vector<diseqcRecord> m_diseqcRecords;
+	vector<rawDiseqcCommand> m_rawDiseqcCommands;
 	float m_latitude;
 	float m_longitude;
 	hash_map<int, USHORT> m_initialONID;

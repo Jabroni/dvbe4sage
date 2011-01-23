@@ -61,6 +61,23 @@ bool NetworkProvider::getTransponderForSid(UINT32 usid,
 		return false;
 }
 
+// Assumption for this is that SID is unique across all networks
+bool NetworkProvider::getOnidForSid(USHORT sid,
+									USHORT& onid) const
+{
+	bool found = false;
+	for(hash_map<UINT32, Service>::const_iterator it = m_Services.begin(); it != m_Services.end() && !found; it++)
+	{
+		if(it->second.sid == sid)
+		{
+			found = true;
+			onid = it->second.onid;
+		}
+	}
+
+	return found;
+}
+
 void NetworkProvider::clear()
 {
 	m_Transponders.clear();
