@@ -12,7 +12,7 @@ struct Transponder
 	ULONG							symbolRate;			// Transponder symbol rate
 	Polarisation					polarization;		// Transponder polarization
 	ModulationType					modulation;			// Transponder modulation
-	BinaryConvolutionCodeRate		fec;				// Transponder FEC rat
+	BinaryConvolutionCodeRate		fec;				// Transponder FEC rate
 };
 
 // Auxiliary structure for services
@@ -49,6 +49,7 @@ public:
 	bool getServiceName(UINT32 sid, LPTSTR output, int outputLength) const;
 	bool getSidForChannel(USHORT channel, UINT32& sid) const;
 	bool getTransponderForSid(UINT32 sid, Transponder& transponder) const;
+	bool getOnidForSid(USHORT sid, USHORT& onid) const;
 	bool canBeCopied() const													{ return !m_Transponders.empty() && !m_Services.empty(); }
 	const hash_map<UINT32, Transponder>& getTransponders() const				{ return m_Transponders; }
 	USHORT getDefaultONID() const												{ return m_DefaultONID; }
