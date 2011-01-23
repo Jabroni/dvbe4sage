@@ -12,7 +12,7 @@ struct Transponder
 	ULONG							symbolRate;			// Transponder symbol rate
 	Polarisation					polarization;		// Transponder polarization
 	ModulationType					modulation;			// Transponder modulation
-	BinaryConvolutionCodeRate		fec;				// Transponder FEC rate
+	BinaryConvolutionCodeRate		fec;				// Transponder FEC rat
 };
 
 // Auxiliary structure for services

@@ -996,20 +996,52 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 			// Insert the new service into the map - filter out certain ones only for non north americans 
 			if(g_pConfiguration->isNorthAmerica())
 			{
-				log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
-						newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+				if(!g_pConfiguration->includeONIDs() || g_pConfiguration->includeONID(newService.onid))
+				{
+					if(!g_pConfiguration->excludeONID(newService.onid))
+					{
+						m_Provider.m_Services[usid] = newService;
 
-				m_Provider.m_Services[usid] = newService;
+						log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+							newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+					}
+					else
+					{
+						log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered but excluded (1): SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+							newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+					}
+				}
+				else
+				{
+					log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered but excluded (2): SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+						newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+				}
 			}
 			else
 			{
 				if((newService.runningStatus != 0 || DISH_ONID(onid)) && (!FOXTEL_ONID(onid) && !SKYNZ_ONID(onid) && !SKYITALIA_ONID(onid) || newService.serviceType < 0x80))
 				{
-					m_Provider.m_Services[usid] = newService;
+					if(!g_pConfiguration->includeONIDs() || g_pConfiguration->includeONID(newService.onid))
+					{
+						if(!g_pConfiguration->excludeONID(newService.onid))
+						{
+							m_Provider.m_Services[usid] = newService;
 
-					// Print log message
-					log(3, true, m_pParent->getTunerOrdinal(), TEXT("Discovered SID=%hu, ONID=%hu, TSID=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
-										sid, onid, tid, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+							// Print log message
+							log(3, true, m_pParent->getTunerOrdinal(), TEXT("Discovered SID=%hu, ONID=%hu, TSID=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+								sid, onid, tid, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+						}
+						else
+						{
+							log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered but excluded (1): SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+								newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+						}
+					}
+					else
+					{
+						log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered but excluded (2): SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+							newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+					}
 				}
 				else
 				{

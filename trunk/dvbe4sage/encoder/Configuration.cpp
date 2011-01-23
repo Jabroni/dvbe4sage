@@ -319,6 +319,45 @@ Configuration::Configuration()
 	m_UseDiseqc = GetPrivateProfileInt(TEXT("Tuning"), TEXT("UseDiseqc"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("UseDiseqc=%u\n"), m_UseDiseqc ? 1 : 0);
 
+	m_AutoDiscoverONID = GetPrivateProfileInt(TEXT("Tuning"), TEXT("AutoDiscoverONID"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("AutoDiscoverONID=%u\n"), m_AutoDiscoverONID ? 1 : 0);
+
+	// List of network IDs to be included 
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("IncludeONIDs"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+	{
+		USHORT onid;
+		_stscanf_s(token, TEXT("%hu"), &onid);
+		m_IncludedONIDs.insert(onid);
+	}
+
+	log(0, false, 0, TEXT("IncludeONIDs="));
+	for(hash_set<USHORT>::const_iterator it = m_IncludedONIDs.begin(); it != m_IncludedONIDs.end();)
+	{
+		log(0, false, 0, TEXT("%hu"), *it);
+		if(++it != m_IncludedONIDs.end())
+			log(0, false, 0, TEXT(","));
+	}
+	log(0, false, 0, TEXT("\n"));
+
+	// List of network IDs to be excluded 
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("ExcludeONIDs"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+	{
+		USHORT onid;
+		_stscanf_s(token, TEXT("%hu"), &onid);
+		m_ExcludedONIDs.insert(onid);
+	}
+
+	log(0, false, 0, TEXT("ExcludeONIDs="));
+	for(hash_set<USHORT>::const_iterator it = m_ExcludedONIDs.begin(); it != m_ExcludedONIDs.end();)
+	{
+		log(0, false, 0, TEXT("%hu"), *it);
+		if(++it != m_ExcludedONIDs.end())
+			log(0, false, 0, TEXT(","));
+	}
+	log(0, false, 0, TEXT("\n"));
+
 	log(0, false, 0, TEXT("\n"));
 
 	// Output section
