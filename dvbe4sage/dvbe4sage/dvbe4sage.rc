@@ -1,7 +1,6 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
-#include "..\\svnrevision\\svnrevision.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -138,8 +137,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,1,0,SVN_REVISION
- PRODUCTVERSION 1,1,0,SVN_REVISION
+ FILEVERSION 1,1,0,999
+ PRODUCTVERSION 1,1,0,999
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -154,15 +153,15 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "Comments", "Official 1.1.0." SVN_REVISION_TXT
+            VALUE "Comments", "Official 1.1.0.999"
             VALUE "CompanyName", "Michael Pogrebisky"
             VALUE "FileDescription", "DVB Enhancer for SageTV UI"
-            VALUE "FileVersion", "1.1.0." SVN_REVISION_TXT
+            VALUE "FileVersion", "1.1.0.999"
             VALUE "InternalName", "dvbe4sage"
             VALUE "LegalCopyright", "Michael Pogrebisky.  Copyright (C) 2008, 2009, 2010. All rights reserved."
             VALUE "OriginalFilename", "dvbe4sage.exe"
             VALUE "ProductName", "DVB Enhancer for SageTV"
-            VALUE "ProductVersion", "1.1.0." SVN_REVISION_TXT
+            VALUE "ProductVersion", "1.1.0.999"
         END
     END
     BLOCK "VarFileInfo"
@@ -210,8 +209,11 @@ BEGIN
     BEGIN
         MENUITEM "&Start Recording...",         ID_OPERATIONS_STARTRECORDING
         MENUITEM SEPARATOR
-        MENUITEM "&Dump ECM Cache...",          ID_OPERATIONS_DUMPCACHE
+        MENUITEM "&Dump ECM Cache...",          ID_OPERATIONS_DUMPSERVICESTOCSV
         MENUITEM "&Load ECM Cache...",          ID_OPERATIONS_LOADCACHE
+        MENUITEM SEPARATOR
+        MENUITEM "Dump Services to CSV",        ID_OPERATIONS_DUMPSERVICESTOCSV
+        MENUITEM "Dump Transponders To CSV",    ID_OPERATIONS_DUMPTRANSTOCSV
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_OPERATIONS_EXIT
     END

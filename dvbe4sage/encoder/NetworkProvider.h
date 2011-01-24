@@ -3,6 +3,8 @@
 using namespace std;
 using namespace stdext;
 
+#define MAX_ERROR_MESSAGE_SIZE	2048
+
 // Auxiliary structure for transponders
 struct Transponder
 {
@@ -53,6 +55,8 @@ public:
 	bool canBeCopied() const													{ return !m_Transponders.empty() && !m_Services.empty(); }
 	const hash_map<UINT32, Transponder>& getTransponders() const				{ return m_Transponders; }
 	USHORT getDefaultONID() const												{ return m_DefaultONID; }
+	bool dumpServices(LPCTSTR fileName, LPTSTR reason) const;
+	bool dumpTransponders(LPCTSTR fileName, LPTSTR reason) const;
 
 	// Clear all internal structures
 	void clear();
