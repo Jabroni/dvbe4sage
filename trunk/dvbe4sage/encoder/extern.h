@@ -40,6 +40,9 @@ extern "C" ENCODER_API bool startRecordingFromFile(LPCWSTR inFileName,
 extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName, LPTSTR reason);
 extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName, LPTSTR reason);
 
+extern "C" ENCODER_API bool dumpServices(LPCTSTR fileName, LPTSTR reason);
+extern "C" ENCODER_API bool dumpTransponders(LPCTSTR fileName, LPTSTR reason);
+
 // DVB translation functions
 extern "C" ENCODER_API BinaryConvolutionCodeRate getFECFromDescriptor(USHORT descriptor);
 extern "C" ENCODER_API LPCTSTR printableFEC(BinaryConvolutionCodeRate fec);

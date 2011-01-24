@@ -725,6 +725,18 @@ bool Encoder::loadECMCache(LPCTSTR fileName,
 	return m_pPluginsHandler != NULL ? m_pPluginsHandler->loadECMCache(fileName, reason) : false;
 }
 
+bool Encoder::dumpServices(LPCTSTR fileName,
+						   LPTSTR reason) const
+{
+	return m_Provider.dumpServices(fileName, reason);
+}
+
+bool Encoder::dumpTransponders(LPCTSTR fileName,
+						   LPTSTR reason) const
+{
+	return m_Provider.dumpTransponders(fileName, reason);
+}
+
 bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 									 int usid,
 									 __int64 duration,

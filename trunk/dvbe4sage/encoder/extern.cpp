@@ -108,3 +108,15 @@ extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName,
 {
 	return g_pEncoder != NULL ? g_pEncoder->loadECMCache(fileName, reason) : false;
 }
+
+extern "C" ENCODER_API bool dumpServices(LPCTSTR fileName,
+										 LPTSTR reason)
+{
+	return g_pEncoder != NULL ? g_pEncoder->dumpServices(fileName, reason) : false;
+}
+
+extern "C" ENCODER_API bool dumpTransponders(LPCTSTR fileName,
+											 LPTSTR reason)
+{
+	return g_pEncoder != NULL ? g_pEncoder->dumpTransponders(fileName, reason) : false;
+}

@@ -87,6 +87,8 @@ BEGIN_MESSAGE_MAP(CDVBE4SageDlg, CTrayDialog)
 	ON_COMMAND(ID_OPERATIONS_EXIT, &CDVBE4SageDlg::OnOperationsExit)
 	ON_COMMAND(ID_OPERATIONS_DUMPCACHE, &CDVBE4SageDlg::OnDumpcache)
 	ON_COMMAND(ID_OPERATIONS_LOADCACHE, &CDVBE4SageDlg::OnLoadcache)
+	ON_COMMAND(ID_OPERATIONS_DUMPSERVICESTOCSV, &CDVBE4SageDlg::OnDumpServices)
+	ON_COMMAND(ID_OPERATIONS_DUMPTRANSTOCSV, &CDVBE4SageDlg::OnDumpTransponders)
 END_MESSAGE_MAP()
 
 
@@ -220,9 +222,7 @@ void CDVBE4SageDlg::OnDumpcache()
 	{
 		TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
 		if(!dumpECMCache(dlg.GetPathName(), reason))
-			MessageBox(reason, TEXT("Error Dumping File"), MB_ICONERROR | MB_OK);
-
-			
+			MessageBox(reason, TEXT("Error Dumping File"), MB_ICONERROR | MB_OK);			
 	}
 }
 
@@ -236,3 +236,27 @@ void CDVBE4SageDlg::OnLoadcache()
 			MessageBox(reason, TEXT("Error Loading File"), MB_ICONERROR | MB_OK);
 	}
 }
+
+void CDVBE4SageDlg::OnDumpServices()
+{
+	CFileDialog dlg(FALSE, _T("csv"), _T("Services"), OFN_OVERWRITEPROMPT, NULL, this);
+	if(dlg.DoModal() == IDOK)
+	{
+		TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
+		if(!dumpServices(dlg.GetPathName(), reason))
+			MessageBox(reason, TEXT("Error Dumping Services to CSV file"), MB_ICONERROR | MB_OK);			
+	}
+}
+
+void CDVBE4SageDlg::OnDumpTransponders()
+{
+	CFileDialog dlg(FALSE, _T("csv"), _T("Transponders"), OFN_OVERWRITEPROMPT, NULL, this);
+	if(dlg.DoModal() == IDOK)
+	{
+		TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
+		if(!dumpTransponders(dlg.GetPathName(), reason))
+			MessageBox(reason, TEXT("Error Dumping Transponders to CSV file"), MB_ICONERROR | MB_OK);			
+	}
+}
+
+

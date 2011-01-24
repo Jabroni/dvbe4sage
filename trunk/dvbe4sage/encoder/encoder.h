@@ -57,6 +57,8 @@ public:
 	bool stopRecording(Recorder* recorder);
 	bool dumpECMCache(LPCTSTR fileName, LPTSTR reason) const;
 	bool loadECMCache(LPCTSTR fileName, LPTSTR reason);
+	bool dumpServices(LPCTSTR fileName, LPTSTR reason) const;
+	bool dumpTransponders(LPCTSTR fileName, LPTSTR reason) const;
 	virtual ~Encoder();
 	int getNumberOfTuners() const;
 	LPCTSTR getTunerFriendlyName(int i) const;
