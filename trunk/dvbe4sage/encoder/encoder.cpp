@@ -214,6 +214,9 @@ void Encoder::socketOperation(SOCKET socket,
 					}
 					else if(command == L"STOP")
 					{
+						// It's better to do this in a lock, otherwise strange things may happen
+						CAutoLock lock(&m_cs);
+
 						log(0, true, 0, TEXT("Requested by Sage, "));
 						// Stop ongoing recording
 						Recorder* recorder = virtualTuner->getRecorder();
