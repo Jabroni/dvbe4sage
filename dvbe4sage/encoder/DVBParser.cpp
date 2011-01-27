@@ -1245,7 +1245,9 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						// See if service ID already initialized
 						hash_map<UINT32, Service>::iterator it = m_Provider.m_Services.find(usid);
 						if(it != m_Provider.m_Services.end() &&																		// If the service USID has already been found in the STD tables
-							(it->second.channelNumber == -1 || it->second.tid != tid && g_pConfiguration->isPreferredTID(tid)) &&	// AND it hasn't been assigned the channel number yet OR the current transponder is the preferred one
+							it->second.channelNumber == -1 &&																		// AND it hasn't been assigned the channel number yet
+							(m_Provider.m_Channels.find(channelNumber) == m_Provider.m_Channels.end()								// AND this channel number hasn't been assigned yet
+									|| it->second.tid == tid && g_pConfiguration->isPreferredTID(tid)) &&							// OR the current transponder is the preferred one
 							!it->second.serviceNames["eng"].empty())																// AND the service has a non-empty English name
 						{
 							// Get the service
@@ -2035,7 +2037,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			m_pPluginsHandler->putCAPacket(this, TYPE_CAT, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 		// Now, we have only ECM packets left
 		// For ECM packets, see if the content is new
-		else if(memcmp(m_LastECMPacket, currentPacket + 4, (size_t)currentPacket[7] + 4) != 0)
+		else if(memcmp(m_LastECMPacket, currentPacket + 4, min((size_t)currentPacket[7] + 4, sizeof(m_LastECMPacket))) != 0)
 		{
 			// If yes, save it
 			memcpy_s(m_LastECMPacket, sizeof(m_LastECMPacket), currentPacket + 4, (size_t)currentPacket[7] + 4);

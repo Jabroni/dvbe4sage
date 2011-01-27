@@ -7,7 +7,6 @@
 #define IDD_START_RECORDING             130
 #define IDR_MAINFRAME                   133
 #define IDR_MENU1                       135
-#define SVN_REVISION                    999
 #define IDC_MAIN_TAB                    1000
 #define IDC_LOG                         1001
 #define IDC_TRANSPONDER                 1002
