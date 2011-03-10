@@ -1351,7 +1351,7 @@ void PSIParser::parseNITTable(const nit_t* const table,
 			case 0x40:
 			{
 				networkName = string((const char*)inputBuffer + DESCR_NETWORK_NAME_LEN, networkDescriptor->descriptor_length);
-				log(4, true, m_pParent->getTunerOrdinal(), TEXT("### Found network with name %s\n"), networkName.c_str());
+				log(3, true, m_pParent->getTunerOrdinal(), TEXT("### Found network with name %s\n"), networkName.c_str());
 				break;
 			}
 			default:
@@ -1436,6 +1436,21 @@ void PSIParser::parseNITTable(const nit_t* const table,
 						transponder.fec = getFECFromDescriptor(satDescriptor->fec_inner);
 						// Get the polarization
 						transponder.polarization = getPolarizationFromDescriptor(satDescriptor->polarization);
+
+						// Set the satellite information (if it hasn't already been set)
+						if(networkName.length() > 0)
+						{
+							hash_map<USHORT, SatelliteInfo>::iterator it = m_Provider.m_SatelliteInfo.find(onid);
+							if(it == m_Provider.m_SatelliteInfo.end())
+							{
+								SatelliteInfo sInfo;
+								sInfo.satelliteName = networkName;
+								sInfo.orbitalLocation = 1000 * BcdCharToInt(satDescriptor->orbital_position2) + 100 * BcdCharToInt(satDescriptor->orbital_position1) + 10 * BcdCharToInt(satDescriptor->orbital_position4) + BcdCharToInt(satDescriptor->orbital_position3);
+								sInfo.east = (satDescriptor->west_east_flag == 1) ? true : false;
+								log(3, true, m_pParent->getTunerOrdinal(), TEXT("Satellite Name: %s  Orbital Location = %d %s\n"), sInfo.satelliteName.c_str(), sInfo.orbitalLocation, (sInfo.east == true) ? "East" : "West");
+								m_Provider.m_SatelliteInfo[onid] = sInfo;
+							}
+						}
 						
 						// Set the transponder info if not set yet
 						hash_map<UINT32, Transponder>::iterator it = m_Provider.m_Transponders.find(utid);

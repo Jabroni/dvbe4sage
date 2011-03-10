@@ -26,6 +26,7 @@ private:
 	const __int64				m_Duration;
 	GenericSource* const		m_pSource;
 	const USHORT				m_Sid;
+	const USHORT				m_Onid;
 	TCHAR						m_ChannelName[256];
 	Encoder* const				m_pEncoder;
 	time_t						m_Time;
@@ -47,6 +48,7 @@ public:
 			 bool useSid,
 			 int channel,
 			 USHORT sid,
+			 USHORT onid,
 			 LPCTSTR channelName,
 			 __int64 duration,
 			 Encoder* pEncoder,
@@ -65,4 +67,5 @@ public:
 	void setBrokenPipe()								{ m_IsBrokenPipe = true; }
 	__int64 getFileLength() const;
 	const wstring& getFileName() const					{ return m_FileName; }
+	USHORT getOnid() const								{ return m_Onid; }
 };

@@ -16,6 +16,7 @@ class DVBParser;
 // Abstract class for TS packet parser
 class TSPacketParser
 {
+	friend class MDAPIPluginsHandler;
 private:
 	//Disallow default and copy constructors
 	TSPacketParser();
@@ -330,6 +331,9 @@ public:
 
 	// Get the file length
 	__int64 getFileLength() const												{ return m_FileLength; }
+
+	// Get The owning recorder
+	Recorder* getRecorder() const												{ return  m_pRecorder; }
 
 	// Get the tuner ordinal
 	int getTunerOrdinal() const;

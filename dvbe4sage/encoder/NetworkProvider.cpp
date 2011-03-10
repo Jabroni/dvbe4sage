@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "NetworkProvider.h"
 #include "extern.h"
+#include "Logger.h"
 
 bool NetworkProvider::getServiceName(UINT32 usid,
 									 LPTSTR output,
@@ -131,11 +132,10 @@ bool NetworkProvider::dumpTransponders(LPCTSTR fileName, LPTSTR reason) const
 	_tfopen_s(&outFile, fileName, TEXT("wt"));
 	if(outFile != NULL)
 	{
-		_ftprintf(outFile, TEXT("\"Network\",\"TID\",\"Frequency\",\"Symbol Rate\",\"Polarization\",\"Modulation\",\"FEC Rate\"\n"));
+		_ftprintf(outFile, TEXT("\"Network ID\",\"TID\",\"Frequency\",\"Symbol Rate\",\"Polarization\",\"Modulation\",\"FEC Rate\"\n"));
+
 		for(hash_map<UINT32, Transponder>::const_iterator it = m_Transponders.begin(); it != m_Transponders.end(); it++)
-		{
-			_ftprintf(outFile, TEXT("%hu,%hu,%lu,%lu,\"%s\",\"%s\",\"%s\"\n"), it->second.onid, it->second.tid, it->second.frequency, it->second.symbolRate, printablePolarization(it->second.polarization), printableModulation(it->second.modulation), printableFEC(it->second.fec));
-		}
+			_ftprintf(outFile, TEXT("%hu,%hu,%lu,%lu,\"%s\",\"%s\",\"%s\"\n"),  it->second.onid, it->second.tid, it->second.frequency, it->second.symbolRate, printablePolarization(it->second.polarization), printableModulation(it->second.modulation), printableFEC(it->second.fec));
 
 		fclose(outFile);
 		return true;
@@ -150,11 +150,70 @@ bool NetworkProvider::dumpTransponders(LPCTSTR fileName, LPTSTR reason) const
 	}
 }
 
+// Locate all EPG and EEPG services and log their information
+bool NetworkProvider::logEPG(LPTSTR reason) const
+{
+	log(0, false, 0, TEXT("=========================================================\n"));
+	log(0, true, 0, TEXT("EPG Service dump:\n\n"));
+	for(hash_map<UINT32, Service>::const_iterator it = m_Services.begin(); it != m_Services.end(); it++)
+	{
+		hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find(string("eng"));
+		if(it1 != it->second.serviceNames.end())
+		{
+			CA2T name(it1->second.c_str());
+			string sName = name;
+
+//			log(0, false, 0, TEXT("(1) service=%s ONID=%hu with TID=%d, SID=%hu\n"), sName.c_str(), it->second.onid, it->second.tid, it->second.sid);
+
+			if(_tcsicmp(name, "DvEPG") == 0)
+				logEPGEntry(it->second.sid, it->second.onid, it->second.tid, sName);
+			else
+			if(_tcsicmp(name, "EPG2") == 0)
+				logEPGEntry(it->second.sid, it->second.onid, it->second.tid, sName);
+			else
+			if(_tcsicmp(name, "EEPG") == 0)
+				logEPGEntry(it->second.sid, it->second.onid, it->second.tid, sName);
+			else
+			if(_tcsicmp(name, "EPG") == 0)
+				logEPGEntry(it->second.sid, it->second.onid, it->second.tid, sName);
+		}
+	}
+
+	log(0, false, 0, TEXT("End of EPG Service dump\n"));
+	log(0, false, 0, TEXT("=========================================================\n"));
+
+	return true;
+}
+
+void NetworkProvider::logEPGEntry(USHORT sid, USHORT onid, USHORT tid, string serviceName) const
+{
+//	log(0, false, 0, TEXT("(2) service=%s ONID=%hu with TID=%d, SID=%hu\n"), serviceName.c_str(), onid, tid, sid);
+
+	hash_map<UINT32, Transponder>::const_iterator it3 = m_Transponders.find(getUniqueSID(onid, tid));
+	if(it3 != m_Transponders.end())
+	{
+		Transponder transponder = it3->second;
+		string satName = getSatelliteName(onid);
+
+		if(satName.length() == 0)
+		{
+			log(0, false, 0, TEXT("%s service found on ONID=%hu with TID=%d, SID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"), serviceName.c_str(), onid, tid, sid, transponder.frequency, transponder.symbolRate, 
+				printablePolarization(transponder.polarization), printableModulation(transponder.modulation), printableFEC(transponder.fec));
+		}
+		else
+		{
+			log(0, false, 0, TEXT("%s service found on ONID=%hu (%s) with TID=%d, SID=%hu, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"), serviceName.c_str(), onid, satName.c_str(), tid, sid, transponder.frequency, transponder.symbolRate, 
+				printablePolarization(transponder.polarization), printableModulation(transponder.modulation), printableFEC(transponder.fec));
+		}
+	}
+}
+
 void NetworkProvider::clear()
 {
 	m_Transponders.clear();
 	m_Services.clear();
 	m_Channels.clear();
+	m_SatelliteInfo.clear();
 	m_DefaultONID = 0;
 }
 
@@ -174,4 +233,28 @@ void NetworkProvider::copy(const NetworkProvider& other)
 
 	if(m_DefaultONID == 0)
 		m_DefaultONID = other.m_DefaultONID;
+}
+
+string NetworkProvider::getSatelliteName(USHORT onid) const
+{ 
+	hash_map<USHORT, SatelliteInfo>::const_iterator it8 = m_SatelliteInfo.find(onid); 
+	if(it8 != m_SatelliteInfo.end())
+		return it8->second.satelliteName;
+	else 
+		return "";
+}
+
+bool NetworkProvider::getSatelliteOrbitalLocation(USHORT onid, UINT& location, bool& east) const
+{ 
+	hash_map<USHORT, SatelliteInfo>::const_iterator it7 = m_SatelliteInfo.find(onid); 
+	if(it7 != m_SatelliteInfo.end())
+	{
+		location = it7->second.orbitalLocation;
+		east = it7->second.east;
+		return true;
+	}
+
+	location = 0;
+	east = false;
+	return false;
 }
