@@ -561,7 +561,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 
 	// If we found the tuner
 	// Create the recorder
-	Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, outFileName, useSid, channel, sid, channelName, duration, this, size, bySage);
+	Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, outFileName, useSid, channel, sid, onid, channelName, duration, this, size, bySage);
 
 	// Let's see if the recorder has an error, just delete it and exit
 	if(recorder->hasError())
@@ -740,6 +740,11 @@ bool Encoder::dumpTransponders(LPCTSTR fileName,
 	return m_Provider.dumpTransponders(fileName, reason);
 }
 
+bool Encoder::logEPG(LPTSTR reason) const
+{
+	return m_Provider.logEPG(reason);
+}
+
 bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 									 int usid,
 									 __int64 duration,
@@ -767,7 +772,7 @@ bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 		log(2, true, 0, TEXT("Service SID=%hu on ONID=%hu has Name=\"%s\"\n"), sid, onid, channelName);
 
 	// Create the recorder
-	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, (int)sid, sid, channelName, duration, this, -1, false);
+	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, (int)sid, sid, onid, channelName, duration, this, -1, false);
 
 	// Let's see if the recorder has an error, just delete it and exit
 	if(recorder->hasError())

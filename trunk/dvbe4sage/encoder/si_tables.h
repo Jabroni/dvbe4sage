@@ -733,8 +733,10 @@ typedef struct descr_satellite_delivery_system_struct {
 	unsigned char frequency2                             :8;
 	unsigned char frequency3                             :8;
 	unsigned char frequency4                             :8;
-	unsigned char orbital_position1                      :8;
-	unsigned char orbital_position2                      :8;
+	unsigned char orbital_position1                      :4;
+	unsigned char orbital_position2                      :4;
+	unsigned char orbital_position3                      :4;
+	unsigned char orbital_position4                      :4;
 #if 0
 	unsigned char west_east_flag                         :1;
 	unsigned char polarization                           :2;

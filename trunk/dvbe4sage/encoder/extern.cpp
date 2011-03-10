@@ -120,3 +120,8 @@ extern "C" ENCODER_API bool dumpTransponders(LPCTSTR fileName,
 {
 	return g_pEncoder != NULL ? g_pEncoder->dumpTransponders(fileName, reason) : false;
 }
+
+extern "C" ENCODER_API bool logEPG(LPTSTR reason)
+{
+	return g_pEncoder != NULL ? g_pEncoder->logEPG(reason) : false;
+}
