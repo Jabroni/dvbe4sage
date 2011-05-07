@@ -386,12 +386,16 @@ void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)
 	CT2A name(m_pCurrentClient->channelName);
 	strcpy_s(tp->szName, sizeof(tp->szName) / sizeof(tp->szName[0]), name);
 
+	USHORT onid = m_pCurrentClient->caller->getRecorder()->getOnid();
+
+	log(3, true, 0, TEXT("Initializing plugin structure with Channel Name %s\n"), tp->szName);
+
 	// Loop through all CAIDs
 	int i = 0;
 	int index = 0;
 	for(hash_set<CAScheme>::const_iterator it = m_pCurrentClient->ecmCaids.begin(); it != m_pCurrentClient->ecmCaids.end(); it++, i++)
 	{
-		tp->CA[i].dwProviderId = it->provId;
+		tp->CA[i].dwProviderId = onid;
 		tp->CA[i].wCA_Type = it->caId;
 		tp->CA[i].wECM = (WORD)it->pid;
 		for(EMMInfo::const_iterator it1 = m_pCurrentClient->emmCaids.begin(); it1 != m_pCurrentClient->emmCaids.end(); it1++)
@@ -400,20 +404,19 @@ void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)
 				tp->CA[i].wEMM = it1->pid;
 				break;
 			}
-		log(2, true, 0, TEXT("Initialized plugin with ProviderID=%.08X, CAID=%.04hX, ECM=%.04hX, EMM=%.04hX\n"), tp->CA[i].dwProviderId, tp->CA[i].wCA_Type, tp->CA[i].wECM, tp->CA[i].wEMM);
+		log(3, false, 0, TEXT("CA[%d]: ProviderID=%d, CAID=%.04hX, ECM=%.04hX, EMM=%.04hX\n"), i, tp->CA[i].dwProviderId, tp->CA[i].wCA_Type, tp->CA[i].wECM, tp->CA[i].wEMM);
 		if(tp->CA[i].wECM == m_pCurrentClient->ecmPid)
 			index = i;
 	}
-	log(2, true, 0, TEXT("Number of CAIDs is %d\n"), i);
+	log(3, false, 0, TEXT("Number of CAIDs is %d\n"), i);
 	tp->byCA = (BYTE)index;
 	tp->wCACount = (WORD)i;
 	tp->wECM = m_pCurrentClient->ecmPid;
 	tp->wSID = m_pCurrentClient->sid;
 	tp->wPMT = m_pCurrentClient->pmtPid;
+	log(3, true, 0, TEXT("byCA=%d, wCACount=%d, wECM=%.04hX, wSID=%d, wPMT=%.04hX\n"), tp->byCA, tp->wCACount, tp->wECM, tp->wSID, tp->wPMT);
 
 	// Set the satellite orbital location for whatever plugins (N3XT) can make use of it
-	USHORT onid = m_pCurrentClient->caller->getRecorder()->getOnid();
-
 	UINT orbitalLocation;
 	bool east;
 	bool found = m_pCurrentClient->caller->m_pParent->getNetworkProvider().getSatelliteOrbitalLocation(onid, orbitalLocation, east);
@@ -425,8 +428,12 @@ void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)
 			orbitalLocation = (UINT)((360.0 - adjustedLocation) * 10.0);
 		}
 
-		log(2, true, 0, TEXT("Setting plugin handler orbitalLocation to %d for onid %hu  \n"), orbitalLocation, onid);
+		log(3, true, 0, TEXT("Setting plugin handler orbitalLocation to %d for onid %hu\n"), orbitalLocation, onid);
 		UINT *pLocation = (UINT *)&tp->szBuffer[0];
 		*pLocation = orbitalLocation;
+	}
+	else
+	{
+		log(3, true, 0, TEXT("Could not find orbitalLocation for onid %hu\n"), onid);
 	}
 }
