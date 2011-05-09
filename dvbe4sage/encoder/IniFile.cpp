@@ -228,7 +228,7 @@ string CIniFile::GetValue(string KeyName, string SectionName, string FileName)
 {
 	vector<Record> content = GetRecord(KeyName,SectionName, FileName);		// Get the Record
 
-	if(!content.empty())													// Make sure there is a value to return
+	if(!content.empty() && content[0].Commented != ';')						// Make sure there is a value to return
 		return content[0].Value;											// And return the value
 
 	return "";																// No value was found
