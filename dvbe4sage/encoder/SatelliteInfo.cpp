@@ -1,7 +1,6 @@
 #include "StdAfx.h"
 
 #include "SatelliteInfo.h"
-#include "extern.h"
 #include "logger.h"
 
 SatelliteInfo* g_pSatelliteInfo = NULL;
@@ -12,6 +11,8 @@ SatelliteInfo::SatelliteInfo()
 	m_SatelliteInfo.clear();
 }
 
+// Add or update information for a satellite
+// The ordinal parameter is the tuner ordinal and is only used for logging purposes
 void SatelliteInfo::addOrUpdateSatellite(int ordinal, USHORT onid, string networkName, UINT orbitalLocation, bool east)
 {
 	hash_map<USHORT, SatelliteInfoData>::iterator itsi = m_SatelliteInfo.find(onid);						
@@ -43,6 +44,7 @@ void SatelliteInfo::addOrUpdateSatellite(int ordinal, USHORT onid, string networ
 	return;
 }
 
+// Return a string with the satellite name for the given network ID
 string SatelliteInfo::getSatelliteName(USHORT onid) const
 { 
 	hash_map<USHORT, SatelliteInfoData>::const_iterator it = m_SatelliteInfo.find(onid); 
@@ -52,6 +54,7 @@ string SatelliteInfo::getSatelliteName(USHORT onid) const
 		return "";
 }
 
+// Return the orbital location (* 10) and east/west flag for the given network ID
 bool SatelliteInfo::getSatelliteOrbitalLocation(USHORT onid, UINT& location, bool& east) const
 { 
 	hash_map<USHORT, SatelliteInfoData>::const_iterator it = m_SatelliteInfo.find(onid); 
