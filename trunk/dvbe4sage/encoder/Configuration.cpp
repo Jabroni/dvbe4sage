@@ -67,6 +67,10 @@ Configuration::Configuration()
 	m_IsVGCam = GetPrivateProfileInt(TEXT("Plugins"), TEXT("IsVGCam"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("IsVGCam=%u\n"), m_IsVGCam ? 1 : 0);
 
+	//m_SendAllECMs = GetPrivateProfileInt(TEXT("Plugins"), TEXT("SendAllECMs"), 0, iniFileFullPath) == 0 ? false : true;
+	//log(0, false, 0, TEXT("SendAllECMs=%u\n"), m_SendAllECMs ? 1 : 0);
+	m_SendAllECMs = false;
+
 	m_MaxNumberOfResets = GetPrivateProfileInt(TEXT("Plugins"), TEXT("MaxNumberOfResets"), 5, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("MaxNumberOfResets=%hu\n"), m_MaxNumberOfResets);
 

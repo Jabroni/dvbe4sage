@@ -553,6 +553,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\SatelliteInfo.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -736,6 +740,10 @@
 			</File>
 			<File
 				RelativePath=".\resource.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SatelliteInfo.h"
 				>
 			</File>
 			<File

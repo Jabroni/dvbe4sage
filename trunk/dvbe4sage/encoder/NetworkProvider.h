@@ -31,13 +31,6 @@ struct Service
 	Service(): channelNumber(-1) {}
 };
 
-struct SatelliteInfo
-{
-	string							satelliteName;		// Name of the satellite
-	UINT							orbitalLocation;	// Orbital location * 10 (61.5 = 615)
-	bool							east;				// true = eastern position
-};
-
 class NetworkProvider
 {
 	// PSIParser is our friend
@@ -47,7 +40,6 @@ class NetworkProvider
 	hash_map<UINT32, Transponder>					m_Transponders;			// ONID&TID to Transponder map
 	hash_map<UINT32, Service>						m_Services;				// ONID&SID to Service descriptor map
 	hash_map<USHORT, UINT32>						m_Channels;				// Channel number to ONID&SID map
-	hash_map<USHORT, SatelliteInfo>					m_SatelliteInfo;		// ONID to SatelliteInfo map
 	USHORT											m_DefaultONID;			// Default ONID
 
 	// Critical section for locking and unlocking
@@ -65,8 +57,6 @@ public:
 	USHORT getDefaultONID() const												{ return m_DefaultONID; }
 	bool dumpServices(LPCTSTR fileName, LPTSTR reason) const;
 	bool dumpTransponders(LPCTSTR fileName, LPTSTR reason) const;
-	string getSatelliteName(USHORT onid) const;
-	bool getSatelliteOrbitalLocation(USHORT onid, UINT& location, bool& east) const;
 	bool logEPG(LPTSTR reason) const;
 	void logEPGEntry(USHORT sid, USHORT onid, USHORT tid, string serviceName) const;
 
