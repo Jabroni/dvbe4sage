@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "configuration.h"
 #include "extern.h"
+#include "SatelliteInfo.h"
 
 // This it the global encoder object
 Encoder*	g_pEncoder = NULL;
@@ -15,6 +16,7 @@ extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance,
 	g_pLogger = new Logger;
 	g_pConfiguration = new Configuration;
 	g_pEncoder = new Encoder(hInstance, hWnd, hParentMenu);
+	g_pSatelliteInfo = new SatelliteInfo;
 }
 
 extern "C" ENCODER_API void deleteEncoder()

@@ -55,6 +55,7 @@ class Configuration
 	USHORT						m_PMTThreshold;
 	USHORT						m_PSIMaturityTime;
 	bool						m_IsVGCam;
+	bool						m_SendAllECMs;
 	USHORT						m_MaxECMCacheSize;
 	USHORT						m_ECMCacheAutodeleteChunkSize;
 	bool						m_EnableECMCache;
@@ -78,6 +79,7 @@ public:
 	bool isCAIDServed(USHORT caid) const				{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
 	bool isPROVIDServed(UINT provid) const				{ return m_ServededProvIds.empty() || m_ServededProvIds.count(provid) > 0; }
 	bool isVGCam() const								{ return m_IsVGCam; };
+	bool sendAllECMs() const							{ return m_SendAllECMs; };	
 	bool scanAllTransponders() const					{ return m_ScanAllTransponders; }
 	bool isNorthAmerica() const							{ return m_IsNorthAmerica; };
 	UINT getLogLevel() const							{ return m_LogLevel; }

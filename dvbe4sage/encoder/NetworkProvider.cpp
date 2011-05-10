@@ -2,6 +2,7 @@
 #include "NetworkProvider.h"
 #include "extern.h"
 #include "Logger.h"
+#include "SatelliteInfo.h"
 
 bool NetworkProvider::getServiceName(UINT32 usid,
 									 LPTSTR output,
@@ -193,7 +194,7 @@ void NetworkProvider::logEPGEntry(USHORT sid, USHORT onid, USHORT tid, string se
 	if(it3 != m_Transponders.end())
 	{
 		Transponder transponder = it3->second;
-		string satName = getSatelliteName(onid);
+		string satName = g_pSatelliteInfo->getSatelliteName(onid);
 
 		if(satName.length() == 0)
 		{
@@ -213,7 +214,6 @@ void NetworkProvider::clear()
 	m_Transponders.clear();
 	m_Services.clear();
 	m_Channels.clear();
-	m_SatelliteInfo.clear();
 	m_DefaultONID = 0;
 }
 
@@ -235,26 +235,5 @@ void NetworkProvider::copy(const NetworkProvider& other)
 		m_DefaultONID = other.m_DefaultONID;
 }
 
-string NetworkProvider::getSatelliteName(USHORT onid) const
-{ 
-	hash_map<USHORT, SatelliteInfo>::const_iterator it8 = m_SatelliteInfo.find(onid); 
-	if(it8 != m_SatelliteInfo.end())
-		return it8->second.satelliteName;
-	else 
-		return "";
-}
 
-bool NetworkProvider::getSatelliteOrbitalLocation(USHORT onid, UINT& location, bool& east) const
-{ 
-	hash_map<USHORT, SatelliteInfo>::const_iterator it7 = m_SatelliteInfo.find(onid); 
-	if(it7 != m_SatelliteInfo.end())
-	{
-		location = it7->second.orbitalLocation;
-		east = it7->second.east;
-		return true;
-	}
 
-	location = 0;
-	east = false;
-	return false;
-}

@@ -6,6 +6,7 @@
 #include "logger.h"
 #include "configuration.h"
 #include "recorder.h"
+#include "SatelliteInfo.h"
 
 char const MDAPIVersion[] = "MD-API Version 01.03 - 01.06";
 
@@ -419,7 +420,7 @@ void MDAPIPluginsHandler::fillTPStructure(LPTPROGRAM82 tp)
 	// Set the satellite orbital location for whatever plugins (N3XT) can make use of it
 	UINT orbitalLocation;
 	bool east;
-	bool found = m_pCurrentClient->caller->m_pParent->getNetworkProvider().getSatelliteOrbitalLocation(onid, orbitalLocation, east);
+	bool found = g_pSatelliteInfo->getSatelliteOrbitalLocation(onid, orbitalLocation, east);
 	if(found)
 	{		
 		if(east == false)

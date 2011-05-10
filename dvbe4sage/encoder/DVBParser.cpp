@@ -7,6 +7,7 @@
 #include "configuration.h"
 #include "extern.h"
 #include "GenericSource.h"
+#include "SatelliteInfo.h"
 
 // Define constants
 #define	CRC_LENGTH			4
@@ -1438,19 +1439,8 @@ void PSIParser::parseNITTable(const nit_t* const table,
 						transponder.polarization = getPolarizationFromDescriptor(satDescriptor->polarization);
 
 						// Set the satellite information (if it hasn't already been set)
-						if(networkName.length() > 0)
-						{
-							hash_map<USHORT, SatelliteInfo>::iterator it = m_Provider.m_SatelliteInfo.find(onid);
-							if(it == m_Provider.m_SatelliteInfo.end())
-							{
-								SatelliteInfo sInfo;
-								sInfo.satelliteName = networkName;
-								sInfo.orbitalLocation = 1000 * BcdCharToInt(satDescriptor->orbital_position2) + 100 * BcdCharToInt(satDescriptor->orbital_position1) + 10 * BcdCharToInt(satDescriptor->orbital_position4) + BcdCharToInt(satDescriptor->orbital_position3);
-								sInfo.east = (satDescriptor->west_east_flag == 1) ? true : false;
-								log(3, true, m_pParent->getTunerOrdinal(), TEXT("Satellite Name: %s  Orbital Location = %d %s\n"), sInfo.satelliteName.c_str(), sInfo.orbitalLocation, (sInfo.east == true) ? "East" : "West");
-								m_Provider.m_SatelliteInfo[onid] = sInfo;
-							}
-						}
+						UINT orbitalLocation = 1000 * BcdCharToInt(satDescriptor->orbital_position2) + 100 * BcdCharToInt(satDescriptor->orbital_position1) + 10 * BcdCharToInt(satDescriptor->orbital_position4) + BcdCharToInt(satDescriptor->orbital_position3);
+						g_pSatelliteInfo->addOrUpdateSatellite(m_pParent->getTunerOrdinal(), onid, networkName, orbitalLocation, (satDescriptor->west_east_flag == 1) ? true : false);
 						
 						// Set the transponder info if not set yet
 						hash_map<UINT32, Transponder>::iterator it = m_Provider.m_Transponders.find(utid);
@@ -2052,7 +2042,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			m_pPluginsHandler->putCAPacket(this, TYPE_CAT, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 		// Now, we have only ECM packets left
 		// For ECM packets, see if the content is new
-		else if(memcmp(m_LastECMPacket, currentPacket + 4, min((size_t)currentPacket[7] + 4, sizeof(m_LastECMPacket))) != 0)
+		else if(memcmp(m_LastECMPacket, currentPacket + 4, min((size_t)currentPacket[7] + 4, sizeof(m_LastECMPacket))) != 0 || g_pConfiguration->sendAllECMs() == true)
 		{
 			// If yes, save it
 			memcpy_s(m_LastECMPacket, sizeof(m_LastECMPacket), currentPacket + 4, (size_t)currentPacket[7] + 4);
