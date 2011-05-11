@@ -217,6 +217,68 @@ void NetworkProvider::clear()
 	m_DefaultONID = 0;
 }
 
+bool NetworkProvider::dumpXmlNetworkProvider(LPTSTR reason) const
+{
+	ofstream t("transponders.cache");
+	ofstream sat("satelliteInfo.cache");
+	ofstream s("services.cache");
+	
+	int counter = 0;
+	// We start generating the transponders.cache
+	for(hash_map<UINT32, Transponder>::const_iterator it = m_Transponders.begin(); it != m_Transponders.end(); it++) 
+	{
+		t << it->second.onid << "," << it->second.tid << "," << it->second.frequency << "," << it->second.symbolRate << "," << printablePolarization(it->second.polarization) 
+		  << "," << printableModulation(it->second.modulation) << "," << printableFEC(it->second.fec) << "\n";
+		counter++;
+	}
+
+	t.close();
+	log(1,true, 0, TEXT("%d transponders saved to transponders.cache\n"),counter);
+
+	// We continue with the satelliteInfo.cache
+	counter = 0;
+	for(hash_map<USHORT, SatelliteInfoData>::const_iterator it = g_pSatelliteInfo->m_SatelliteInfo.begin(); it != g_pSatelliteInfo->m_SatelliteInfo.end(); it++) 
+	{
+		sat << it->second.satelliteName << "," << it->second.onid << "," << it->second.orbitalLocation << "," << it->second.east << "\n";
+		counter++;
+	}
+
+	sat.close();
+	log(1,true, 0, TEXT("%d satellites info saved to satelliteInfo.cache\n"),counter);
+
+	// We end with the services.cache
+	TCHAR channelName[256];
+	counter=0;
+	for(hash_map<UINT32, Service>::const_iterator it = m_Services.begin(); it != m_Services.end(); it++)
+	{
+		hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find(string("eng"));
+		if(it1 != it->second.serviceNames.end())
+		{
+			CA2T name(it1->second.c_str());
+			_tcscpy_s(channelName, sizeof(channelName), name);
+		}
+		else
+		{
+			it1 = it->second.serviceNames.begin();
+			if(it1 != it->second.serviceNames.end())
+			{
+				CA2T name(it1->second.c_str());
+				_tcscpy_s(channelName, sizeof(channelName), name);
+			}
+			else
+				_tcscpy_s(channelName, sizeof(channelName), "Unknown");
+		}
+		s << it->second.sid << "," << it->second.onid << "," << it->second.tid << "," << channelName << "," << (char)it->second.serviceType << "," << (char)it->second.runningStatus << "\n";
+		counter++;
+	}
+
+	s.close();
+	log(1,true, 0, TEXT("%d services saved to services.cache\n"),counter);
+		 
+	log(1,true, 0, TEXT("Transponders and Services dumped to cache file\n"));
+	return true;
+}
+
 void NetworkProvider::copy(const NetworkProvider& other)
 {
 	// Copy transponders
@@ -234,6 +296,5 @@ void NetworkProvider::copy(const NetworkProvider& other)
 	if(m_DefaultONID == 0)
 		m_DefaultONID = other.m_DefaultONID;
 }
-
 
 

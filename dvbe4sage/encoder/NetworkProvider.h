@@ -31,6 +31,8 @@ struct Service
 	Service(): channelNumber(-1) {}
 };
 
+
+
 class NetworkProvider
 {
 	// PSIParser is our friend
@@ -62,6 +64,10 @@ public:
 
 	// Clear all internal structures
 	void clear();
+
+	// Dump to xml 
+	bool dumpXmlNetworkProvider(LPTSTR reason) const;
+	bool loadXmlNetworkProvider(LPTSTR reason) const;
 
 	// Copy all the internal data
 	void copy(const NetworkProvider& other);

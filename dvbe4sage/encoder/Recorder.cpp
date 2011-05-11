@@ -60,13 +60,20 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 			// Here we update the encoder with the latest and greatest PSI parser info
 			// Get the parser from the source
 			DVBParser* const sourceParser = recorder->m_pSource->getParser();
-
+			
 			// Let's see if it's valid and can be used
 			if(sourceParser != NULL && sourceParser->getNetworkProvider().canBeCopied() && !sourceParser->providerInfoHasBeenCopied() && sourceParser->getTimeStamp() != 0 && 
 				(__int64)difftime(now, sourceParser->getTimeStamp()) > g_pConfiguration->getPSIMaturityTime())
 			{
+				
 				// If yes, get the encoder's network provider
 				NetworkProvider& encoderNetworkProvider = recorder->m_pEncoder->getNetworkProvider();
+	
+				// If enabled, we dump the services and transponders to file after the timeout of scanning the PSI for new services
+				if(g_pConfiguration->getCacheServices()) {
+					TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
+					recorder->m_pEncoder->dumpXmlNetworkProvider(reason);
+				}
 
 				// Lock network provider
 				encoderNetworkProvider.lock();
@@ -78,8 +85,8 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 				encoderNetworkProvider.unlock();
 
 				// Set "HasBeenCopied" flag to prevent multiple copy
-				sourceParser->setProviderInfoHasBeenCopied();
-			}
+				sourceParser->setProviderInfoHasBeenCopied();				
+			}			
 		}
 	}
 
