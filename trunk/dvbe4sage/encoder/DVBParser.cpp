@@ -78,6 +78,321 @@ void DVBParser::unlock()
 	m_cs.Unlock();
 }
 
+
+void csvline_populate(vector<string> &record, const string& line, char delimiter)
+{
+    int linepos=0;
+    int inquotes=false;
+    char c;
+    int linemax=line.length();
+    string curstring;
+    record.clear();
+       
+    while(line[linepos]!=0 && linepos < linemax)
+    {    
+        c = line[linepos];
+       
+        if (!inquotes && curstring.length()==0 && c=='"')
+        {
+            //beginquotechar
+            inquotes=true;
+        }
+        else if (inquotes && c=='"')
+        {
+            //quotechar
+            if ( (linepos+1 <linemax) && (line[linepos+1]=='"') )
+            {
+                //encountered 2 double quotes in a row (resolves to 1 double quote)
+                curstring.push_back(c);
+                linepos++;
+            }
+            else
+            {
+                //endquotechar
+                inquotes=false;
+            }
+        }
+        else if (!inquotes && c==delimiter)
+        {
+            //end of field
+            record.push_back( curstring );
+            curstring="";
+        }
+        else if (!inquotes && (c=='\r' || c=='\n') )
+        {
+            record.push_back( curstring );
+            return;
+        }
+        else
+        {
+            curstring.push_back(c);
+        }
+        linepos++;
+    }
+    record.push_back( curstring );
+    return;
+}
+
+
+// Reads the services.cache / transponders.cache
+bool DVBParser::readTransponderServicesFromFile() 
+{
+	bool returnValue=true;
+			
+	vector<string> row;
+	string line;
+	ifstream in2("services.cache");
+	if(in2.good()) 
+		log(1, true, m_TunerOrdinal,TEXT("File services.cache opened successfully\n"));
+	else
+	{ 
+		log(1, true, m_TunerOrdinal,TEXT("Error while trying to open services.cache\n"));
+		returnValue = false;
+	}
+
+	int counter = 0;
+	while(getline(in2,line)) 
+	{
+		csvline_populate(row, line, ',');
+		Service newService;
+		USHORT val;
+		SHORT val2;
+		byte val3;
+		istringstream  iss0 (row[0],istringstream::in);
+		istringstream  iss1 (row[1],istringstream::in);
+		istringstream  iss2 (row[2],istringstream::in);
+		istringstream  iss4 (row[4],istringstream::in);
+		istringstream  iss5 (row[5],istringstream::in);
+		iss0 >> val;
+		newService.sid = val;
+		iss2 >> val;		
+		newService.tid = val;
+		iss1 >> val;
+		newService.onid = val;
+		iss0 >> val2;
+		newService.channelNumber = val2;
+
+		newService.serviceNames[string("eng")] = row[3];
+
+		iss4 >> val3;
+		newService.runningStatus = val3;
+		iss5 >> val3;
+		newService.serviceType = val3;	
+	  	
+		m_PSIParser.addService(newService);
+		counter++;
+		log(3, true, 0,TEXT("Added Service SID:%hu TID:%hu name:%s from cache\n"),newService.sid,newService.tid,row[3].c_str());
+	}
+
+	in2.close();
+	log(1, true, 0,TEXT("Added %d services from cache\n"),counter);
+
+	ifstream in3("transponders.cache");
+	if(in3.good()) 
+		log(1, true, m_TunerOrdinal,TEXT("File transponders.cache opened successfully\n"));
+	else 
+	{ 
+		log(1, true, m_TunerOrdinal,TEXT("Error while trying to open transponders.cache\n"));
+		returnValue = false; 
+	}
+	
+	counter=0;
+	while(getline(in3,line)) 
+	{
+		csvline_populate(row, line, ',');
+		Transponder newTransponder;
+		istringstream  iss0 (row[0],istringstream::in);
+		istringstream  iss1 (row[1],istringstream::in);
+		istringstream  iss2 (row[2],istringstream::in);
+		istringstream  iss3 (row[3],istringstream::in);
+
+		USHORT val1;
+		ULONG val2;
+	
+		iss0 >> val1;
+		newTransponder.onid = val1;
+		
+		iss1 >> val1;
+		newTransponder.tid = val1;
+
+		iss2 >> val2;
+		newTransponder.frequency = val2;
+
+		iss3 >> val2;
+		newTransponder.symbolRate = val2;
+
+		newTransponder.polarization = getPolarizationFromString(row[4].c_str());
+
+		newTransponder.modulation =  getModulationFromString(row[5].c_str());
+								
+		newTransponder.fec =  getFECFromString(row[6].c_str());
+
+		log(3, true, 0,TEXT("Added Transponder ONID:%hu TID:%hu from cache\n"),newTransponder.onid, newTransponder.tid);
+
+		m_PSIParser.addTransponder(newTransponder);
+		counter++;
+
+	}
+
+	in3.close();
+	log(1, true, 0,TEXT("Added %d transponders from cache\n"),counter);
+
+	ifstream in4("satelliteInfo.cache");
+	if(in4.good()) 
+		log(1, true, m_TunerOrdinal,TEXT("File satelliteInfo.cache opened successfully\n"));
+	else
+	{ 
+		log(1, true, m_TunerOrdinal,TEXT("Error while trying to open satelliteInfo.cache\n"));
+		returnValue = false;
+	}
+
+	counter = 0;
+	while(getline(in4,line)) 
+	{
+		csvline_populate(row, line, ',');
+		string satelliteName = row[0];
+		UINT orbitalLocation;
+		UINT val;
+		USHORT onid;
+		istringstream  iss1 (row[1],istringstream::in);
+		istringstream  iss2 (row[2],istringstream::in);
+		istringstream  iss3 (row[3],istringstream::in);
+		iss1 >> onid;
+		iss2 >> orbitalLocation;
+		iss3 >> val;
+		bool east;
+		if(val == 0)
+			east = false;
+		else
+			east = true;
+
+		g_pSatelliteInfo->addOrUpdateSatellite(0, onid, satelliteName, orbitalLocation, east);
+	  	
+		counter++;
+	}
+
+	in4.close();
+	log(1, true, 0,TEXT("Added %d satellites info from cache\n"),counter);
+
+	return returnValue;
+}
+
+
+
+
+BinaryConvolutionCodeRate DVBParser::getFECFromString(string str2)
+{
+	LPCTSTR  str = str2.c_str();
+	if(_tcsicmp(str, TEXT("Not set")) == 0)
+		return BDA_BCC_RATE_NOT_SET;	
+	if(_tcsicmp(str, TEXT("Not defined")) == 0)
+		return BDA_BCC_RATE_NOT_DEFINED;
+	if(_tcsicmp(str, TEXT("1/2")) == 0)
+		return BDA_BCC_RATE_1_2;
+	if(_tcsicmp(str, TEXT("2/3")) == 0)
+		return BDA_BCC_RATE_2_3;
+	if(_tcsicmp(str, TEXT("3/4")) == 0)
+		return BDA_BCC_RATE_3_4;
+	if(_tcsicmp(str, TEXT("3/5")) == 0)
+		return BDA_BCC_RATE_3_5;
+	if(_tcsicmp(str, TEXT("4/5")) == 0)
+		return BDA_BCC_RATE_4_5;
+	if(_tcsicmp(str, TEXT("5/6")) == 0)
+		return BDA_BCC_RATE_5_6;
+	if(_tcsicmp(str, TEXT("5/11")) == 0)
+		return BDA_BCC_RATE_5_11;
+	if(_tcsicmp(str, TEXT("7/8")) == 0)
+		return BDA_BCC_RATE_7_8;
+	if(_tcsicmp(str, TEXT("1/4")) == 0)
+		return BDA_BCC_RATE_1_4;
+	if(_tcsicmp(str, TEXT("1/3")) == 0)
+		return BDA_BCC_RATE_1_3;
+	if(_tcsicmp(str, TEXT("2/5")) == 0)
+		return BDA_BCC_RATE_2_5;
+	if(_tcsicmp(str, TEXT("6/7")) == 0)
+		return BDA_BCC_RATE_6_7;
+	if(_tcsicmp(str, TEXT("8/9")) == 0)
+		return BDA_BCC_RATE_8_9;
+	if(_tcsicmp(str, TEXT("9/10")) == 0)
+		return BDA_BCC_RATE_9_10;
+	return BDA_BCC_RATE_NOT_DEFINED;
+}
+
+
+Polarisation DVBParser::getPolarizationFromString(string str2)
+{
+	LPCTSTR  str = str2.c_str();
+	if(_tcsicmp(str, TEXT("Not set")) == 0)
+		return BDA_POLARISATION_NOT_SET;	
+	if(_tcsicmp(str, TEXT("Not defined")) == 0)
+		return BDA_POLARISATION_NOT_DEFINED;
+	if(_tcsicmp(str, TEXT("H")) == 0)
+		return BDA_POLARISATION_LINEAR_H;
+	if(_tcsicmp(str, TEXT("V")) == 0)
+		return BDA_POLARISATION_LINEAR_V;
+	if(_tcsicmp(str, TEXT("L")) == 0)
+		return BDA_POLARISATION_CIRCULAR_L;
+	if(_tcsicmp(str, TEXT("R")) == 0)
+		return BDA_POLARISATION_CIRCULAR_R;
+	return BDA_POLARISATION_NOT_DEFINED;
+}
+
+
+ModulationType DVBParser::getModulationFromString(string str2)
+{
+	LPCTSTR  str = str2.c_str();
+	if(_tcsicmp(str, TEXT("Not set")) == 0)
+		return BDA_MOD_NOT_SET;	
+	if(_tcsicmp(str, TEXT("Not defined")) == 0)
+		return BDA_MOD_NOT_DEFINED;
+	if(_tcsicmp(str, TEXT("QPSK")) == 0)
+		return BDA_MOD_QPSK;
+	if(_tcsicmp(str, TEXT("8PSK")) == 0)
+		return BDA_MOD_8PSK;
+	if(_tcsicmp(str, TEXT("NBC-QPSK")) == 0)
+		return BDA_MOD_NBC_QPSK;
+	if(_tcsicmp(str, TEXT("16QAM")) == 0)
+		return BDA_MOD_16QAM;
+	if(_tcsicmp(str, TEXT("32QAM")) == 0)
+		return BDA_MOD_32QAM;
+	if(_tcsicmp(str, TEXT("64QAM")) == 0)
+		return BDA_MOD_64QAM;
+	if(_tcsicmp(str, TEXT("80QAM")) == 0)
+		return BDA_MOD_80QAM;
+	if(_tcsicmp(str, TEXT("96QAM")) == 0)
+		return BDA_MOD_96QAM;
+	if(_tcsicmp(str, TEXT("112QAM")) == 0)
+		return BDA_MOD_112QAM;
+	if(_tcsicmp(str, TEXT("128QAM")) == 0)
+		return BDA_MOD_128QAM;
+	if(_tcsicmp(str, TEXT("160QAM")) == 0)
+		return BDA_MOD_160QAM;
+	if(_tcsicmp(str, TEXT("192QAM")) == 0)
+		return BDA_MOD_192QAM;
+	if(_tcsicmp(str, TEXT("224QAM")) == 0)
+		return BDA_MOD_224QAM;
+	if(_tcsicmp(str, TEXT("256QAM")) == 0)
+		return BDA_MOD_256QAM;
+	if(_tcsicmp(str, TEXT("320QAM")) == 0)
+		return BDA_MOD_320QAM;
+	if(_tcsicmp(str, TEXT("384QAM")) == 0)
+		return BDA_MOD_384QAM;
+	if(_tcsicmp(str, TEXT("448QAM")) == 0)
+		return BDA_MOD_448QAM;
+	if(_tcsicmp(str, TEXT("512QAM")) == 0)
+		return BDA_MOD_512QAM;
+	if(_tcsicmp(str, TEXT("640QAM")) == 0)
+		return BDA_MOD_640QAM;
+	if(_tcsicmp(str, TEXT("768QAM")) == 0)
+		return BDA_MOD_768QAM;
+	if(_tcsicmp(str, TEXT("896QAM")) == 0)
+		return BDA_MOD_896QAM;
+	if(_tcsicmp(str, TEXT("1024QAM")) == 0)
+		return BDA_MOD_1024QAM;
+	return BDA_MOD_NOT_DEFINED;
+}
+
+
 // This is the top level DVB TS stream parsing routine, to be called on a generic TS buffer
 void DVBParser::parseTSStream(const BYTE* inputBuffer,
 							  int inputBufferLength)
@@ -194,6 +509,7 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 // This function resets the PID to parser map and initializes a few constant entries
 void DVBParser::resetParser(bool clearPSIParser)
 {
+	log(3,true,0,TEXT("Reset DVBParser invoked"));
 	// Clear the PSI parser if requested
 	if(clearPSIParser)
 		m_PSIParser.clear();
@@ -452,6 +768,7 @@ void PSIParser::parseTable(const pat_t* const table,
 			// Make sure the CRC matches
 			if(crc == _dvb_crc32(inputBuffer, tableLength - CRC_LENGTH))
 			{
+
 				// If this is a PAT table
 				if(table->table_id == (BYTE)'\0')
 					parsePATTable(table, tableLength, abandonPacket);		// Parse PAT table
@@ -840,6 +1157,17 @@ void PSIParser::parsePATTable(const pat_t* const table,
 		// Adjust remaining length
 		remainingLength -= PAT_PROG_LEN;
 	}
+}
+
+void PSIParser::addService(Service serv) {
+	m_Provider.m_Services[NetworkProvider::getUniqueSID(serv.onid, serv.sid)] = serv;
+	//log(0, true, 0,TEXT("Added Service2 %hu thru cache\n",serv.sid));
+}
+
+
+void PSIParser::addTransponder(Transponder trans) {
+	m_Provider.m_Transponders[NetworkProvider::getUniqueSID(trans.onid, trans.tid)] = trans;
+	//log(0, true, 0,TEXT("Added Transponder %hu thru cache\n"),trans.tid);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2042,7 +2370,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 			m_pPluginsHandler->putCAPacket(this, TYPE_CAT, m_ECMCATypes, m_EMMCATypes, m_Sid, m_ChannelName, caPid, m_PmtPid, currentPacket + 4);
 		// Now, we have only ECM packets left
 		// For ECM packets, see if the content is new
-		else if(memcmp(m_LastECMPacket, currentPacket + 4, min((size_t)currentPacket[7] + 4, sizeof(m_LastECMPacket))) != 0 || g_pConfiguration->sendAllECMs() == true)
+		else if(memcmp(m_LastECMPacket, currentPacket + 4, min((size_t)currentPacket[7] + 4, sizeof(m_LastECMPacket))) != 0)
 		{
 			// If yes, save it
 			memcpy_s(m_LastECMPacket, sizeof(m_LastECMPacket), currentPacket + 4, (size_t)currentPacket[7] + 4);

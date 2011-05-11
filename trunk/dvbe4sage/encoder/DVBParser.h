@@ -6,6 +6,7 @@
 #include "configuration.h"
 #include "NetworkProvider.h"
 
+
 #define MAX_PSI_SECTION_LENGTH	4096
 
 using namespace std;
@@ -161,8 +162,14 @@ public:
 	USHORT getCurrentONID() const												{ return m_CurrentONID; }
 	BYTE getTypeForPid(USHORT pid) const;
 
+	
 	// Setter for "Has been copied" flag
 	void setProviderInfoHasBeenCopied()											{ m_ProviderInfoHasBeenCopied = true; }
+
+
+	// Setter for new service
+	void addService(Service serv);
+	void addTransponder(Transponder trans);
 
 	// Clear method
 	void clear();
@@ -449,4 +456,10 @@ public:
 
 	// Clear PMT change flag for a SID
 	void clearPMTChanged(USHORT sid)						{ m_PMTChangedForSid[sid] = false; }
+
+	// Read cache files for services and transponders
+	bool readTransponderServicesFromFile();
+	ModulationType getModulationFromString(string str);
+	Polarisation getPolarizationFromString(string str);
+	BinaryConvolutionCodeRate getFECFromString(string str);
 };

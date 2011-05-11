@@ -249,6 +249,11 @@ Configuration::Configuration()
 	m_TuningTimeout = GetPrivateProfileInt(TEXT("Tuning"), TEXT("TuningTimeout"), 20, iniFileFullPath);
 	log(0, false, 0, TEXT("TuningTimeout=%u\n"), m_TuningTimeout);
 
+	
+	m_CacheServices = GetPrivateProfileInt(TEXT("Tuning"), TEXT("CacheServices"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("CacheServices=%u\n"), m_CacheServices ? 1:0 );
+
+
 	m_TuningLockTimeout = GetPrivateProfileInt(TEXT("Tuning"), TEXT("TuningLockTimeout"), 5, iniFileFullPath);
 	log(0, false, 0, TEXT("TuningLockTimeout=%u\n"), m_TuningLockTimeout);
 

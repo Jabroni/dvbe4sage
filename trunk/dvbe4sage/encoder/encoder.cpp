@@ -143,6 +143,7 @@ Encoder::~Encoder()
 	log(0, true, 0, TEXT("Encoder stopped!\n"));
 }
 
+
 void Encoder::socketOperation(SOCKET socket,
 							  WORD eventType,
 							  WORD error)
@@ -716,6 +717,19 @@ void Encoder::waitForFullInitialization()
 	log(0, true, 0, TEXT("Encoder initialization is complete\n"));
 }
 
+
+bool Encoder::dumpXmlNetworkProvider(LPTSTR reason) const
+{
+	return m_Provider.dumpXmlNetworkProvider(reason);
+}
+
+bool Encoder::loadXmlNetworkProvider(LPTSTR reason) const
+{
+	return m_Provider.dumpXmlNetworkProvider(reason);
+}
+
+
+
 bool Encoder::dumpECMCache(LPCTSTR fileName,
 						   LPTSTR reason) const
 {
@@ -780,6 +794,14 @@ bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 		log(0, true, 0, TEXT("Cannot start recording!\n")),
 			delete recorder;
 		return false;
+	}
+
+	// Load in cached services if configured to do so
+	if(g_pConfiguration->getCacheServices())
+	{
+		DVBParser* const sourceParser = recorder->getSource()->getParser();
+
+		sourceParser->readTransponderServicesFromFile();
 	}
 
 	// Lock access to global structure

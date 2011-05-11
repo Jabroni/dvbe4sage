@@ -48,6 +48,7 @@ class Configuration
 	bool						m_IsNorthAmerica;
 	bool						m_UseDiseqc;
 	bool						m_AutoDiscoverONID;
+	bool						m_CacheServices;
 
 	// All advanced stuff goes here
 	USHORT						m_PMTDilutionFactor;
@@ -79,7 +80,7 @@ public:
 	bool isCAIDServed(USHORT caid) const				{ return m_ServedCAIDs.empty() || m_ServedCAIDs.count(caid) > 0; }
 	bool isPROVIDServed(UINT provid) const				{ return m_ServededProvIds.empty() || m_ServededProvIds.count(provid) > 0; }
 	bool isVGCam() const								{ return m_IsVGCam; };
-	bool sendAllECMs() const							{ return m_SendAllECMs; };	
+	bool sendAllECMs() const							{ return m_SendAllECMs; };
 	bool scanAllTransponders() const					{ return m_ScanAllTransponders; }
 	bool isNorthAmerica() const							{ return m_IsNorthAmerica; };
 	UINT getLogLevel() const							{ return m_LogLevel; }
@@ -113,6 +114,7 @@ public:
 	USHORT getMaxNumberOfResets() const					{ return m_MaxNumberOfResets; }
 	bool getUseDiseqc() const							{ return m_UseDiseqc; };
 	bool getAutoDiscoverONID() const					{ return m_AutoDiscoverONID; };
+	bool getCacheServices() const						{ return m_CacheServices; };
 
 	// All advanced stuff goes here
 	USHORT getPMTDilutionFactor() const					{ return m_PMTDilutionFactor; }
