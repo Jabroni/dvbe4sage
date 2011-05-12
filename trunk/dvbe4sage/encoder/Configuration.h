@@ -49,6 +49,7 @@ class Configuration
 	bool						m_UseDiseqc;
 	bool						m_AutoDiscoverONID;
 	bool						m_CacheServices;
+	bool						m_TrustKeys;
 
 	// All advanced stuff goes here
 	USHORT						m_PMTDilutionFactor;
@@ -83,6 +84,7 @@ public:
 	bool sendAllECMs() const							{ return m_SendAllECMs; };
 	bool scanAllTransponders() const					{ return m_ScanAllTransponders; }
 	bool isNorthAmerica() const							{ return m_IsNorthAmerica; };
+	bool trustKeys() const								{ return m_TrustKeys; };
 	UINT getLogLevel() const							{ return m_LogLevel; }
 	UINT getDCWTimeout() const							{ return m_DCWTimeout; }
 	UINT getTSPacketsPerBuffer() const					{ return m_TSPacketsPerBuffer; }

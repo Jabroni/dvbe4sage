@@ -71,6 +71,9 @@ Configuration::Configuration()
 	//log(0, false, 0, TEXT("SendAllECMs=%u\n"), m_SendAllECMs ? 1 : 0);
 	m_SendAllECMs = false;
 
+	m_TrustKeys = GetPrivateProfileInt(TEXT("Plugins"), TEXT("TrustKeys"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("TrustKeys=%u\n"), m_TrustKeys ? 1 : 0);
+
 	m_MaxNumberOfResets = GetPrivateProfileInt(TEXT("Plugins"), TEXT("MaxNumberOfResets"), 5, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("MaxNumberOfResets=%hu\n"), m_MaxNumberOfResets);
 
