@@ -2797,6 +2797,10 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 										const BYTE* const evenKey,
 										bool checkAgainstEvenKey)
 {
+	// If configured to always trust keys from the plugin just accept that it is OK
+	if(g_pConfiguration->trustKeys() == true)
+		return KEY_OK;
+
 	log(4, true, getTunerOrdinal(), TEXT("Trying to match the key against %lu packets\n"), numberOfPackets);
 
 	// See if the keys are initialized
