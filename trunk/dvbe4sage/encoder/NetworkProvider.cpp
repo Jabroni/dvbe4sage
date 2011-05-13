@@ -214,10 +214,11 @@ void NetworkProvider::clear()
 	m_Transponders.clear();
 	m_Services.clear();
 	m_Channels.clear();
+	
 	m_DefaultONID = 0;
 }
 
-bool NetworkProvider::dumpXmlNetworkProvider(LPTSTR reason) const
+bool NetworkProvider::dumpNetworkProvider(LPTSTR reason) const
 {
 	ofstream t("transponders.cache");
 	ofstream sat("satelliteInfo.cache");

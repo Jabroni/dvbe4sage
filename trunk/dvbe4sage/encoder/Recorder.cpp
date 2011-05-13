@@ -72,7 +72,7 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 				// If enabled, we dump the services and transponders to file after the timeout of scanning the PSI for new services
 				if(g_pConfiguration->getCacheServices()) {
 					TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
-					recorder->m_pEncoder->dumpXmlNetworkProvider(reason);
+					recorder->m_pEncoder->dumpNetworkProvider(reason);
 				}
 
 				// Lock network provider
@@ -85,7 +85,8 @@ DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 				encoderNetworkProvider.unlock();
 
 				// Set "HasBeenCopied" flag to prevent multiple copy
-				sourceParser->setProviderInfoHasBeenCopied();				
+				sourceParser->setProviderInfoHasBeenCopied();	
+				
 			}			
 		}
 	}

@@ -139,6 +139,7 @@ void DVBSTuner::tune(ULONG frequency,
 
 bool DVBSTuner::startPlayback(USHORT onid, bool startFullTransponderDump)
 {
+
 	// Build the graph, but only if needed
 	if(!m_pFilterGraph->m_fGraphBuilt)
 		if(m_pFilterGraph->BuildGraph() != S_OK || !m_pFilterGraph->m_fGraphBuilt)
@@ -152,8 +153,9 @@ bool DVBSTuner::startPlayback(USHORT onid, bool startFullTransponderDump)
 	((DVBFilterGraph*)m_pFilterGraph)->ChangeSetting();
 
 	// Start full transponder dump if requested
- 	if(startFullTransponderDump && m_pFilterGraph->getParser() != NULL)
+	if(startFullTransponderDump && m_pFilterGraph->getParser() != NULL) 
 		m_pFilterGraph->getParser()->startTransponderDump();
+
 
 	// Run the graph
 	HRESULT hr = S_OK;
@@ -234,28 +236,31 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 
 		bool autoDiscover = true;
 
-				
+		
 		// We first check if we need to load the services and transponders from file, if not, continue with autodiscover
 		if(g_pConfiguration->getCacheServices() && pTuner->getParser() != NULL ? pTuner->getParser()->readTransponderServicesFromFile() : 0) {
-				autoDiscover = false;
 				
-
+				autoDiscover = false;
+			
 				// If yes, get the encoder's network provider
 				NetworkProvider& encoderNetworkProvider = pTuner->m_pEncoder->getNetworkProvider();
 			
-
 				// Lock network provider
 				encoderNetworkProvider.lock();
-
+				pTuner->getParser()->lock();
 				// Copy the contents of the network provider
 				encoderNetworkProvider.copy(pTuner->getParser()->getNetworkProvider());
-
+				pTuner->getParser()->unlock();
 				// And unlock the encoder provider
 				encoderNetworkProvider.unlock();
+				
+				pTuner->getParser()->setProviderInfoHasBeenCopied();
+				
+				
 				log(3,true,0,TEXT("Network Provider has been copied from parser to encoder\n"));
 		}
 		
-		if(autoDiscover) {
+		//if(autoDiscover) { This was removed to always to autodiscover, just it would be less time when cache is available
 		// Tune to the configured transponder		
 		pTuner->tune(g_pConfiguration->getInitialFrequency(onidIndex),
 					 g_pConfiguration->getInitialSymbolRate(onidIndex),
@@ -269,9 +274,12 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 			// Log entry
 			log(0, true, pTuner->getSourceOrdinal(), TEXT("Starting initial run for autodiscovery, transponder data: Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 				pTuner->getFrequency(), pTuner->getSymbolRate(), printablePolarization(pTuner->getPolarization()), printableModulation(pTuner->getModulation()), printableFEC(pTuner->getFECRate()));
+	
 
 			// Sleep for the initial running time
-			Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
+			if(autoDiscover)
+				Sleep(g_pConfiguration->getInitialRunningTime() * 1000);
+
 
 			// Log entry
 			log(0, true, pTuner->getSourceOrdinal(), TEXT("The initial run for autodiscovery finished\n"));
@@ -292,7 +300,7 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 			// After the initial autodiscovery, if enabled save the services and transponders to cache file
 			if(g_pConfiguration->getCacheServices()) {
 				TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
-				pTuner->m_pEncoder->dumpXmlNetworkProvider(reason);
+				pTuner->m_pEncoder->dumpNetworkProvider(reason);
 			}
 
 
@@ -338,9 +346,9 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 			log(0, true, pTuner->getSourceOrdinal(), TEXT("Autodiscovery of ONID %hu failed.\n"), onidIndex);
 		} //else ifstart playback
 	
-		} else { //if autodiscover
-			log(0, true, pTuner->getSourceOrdinal(), TEXT("The initial run for autodiscovery was skipped\n"));
-		}
+		//} else { //if autodiscover
+		//	log(0, true, pTuner->getSourceOrdinal(), TEXT("The initial run for autodiscovery was skipped\n"));
+		//}
 	
 
 	} // for

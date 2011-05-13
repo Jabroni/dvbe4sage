@@ -422,6 +422,8 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 							 bool bySage,
 							 bool startFullTransponderDump)
 {
+
+
 	// Use the internal parser
 	// Lock it
 	m_Provider.lock();
@@ -718,14 +720,14 @@ void Encoder::waitForFullInitialization()
 }
 
 
-bool Encoder::dumpXmlNetworkProvider(LPTSTR reason) const
+bool Encoder::dumpNetworkProvider(LPTSTR reason) const
 {
-	return m_Provider.dumpXmlNetworkProvider(reason);
+	return m_Provider.dumpNetworkProvider(reason);
 }
 
-bool Encoder::loadXmlNetworkProvider(LPTSTR reason) const
+bool Encoder::loadNetworkProvider(LPTSTR reason) const
 {
-	return m_Provider.dumpXmlNetworkProvider(reason);
+	return m_Provider.dumpNetworkProvider(reason);
 }
 
 

@@ -59,8 +59,8 @@ public:
 	bool loadECMCache(LPCTSTR fileName, LPTSTR reason);
 	bool dumpServices(LPCTSTR fileName, LPTSTR reason) const;
 	bool dumpTransponders(LPCTSTR fileName, LPTSTR reason) const;
-	bool dumpXmlNetworkProvider(LPTSTR reason) const;
-	bool loadXmlNetworkProvider(LPTSTR reason) const;
+	bool dumpNetworkProvider(LPTSTR reason) const;
+	bool loadNetworkProvider(LPTSTR reason) const;
 	bool logEPG(LPTSTR reason) const;
 	virtual ~Encoder();
 	int getNumberOfTuners() const;

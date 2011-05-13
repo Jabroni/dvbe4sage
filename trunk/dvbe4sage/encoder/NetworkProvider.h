@@ -66,8 +66,8 @@ public:
 	void clear();
 
 	// Dump to xml 
-	bool dumpXmlNetworkProvider(LPTSTR reason) const;
-	bool loadXmlNetworkProvider(LPTSTR reason) const;
+	bool dumpNetworkProvider(LPTSTR reason) const;
+	//bool loadXmlNetworkProvider(LPTSTR reason) const;
 
 	// Copy all the internal data
 	void copy(const NetworkProvider& other);

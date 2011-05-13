@@ -459,7 +459,4 @@ public:
 
 	// Read cache files for services and transponders
 	bool readTransponderServicesFromFile();
-	ModulationType getModulationFromString(string str);
-	Polarisation getPolarizationFromString(string str);
-	BinaryConvolutionCodeRate getFECFromString(string str);
 };
