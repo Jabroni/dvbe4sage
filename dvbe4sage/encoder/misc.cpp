@@ -211,11 +211,11 @@ extern "C" ENCODER_API LPCTSTR printableModulation(ModulationType modulation)
 	switch(modulation)
 	{
 		case BDA_MOD_QPSK:
-			return TEXT("QPSK (DVB-S)");
+			return TEXT("QPSK");
 		case BDA_MOD_NBC_QPSK:
-			return TEXT("QPSK (DVB-S2)");
+			return TEXT("NBC-QPSK");
 		case BDA_MOD_8PSK:
-			return TEXT("8PSK (DVB-S2)");
+			return TEXT("8PSK");
 		case BDA_MOD_16QAM:
 			return TEXT("16QAM");
 		case BDA_MOD_32QAM:
