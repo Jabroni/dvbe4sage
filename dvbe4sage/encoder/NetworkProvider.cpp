@@ -269,7 +269,7 @@ bool NetworkProvider::dumpNetworkProvider(LPTSTR reason) const
 			else
 				_tcscpy_s(channelName, sizeof(channelName), "Unknown");
 		}
-		s << it->second.sid << "," << it->second.onid << "," << it->second.tid << "," << channelName << "," << (char)it->second.serviceType << "," << (char)it->second.runningStatus << "\n";
+		s << it->second.sid << "," << it->second.onid << "," << it->second.tid << "," << channelName << "," << (USHORT)it->second.serviceType << "," << (USHORT)it->second.runningStatus << "\n";
 		counter++;
 	}
 
