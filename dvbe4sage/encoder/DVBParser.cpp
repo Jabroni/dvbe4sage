@@ -2684,10 +2684,6 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 										const BYTE* const evenKey,
 										bool checkAgainstEvenKey)
 {
-	// If configured to always trust keys from the plugin just accept that it is OK
-	if(g_pConfiguration->trustKeys() == true)
-		return KEY_OK;
-
 	log(4, true, getTunerOrdinal(), TEXT("Trying to match the key against %lu packets\n"), numberOfPackets);
 
 	// See if the keys are initialized
@@ -2753,6 +2749,10 @@ KeyCorrectness ESCAParser::isCorrectKey(const BYTE* const buffer,
 				pid, (packet->transport_scrambling_control & 1) ? TEXT("ODD") : TEXT("EVEN"));
 		}
 	}
+
+		// If configured to always trust keys from the plugin just accept that it is OK
+	if(g_pConfiguration->trustKeys() == true)
+		return KEY_OK;
 
 	// If no PES packets have been in the buffer, the key still might be OK, otherwise the key is wrong
 	return anyPESPacketsFound ? KEY_WRONG : KEY_MAYBE_OK;
