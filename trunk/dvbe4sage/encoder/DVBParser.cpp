@@ -396,7 +396,7 @@ void DVBParser::parseTSStream(const BYTE* inputBuffer,
 // This function resets the PID to parser map and initializes a few constant entries
 void DVBParser::resetParser(bool clearPSIParser)
 {
-	log(3,true,0,TEXT("Reset DVBParser invoked"));
+	log(3,true,0,TEXT("Reset DVBParser invoked\n"));
 	// Clear the PSI parser if requested
 	if(clearPSIParser)
 		m_PSIParser.clear();
