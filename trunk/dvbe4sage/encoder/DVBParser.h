@@ -169,6 +169,7 @@ public:
 
 	// Setter for new service
 	void addService(Service serv);
+	void addChannel(USHORT number, UINT32 usid);
 	void addTransponder(Transponder trans);
 
 	// Clear method

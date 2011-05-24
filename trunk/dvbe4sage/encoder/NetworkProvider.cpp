@@ -223,8 +223,23 @@ bool NetworkProvider::dumpNetworkProvider(LPTSTR reason) const
 	ofstream t("transponders.cache");
 	ofstream sat("satelliteInfo.cache");
 	ofstream s("services.cache");
+	ofstream chan("channels.cache");
 	
+
 	int counter = 0;
+	
+	for(hash_map<USHORT, UINT32>::const_iterator it = m_Channels.begin(); it != m_Channels.end(); it++) 
+	{
+		chan << it->first << "," << it->second << "\n";
+		counter++;
+	}
+
+	chan.close();
+	log(1,true, 0, TEXT("%d channels saved to channels.cache\n"),counter);
+	
+	
+	
+	counter = 0;
 	// We start generating the transponders.cache
 	for(hash_map<UINT32, Transponder>::const_iterator it = m_Transponders.begin(); it != m_Transponders.end(); it++) 
 	{

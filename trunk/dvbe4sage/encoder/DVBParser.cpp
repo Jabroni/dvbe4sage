@@ -270,9 +270,35 @@ bool DVBParser::readTransponderServicesFromFile()
 	  	
 		counter++;
 	}
-
 	in4.close();
 	log(1, true, 0,TEXT("Added %d satellites info from cache\n"),counter);
+
+	
+	ifstream in5("channels.cache");
+	if(in5.good()) 
+		log(1, true, m_TunerOrdinal,TEXT("File channels.cache opened successfully\n"));
+	else
+	{ 
+		log(1, true, m_TunerOrdinal,TEXT("Error while trying to open channels.cache\n"));
+		returnValue = false;
+	}
+
+	counter = 0;
+	while(getline(in5,line)) 
+	{
+		csvline_populate(row, line, ',');
+		istringstream  iss1 (row[0],istringstream::in);
+		istringstream  iss2 (row[1],istringstream::in);
+		USHORT chan;
+		iss1 >> chan;
+		UINT32 usid;
+		iss2 >> usid;
+		m_PSIParser.addChannel(chan,usid);
+
+		counter++;
+	}
+	in5.close();
+	log(1, true, 0,TEXT("Added %d channels info from cache\n"),counter);
 
 	return returnValue;
 }
@@ -1050,6 +1076,11 @@ void PSIParser::addService(Service serv) {
 	//log(0, true, 0,TEXT("Added Service2 %hu thru cache\n",serv.sid));
 }
 
+void PSIParser::addChannel(USHORT number, UINT32 usid) {
+	
+	m_Provider.m_Channels[number]=usid;
+	//log(1, true, 0,TEXT("Added channel %hu , %hu thru cache\n"),number,usid);
+}
 
 void PSIParser::addTransponder(Transponder trans) {
 	m_Provider.m_Transponders[NetworkProvider::getUniqueSID(trans.onid, trans.tid)] = trans;
