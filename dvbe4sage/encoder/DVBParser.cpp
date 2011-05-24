@@ -1333,9 +1333,10 @@ void PSIParser::parseBATTable(const nit_t* const table,
 	bool isSkyUK = (bouquetName == g_pConfiguration->getBouquetName());
 	bool isSkyItalia = (bouquetName == "Live bouquet ID");
 	bool isSkyNZ = (bouquetName.find("CA2 ") == 0 && !g_pConfiguration->getPreferSDOverHD() || bouquetName == g_pConfiguration->getBouquetName());
+	bool isSkyMex = bouquetID >= 24500 && bouquetID <= 24700;
 
 	// Do it only for supported providers
-	if(isYES || isFoxtel || isSkyUK || isSkyItalia || isSkyNZ)
+	if(isYES || isFoxtel || isSkyUK || isSkyItalia || isSkyNZ || isSkyMex)
 	{
 		// First time flag
 		bool firstTime = true;
@@ -1380,10 +1381,10 @@ void PSIParser::parseBATTable(const nit_t* const table,
 				const descr_gen_t* const genericDescriptor = CastGenericDescriptor(inputBuffer);
 				const USHORT descriptorLength = genericDescriptor->descriptor_length;
 
-				if((isYES || isSkyNZ && g_pConfiguration->getPreferSDOverHD()) && genericDescriptor->descriptor_tag == (BYTE)0xE2/* ||
+				if((isSkyMex || isYES || isSkyNZ && g_pConfiguration->getPreferSDOverHD()) && genericDescriptor->descriptor_tag == (BYTE)0xE2/* ||
 				   isFoxtel && genericDescriptor->descriptor_tag == (BYTE)0x93 && (!bouquetName.empty() || m_AustarDigitalDone)*/)
 				{
-					// This is how YES, Foxtel and SkyNZ (non-HD) keep their channel mapping
+					// This is how YES, Foxtel, SkyMex and SkyNZ (non-HD) keep their channel mapping
 					const int len = descriptorLength / 4;
 					for(int i = 0; i < len; i++)
 					{
@@ -1417,7 +1418,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 							// Print log message
 							if(firstTime)
 							{
-								log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found in Bouquet=\"%s\"\n"), bouquetName.c_str());
+								log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found in Bouquet=\"%s\" ID=%d\n"), bouquetName.c_str(), bouquetID);
 								firstTime = false;
 							}
 
