@@ -57,6 +57,7 @@ public:
 	bool stopRecording(Recorder* recorder);
 	bool dumpECMCache(LPCTSTR fileName, LPTSTR reason) const;
 	bool loadECMCache(LPCTSTR fileName, LPTSTR reason);
+	bool dumpChannels(LPCTSTR fileName, LPTSTR reason) const;
 	bool dumpServices(LPCTSTR fileName, LPTSTR reason) const;
 	bool dumpTransponders(LPCTSTR fileName, LPTSTR reason) const;
 	bool dumpNetworkProvider(LPTSTR reason) const;

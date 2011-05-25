@@ -57,6 +57,7 @@ public:
 	bool canBeCopied() const													{ return !m_Transponders.empty() && !m_Services.empty(); }
 	const hash_map<UINT32, Transponder>& getTransponders() const				{ return m_Transponders; }
 	USHORT getDefaultONID() const												{ return m_DefaultONID; }
+	bool dumpChannels(LPCTSTR fileName, LPTSTR reason) const;
 	bool dumpServices(LPCTSTR fileName, LPTSTR reason) const;
 	bool dumpTransponders(LPCTSTR fileName, LPTSTR reason) const;
 	bool logEPG(LPTSTR reason) const;

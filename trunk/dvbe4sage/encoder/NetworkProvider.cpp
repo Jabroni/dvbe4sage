@@ -81,6 +81,36 @@ bool NetworkProvider::getOnidForSid(USHORT sid,
 	return found;
 }
 
+// Dump the channels table to a CSV file suitable for import by Excel or OpenOffice
+bool NetworkProvider::dumpChannels(LPCTSTR fileName, LPTSTR reason) const
+{
+	FILE* outFile = NULL;
+	TCHAR channelName[256];
+	_tfopen_s(&outFile, fileName, TEXT("wt"));
+	if(outFile != NULL)
+	{
+		_ftprintf(outFile, TEXT("\"Channel\",\"SID\",\"Network\",\"Name\"\n"));
+		for(hash_map<USHORT, UINT32>::const_iterator it = m_Channels.begin(); it != m_Channels.end(); it++)
+		{
+			if(getServiceName(it->second, channelName, sizeof(channelName) / sizeof(channelName[0])) == false)
+					_tcscpy_s(channelName, sizeof(channelName), "Unknown");
+
+			_ftprintf(outFile, TEXT("%d,%hu,%hu,\"%s\"\n"), it->first, getSIDFromUniqueSID(it->second), getONIDFromUniqueSID(it->second), channelName);
+		}
+
+		fclose(outFile);
+		return true;
+	}
+	else
+	{
+		// We get here if for some reason we're unable to open the file
+		stringstream result;
+		result << "Cannot open the output file \"" << fileName << "\", error code = " << errno;
+		_tcscpy_s(reason, MAX_ERROR_MESSAGE_SIZE, CA2CT(result.str().c_str()));
+		return false;
+	}
+}
+
 // Dump the services table to a CSV file suitable for import by Excel or OpenOffice
 bool NetworkProvider::dumpServices(LPCTSTR fileName, LPTSTR reason) const
 {

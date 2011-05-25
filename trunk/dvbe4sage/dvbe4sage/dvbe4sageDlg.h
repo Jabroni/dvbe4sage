@@ -51,6 +51,7 @@ public:
 	bool continueToRun() const { return m_ContinueToRun; }
 	afx_msg void OnDumpcache();
 	afx_msg void OnLoadcache();
+	afx_msg void OnDumpChannels();
 	afx_msg void OnDumpServices();
 	afx_msg void OnDumpTransponders();
 	afx_msg void OnLogEPG();

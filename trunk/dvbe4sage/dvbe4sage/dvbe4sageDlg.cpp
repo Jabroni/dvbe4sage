@@ -87,6 +87,7 @@ BEGIN_MESSAGE_MAP(CDVBE4SageDlg, CTrayDialog)
 	ON_COMMAND(ID_OPERATIONS_EXIT, &CDVBE4SageDlg::OnOperationsExit)
 	ON_COMMAND(ID_OPERATIONS_DUMPCACHE, &CDVBE4SageDlg::OnDumpcache)
 	ON_COMMAND(ID_OPERATIONS_LOADCACHE, &CDVBE4SageDlg::OnLoadcache)
+	ON_COMMAND(ID_OPERATIONS_DUMPCHANNELSTOCSV, &CDVBE4SageDlg::OnDumpChannels)
 	ON_COMMAND(ID_OPERATIONS_DUMPSERVICESTOCSV, &CDVBE4SageDlg::OnDumpServices)
 	ON_COMMAND(ID_OPERATIONS_DUMPTRANSTOCSV, &CDVBE4SageDlg::OnDumpTransponders)
 	ON_COMMAND(ID_OPERATIONS_LOG_EPG, &CDVBE4SageDlg::OnLogEPG)
@@ -235,6 +236,17 @@ void CDVBE4SageDlg::OnLoadcache()
 		TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
 		if(!loadECMCache(dlg.GetPathName(), reason))
 			MessageBox(reason, TEXT("Error Loading File"), MB_ICONERROR | MB_OK);
+	}
+}
+
+void CDVBE4SageDlg::OnDumpChannels()
+{
+	CFileDialog dlg(FALSE, _T("csv"), _T("Channels"), OFN_OVERWRITEPROMPT, NULL, this);
+	if(dlg.DoModal() == IDOK)
+	{
+		TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
+		if(!dumpChannels(dlg.GetPathName(), reason))
+			MessageBox(reason, TEXT("Error Dumping Channels to CSV file"), MB_ICONERROR | MB_OK);			
 	}
 }
 

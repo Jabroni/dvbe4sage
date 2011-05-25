@@ -744,6 +744,12 @@ bool Encoder::loadECMCache(LPCTSTR fileName,
 	return m_pPluginsHandler != NULL ? m_pPluginsHandler->loadECMCache(fileName, reason) : false;
 }
 
+bool Encoder::dumpChannels(LPCTSTR fileName,
+						   LPTSTR reason) const
+{
+	return m_Provider.dumpChannels(fileName, reason);
+}
+
 bool Encoder::dumpServices(LPCTSTR fileName,
 						   LPTSTR reason) const
 {
