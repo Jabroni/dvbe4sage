@@ -21,10 +21,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "svnrevision", "svnrevision\svnrevision.vcproj", "{6F60F9F5-2A63-4CB9-A66B-D70DA0B74EBB}"
 EndProject
 Global
-	GlobalSection(SubversionScc) = preSolution
-		Svn-Managed = True
-		Manager = AnkhSVN - Subversion Support for Visual Studio
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
 		Release|Win32 = Release|Win32
@@ -45,10 +41,13 @@ Global
 		{6F60F9F5-2A63-4CB9-A66B-D70DA0B74EBB}.Debug|Win32.ActiveCfg = Debug|Win32
 		{6F60F9F5-2A63-4CB9-A66B-D70DA0B74EBB}.Debug|Win32.Build.0 = Debug|Win32
 		{6F60F9F5-2A63-4CB9-A66B-D70DA0B74EBB}.Release|Win32.ActiveCfg = Release|Win32
-		{6F60F9F5-2A63-4CB9-A66B-D70DA0B74EBB}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(SubversionScc) = preSolution
+		Svn-Managed = True
+		Manager = AnkhSVN - Subversion Support for Visual Studio
 	EndGlobalSection
 	GlobalSection(DPCodeReviewSolutionGUID) = preSolution
 		DPCodeReviewSolutionGUID = {00000000-0000-0000-0000-000000000000}
