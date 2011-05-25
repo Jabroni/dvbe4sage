@@ -32,6 +32,19 @@ bool NetworkProvider::getServiceName(UINT32 usid,
 		return false;
 }
 
+USHORT NetworkProvider::getChannelForSid(UINT32 usid) const
+{
+	for(hash_map<USHORT, UINT32>::const_iterator it = m_Channels.begin(); it != m_Channels.end(); it++) 
+	{		
+		if(it->second == usid)
+			return it->first;
+	}
+
+	return NULL;
+}
+
+
+
 bool NetworkProvider::getSidForChannel(USHORT channel,
 									   UINT32& usid) const
 {
@@ -119,7 +132,7 @@ bool NetworkProvider::dumpServices(LPCTSTR fileName, LPTSTR reason) const
 	_tfopen_s(&outFile, fileName, TEXT("wt"));
 	if(outFile != NULL)
 	{
-		_ftprintf(outFile, TEXT("\"Name\",\"SID\",\"Network\",\"TID\"\n"));
+		_ftprintf(outFile, TEXT("\"Name\",\"SID\",\"Network\",\"TID\",\"ChNo\"\n"));
 		for(hash_map<UINT32, Service>::const_iterator it = m_Services.begin(); it != m_Services.end(); it++)
 		{
 			hash_map<string, string>::const_iterator it1 = it->second.serviceNames.find(string("eng"));
@@ -140,7 +153,16 @@ bool NetworkProvider::dumpServices(LPCTSTR fileName, LPTSTR reason) const
 					_tcscpy_s(channelName, sizeof(channelName), "Unknown");
 			}
 
-			_ftprintf(outFile, TEXT("\"%s\",%hu,%hu,%d\n"), channelName, it->second.sid, it->second.onid, it->second.tid);
+
+			USHORT channelNumber = getChannelForSid(getUniqueSID(it->second.onid, it->second.sid));
+		
+		
+
+			_ftprintf(outFile, TEXT("\"%s\",%hu,%hu,%d"), channelName, it->second.sid, it->second.onid, it->second.tid);
+			if(channelNumber!=NULL )
+				_ftprintf(outFile, TEXT(",%hu\n"), channelNumber);
+			else 
+				_ftprintf(outFile, TEXT(",%s\n"), "NA");
 		}
 
 		fclose(outFile);
@@ -253,23 +275,10 @@ bool NetworkProvider::dumpNetworkProvider(LPTSTR reason) const
 	ofstream t("transponders.cache");
 	ofstream sat("satelliteInfo.cache");
 	ofstream s("services.cache");
-	ofstream chan("channels.cache");
+
 	
 
 	int counter = 0;
-	
-	for(hash_map<USHORT, UINT32>::const_iterator it = m_Channels.begin(); it != m_Channels.end(); it++) 
-	{
-		chan << it->first << "," << it->second << "\n";
-		counter++;
-	}
-
-	chan.close();
-	log(1,true, 0, TEXT("%d channels saved to channels.cache\n"),counter);
-	
-	
-	
-	counter = 0;
 	// We start generating the transponders.cache
 	for(hash_map<UINT32, Transponder>::const_iterator it = m_Transponders.begin(); it != m_Transponders.end(); it++) 
 	{
@@ -314,7 +323,14 @@ bool NetworkProvider::dumpNetworkProvider(LPTSTR reason) const
 			else
 				_tcscpy_s(channelName, sizeof(channelName), "Unknown");
 		}
-		s << it->second.sid << "," << it->second.onid << "," << it->second.tid << "," << channelName << "," << (USHORT)it->second.serviceType << "," << (USHORT)it->second.runningStatus << "\n";
+
+		USHORT channelNumber = getChannelForSid(getUniqueSID(it->second.onid, it->second.sid));
+		
+		s << it->second.sid << "," << it->second.onid << "," << it->second.tid << "," << channelName << "," << (USHORT)it->second.serviceType << "," << (USHORT)it->second.runningStatus << "," ;
+		if(channelNumber!=NULL )
+			s <<  channelNumber  << "\n";
+		else 
+			s <<  "N/A"  << "\n";
 		counter++;
 	}
 

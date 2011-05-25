@@ -163,6 +163,7 @@ bool DVBParser::readTransponderServicesFromFile()
 		istringstream  iss2 (row[2],istringstream::in);
 		istringstream  iss4 (row[4],istringstream::in);
 		istringstream  iss5 (row[5],istringstream::in);
+		istringstream  iss6 (row[6],istringstream::in);
 		iss0 >> val;
 		newService.sid = val;
 		iss2 >> val;		
@@ -180,6 +181,14 @@ bool DVBParser::readTransponderServicesFromFile()
 		newService.serviceType = val3;	
 	  	
 		m_PSIParser.addService(newService);
+
+		
+		if(row[6]!="N/A") {
+			USHORT number;
+			iss6 >> number;
+			m_PSIParser.addChannel(number,NetworkProvider::getUniqueSID(newService.onid,newService.sid));
+		} 
+
 		counter++;
 		log(3, true, 0,TEXT("Added Service SID:%hu TID:%hu name:%s from cache\n"),newService.sid,newService.tid,row[3].c_str());
 	}
@@ -274,31 +283,6 @@ bool DVBParser::readTransponderServicesFromFile()
 	log(1, true, 0,TEXT("Added %d satellites info from cache\n"),counter);
 
 	
-	ifstream in5("channels.cache");
-	if(in5.good()) 
-		log(1, true, m_TunerOrdinal,TEXT("File channels.cache opened successfully\n"));
-	else
-	{ 
-		log(1, true, m_TunerOrdinal,TEXT("Error while trying to open channels.cache\n"));
-		returnValue = false;
-	}
-
-	counter = 0;
-	while(getline(in5,line)) 
-	{
-		csvline_populate(row, line, ',');
-		istringstream  iss1 (row[0],istringstream::in);
-		istringstream  iss2 (row[1],istringstream::in);
-		USHORT chan;
-		iss1 >> chan;
-		UINT32 usid;
-		iss2 >> usid;
-		m_PSIParser.addChannel(chan,usid);
-
-		counter++;
-	}
-	in5.close();
-	log(1, true, 0,TEXT("Added %d channels info from cache\n"),counter);
 
 	return returnValue;
 }
