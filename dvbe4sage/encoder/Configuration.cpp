@@ -57,6 +57,10 @@ Configuration::Configuration()
 	m_IsNorthAmerica = GetPrivateProfileInt(TEXT("General"), TEXT("NorthAmerica"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("NorthAmerica=%u\n"), m_IsNorthAmerica ? 1 : 0);
 
+	GetPrivateProfileString(TEXT("General"), TEXT("GrowlIP"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	m_GrowlIP = buffer;
+	log(0, false, 0, TEXT("GrowlIP=%s\n"), m_GrowlIP.c_str());
+
 	log(0, false, 0, TEXT("\n"));
 
 	// Plugins section
