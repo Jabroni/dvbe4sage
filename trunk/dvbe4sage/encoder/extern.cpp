@@ -5,6 +5,7 @@
 #include "configuration.h"
 #include "extern.h"
 #include "SatelliteInfo.h"
+#include "GrowlHandler.h"
 
 // This it the global encoder object
 Encoder*	g_pEncoder = NULL;
@@ -17,12 +18,14 @@ extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance,
 	g_pConfiguration = new Configuration;
 	g_pEncoder = new Encoder(hInstance, hWnd, hParentMenu);
 	g_pSatelliteInfo = new SatelliteInfo;
+	g_pGrowlHandler = new GrowlHandler;
 }
 
 extern "C" ENCODER_API void deleteEncoder()
 {
 	delete g_pEncoder;
 	delete g_pLogger;
+	delete g_pGrowlHandler;
 }
 
 extern "C" ENCODER_API LRESULT encoderWindowProc(UINT message,
