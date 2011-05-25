@@ -19,7 +19,7 @@ GrowlHandler::GrowlHandler(void)
 		string ipAddr = g_pConfiguration->getGrowlIP();
 		if(ipAddr.length() > 0)
 		{
-			m_pGrowl = new Growl(GROWL_TCP, ipAddr.c_str(), "DVBE4SAGE", notifications, sizeof(notifications) / sizeof(notifications[0]));	
+			m_pGrowl = new Growl(GROWL_UDP, ipAddr.c_str(), "DVBE4SAGE", notifications, sizeof(notifications) / sizeof(notifications[0]));	
 			log(0, true, 0, TEXT("Growl configured to send notifications to \"%s\"\n"), ipAddr.c_str());
 		}			
 	}
