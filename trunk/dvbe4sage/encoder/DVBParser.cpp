@@ -1365,6 +1365,12 @@ void PSIParser::parseBATTable(const nit_t* const table,
 	bool isSkyItalia = (bouquetName == "Live bouquet ID");
 	bool isSkyNZ = (bouquetName.find("CA2 ") == 0 && !g_pConfiguration->getPreferSDOverHD() || bouquetName == g_pConfiguration->getBouquetName());
 	bool isSkyMex = bouquetID >= 24500 && bouquetID <= 24700;
+	
+	int channelLimit = 1000;
+
+	// We check if its Sky Mexico, and since the provider has channels on the 1xxx range, we allow up to 2000 
+	if(isSkyMex)
+		channelLimit = 2000;
 
 	// Do it only for supported providers
 	if(isYES || isFoxtel || isSkyUK || isSkyItalia || isSkyNZ || isSkyMex)
@@ -1433,7 +1439,10 @@ void PSIParser::parseBATTable(const nit_t* const table,
 
 						// See if service ID already initialized
 						hash_map<UINT32, Service>::iterator it = m_Provider.m_Services.find(usid);
-						if(channelNumber < 1000 && it != m_Provider.m_Services.end() &&	it->second.channelNumber == -1 &&
+
+
+
+						if(channelNumber < channelLimit && it != m_Provider.m_Services.end() &&	it->second.channelNumber == -1 &&
 							m_Provider.m_Channels.find(channelNumber) == m_Provider.m_Channels.end())							// YES, Foxtel and Sky NZ disallow duplicate channel numbers
 						{
 							// Update timestamp
