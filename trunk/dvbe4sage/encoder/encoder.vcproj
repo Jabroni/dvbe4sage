@@ -53,8 +53,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\3rdparty\FFdecsa\src;..\3rdparty\baseclasses\src;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1;XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS;AM_NOVTABLE=__declspec(novtable);_USE_MATH_DEFINES"
+				AdditionalIncludeDirectories="..\3rdparty\FFdecsa\src;..\3rdparty\baseclasses\src;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include;..\3rdparty\GrowlSDK"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;_SECURE_SCL=1;XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS;AM_NOVTABLE=__declspec(novtable);_USE_MATH_DEFINES;GROWL_CPP_STATIC"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -74,10 +74,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib ws2_32.lib strmbasd.lib FFdecsad.lib libci-d.lib ttBdaDrvApi_Lib-d.lib xerces-c_static_3D.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib strmbasd.lib FFdecsad.lib libci-d.lib ttBdaDrvApi_Lib-d.lib xerces-c_static_3D.lib libgrowl-static++.lib libgrowl-static.lib"
 				ShowProgress="0"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib;..\3rdparty\xsd\lib;..\3rdparty\baseclasses\lib;..\3rdparty\FFdecsa\lib"
+				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib;..\3rdparty\xsd\lib;..\3rdparty\baseclasses\lib;..\3rdparty\FFdecsa\lib;..\3rdparty\GrowlSDK"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -139,8 +139,8 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\3rdparty\FFdecsa\src;..\3rdparty\baseclasses\src;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS;AM_NOVTABLE=__declspec(novtable);_USE_MATH_DEFINES"
+				AdditionalIncludeDirectories="..\3rdparty\FFdecsa\src;..\3rdparty\baseclasses\src;..\3rdparty\ttbdadrvapi\include;..\3rdparty\xsd\include;..\3rdparty\GrowlSDK"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;ENCODER_EXPORTS;XERCES_STATIC_LIBRARY;TTBDADRVAPI_STATIC_LIBRARY;NEED_ACCESS_FUNCTIONS;AM_NOVTABLE=__declspec(novtable);_USE_MATH_DEFINES;GROWL_CPP_STATIC"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				EnableEnhancedInstructionSet="2"
@@ -159,10 +159,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib ws2_32.lib strmbase.lib FFdecsar.lib libci.lib ttBdaDrvApi_Lib.lib xerces-c_static_3.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib strmbase.lib FFdecsar.lib libci.lib ttBdaDrvApi_Lib.lib xerces-c_static_3.lib libgrowl-static++.lib libgrowl-static.lib"
 				ShowProgress="0"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib;..\3rdparty\xsd\lib;..\3rdparty\baseclasses\lib;..\3rdparty\FFdecsa\lib"
+				AdditionalLibraryDirectories="..\3rdparty\ttbdadrvapi\lib;..\3rdparty\xsd\lib;..\3rdparty\baseclasses\lib;..\3rdparty\FFdecsa\lib;..\3rdparty\GrowlSDK"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -473,6 +473,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GrowlHandler.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\IniFile.cpp"
 				>
 			</File>
@@ -696,6 +700,10 @@
 			</File>
 			<File
 				RelativePath=".\graph.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GrowlHandler.h"
 				>
 			</File>
 			<File

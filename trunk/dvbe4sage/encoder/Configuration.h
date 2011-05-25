@@ -50,6 +50,7 @@ class Configuration
 	bool						m_AutoDiscoverONID;
 	bool						m_CacheServices;
 	bool						m_TrustKeys;
+	string						m_GrowlIP;
 
 	// All advanced stuff goes here
 	USHORT						m_PMTDilutionFactor;
@@ -117,6 +118,7 @@ public:
 	bool getUseDiseqc() const							{ return m_UseDiseqc; };
 	bool getAutoDiscoverONID() const					{ return m_AutoDiscoverONID; };
 	bool getCacheServices() const						{ return m_CacheServices; };
+	const string& getGrowlIP() const					{ return m_GrowlIP; }
 
 	// All advanced stuff goes here
 	USHORT getPMTDilutionFactor() const					{ return m_PMTDilutionFactor; }
