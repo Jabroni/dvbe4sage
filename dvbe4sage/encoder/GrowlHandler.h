@@ -5,7 +5,7 @@
 using namespace std;
 using namespace stdext;
 
-enum NotificationType {NOTIFICATION_TEST, NOTIFICATION_ERROR, NOTIFICATION_NEWCHANNEL };
+enum NotificationType {NOTIFICATION_ERROR, NOTIFICATION_NEWCHANNEL };
 
 class GrowlHandler
 {
