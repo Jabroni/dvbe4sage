@@ -9,6 +9,7 @@
 #include "GenericSource.h"
 #include "SatelliteInfo.h"
 #include "GrowlHandler.h"
+#include "encoder.h"
 
 // Define constants
 #define	CRC_LENGTH			4
@@ -21,6 +22,8 @@
 #define FOXTEL_ONID(onid)		(onid == 4096)
 #define SKYITALIA_ONID(onid)	(onid == 64511)
 #define DISH_ONID(onid)			(onid >= 4097 && onid <= 4106)
+
+extern Encoder*	g_pEncoder;
 
 // Start dumping the full transponder
 void DVBParser::startTransponderDump()
@@ -1235,13 +1238,20 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 						if( g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnNewSID()  ) {
 
 							// See if service ID already initialized on the Network Provider (no reason to SPAM our Growl user)
-							if(m_Provider.isServiceExist(usid) == false) 
+							NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
+			
+							// Lock network provider and parser
+							encoderNetworkProvider.lock();
+							if(encoderNetworkProvider.isServiceExist(usid) == false) 
 							{
 								char buff[500];
 								sprintf_s(buff, "Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu", 
 											newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
 								g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_NEWSID, "New Service Discovered", buff); 
 							}
+
+							// Unlock network provider and parser
+							encoderNetworkProvider.unlock();
 						}
 										
 						m_Provider.m_Services[usid] = newService;
