@@ -43,7 +43,19 @@ USHORT NetworkProvider::getChannelForSid(UINT32 usid) const
 	return NULL;
 }
 
+bool NetworkProvider::isServiceExist(UINT32 usid) const {
+	hash_map<UINT32, Service>::const_iterator it = m_Services.find(usid);
+	if(it == m_Services.end())
+		return false;
+	return true;
+}
 
+bool NetworkProvider::isChNoExist(USHORT channel) const {
+	hash_map<USHORT, UINT32>::const_iterator it = m_Channels.find(channel);
+	if(it==m_Channels.end())
+		return false;
+	return true;
+}
 
 bool NetworkProvider::getSidForChannel(USHORT channel,
 									   UINT32& usid) const
@@ -260,6 +272,7 @@ void NetworkProvider::logEPGEntry(USHORT sid, USHORT onid, USHORT tid, string se
 		}
 	}
 }
+
 
 void NetworkProvider::clear()
 {

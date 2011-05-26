@@ -18,7 +18,8 @@ extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance,
 	g_pConfiguration = new Configuration;
 	g_pEncoder = new Encoder(hInstance, hWnd, hParentMenu);
 	g_pSatelliteInfo = new SatelliteInfo;
-	g_pGrowlHandler = new GrowlHandler;
+	if(g_pConfiguration->getGrowlNotification())
+		g_pGrowlHandler = new GrowlHandler;
 }
 
 extern "C" ENCODER_API void deleteEncoder()
