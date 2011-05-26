@@ -5,6 +5,7 @@
 #include "configuration.h"
 #include "encoder.h"
 #include "extern.h"
+#include "GrowlHandler.h"
 
 int DVBSTuner::m_TTBudget2Tuners = 0;
 int DVBSTuner::m_USB2Tuners = 0;
@@ -30,6 +31,9 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 	// Build the graph
 	if(FAILED(m_pFilterGraph->BuildGraph()))
 	{
+		g_pGrowlHandler = new GrowlHandler;
+		if(g_pConfiguration->getGrowlNotification())
+			g_pGrowlHandler->SendNotificationMessage(NotificationType::NOTIFICATION_ERROR,"Cannot build BDA Graph","ERROR: Could not build BDA filter graph");
 		log(0, true, ordinal, TEXT("Error: Could not Build the BDA filter graph\n"));
 		m_IsSourceOK = false;
 	}

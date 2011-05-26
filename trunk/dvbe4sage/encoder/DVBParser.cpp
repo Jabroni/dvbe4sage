@@ -8,6 +8,7 @@
 #include "extern.h"
 #include "GenericSource.h"
 #include "SatelliteInfo.h"
+#include "GrowlHandler.h"
 
 // Define constants
 #define	CRC_LENGTH			4
@@ -840,6 +841,7 @@ void PSIParser::parsePMTTable(const pmt_t* const table,
 			else
 				caScheme.provId = 0;
 			// Let's see if these CAID/PROVID are served
+			
 			if(g_pConfiguration->isCAIDServed(caScheme.caId) && g_pConfiguration->isPROVIDServed(caScheme.provId))
 			{
 				// Add the CA Scheme to the set
@@ -1230,6 +1232,22 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 				{
 					if(!g_pConfiguration->excludeONID(newService.onid))
 					{
+						
+						
+						if( g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnNewSID()  ) {
+
+							// See if service ID already initialized on the Network Provider
+							/*
+							NetworkProvider encoderNetworkProvider = m_pParent->getNetworkProvider();
+							m_pParent->unlock();
+							if(encoderNetworkProvider.isServiceExist(usid)==false) {
+								char buff[500];
+								sprintf_s(buff,"Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu", 
+											newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
+								g_pGrowlHandler->SendNotificationMessage(NotificationType::NOTIFICATION_ERROR,"New service Discovered",buff); 
+							}*/
+						}
+										
 						m_Provider.m_Services[usid] = newService;
 
 						log(3, true, m_pParent->getTunerOrdinal(), TEXT("Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
@@ -1425,7 +1443,6 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						hash_map<UINT32, Service>::iterator it = m_Provider.m_Services.find(usid);
 
 
-
 						if(channelNumber < channelLimit && it != m_Provider.m_Services.end() &&	it->second.channelNumber == -1 &&
 							m_Provider.m_Channels.find(channelNumber) == m_Provider.m_Channels.end())							// YES, Foxtel and Sky NZ disallow duplicate channel numbers
 						{
@@ -1536,7 +1553,7 @@ void PSIParser::parseBATTable(const nit_t* const table,
 						}
 					}
 				}
-
+				
 				// Adjust input Buffer
 				inputBuffer += descriptorLength + DESCR_GEN_LEN;
 

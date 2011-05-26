@@ -52,6 +52,8 @@ public:
 	// Common query methods
 	bool getServiceName(UINT32 sid, LPTSTR output, int outputLength) const;
 	USHORT getChannelForSid(UINT32 usid) const;
+	bool isServiceExist(UINT32 usid) const;
+	bool isChNoExist(USHORT channel) const;
 	bool getSidForChannel(USHORT channel, UINT32& sid) const;
 	bool getTransponderForSid(UINT32 sid, Transponder& transponder) const;
 	bool getOnidForSid(USHORT sid, USHORT& onid) const;

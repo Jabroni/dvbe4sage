@@ -57,9 +57,9 @@ Configuration::Configuration()
 	m_IsNorthAmerica = GetPrivateProfileInt(TEXT("General"), TEXT("NorthAmerica"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("NorthAmerica=%u\n"), m_IsNorthAmerica ? 1 : 0);
 
-	GetPrivateProfileString(TEXT("General"), TEXT("GrowlIP"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
-	m_GrowlIP = buffer;
-	log(0, false, 0, TEXT("GrowlIP=%s\n"), m_GrowlIP.c_str());
+
+	m_GrowlNotification = GetPrivateProfileInt(TEXT("General"), TEXT("GrowlNotification"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("GrowlNotification=%u\n"), m_GrowlNotification ? 1 : 0);
 
 	log(0, false, 0, TEXT("\n"));
 
@@ -412,6 +412,30 @@ Configuration::Configuration()
 	GetPrivateProfileString(TEXT("Recording"), TEXT("PreferredSubtitlesLanguage"), TEXT("eng"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
 	m_PreferredSubtitlesLanguage = buffer;
 	log(0, false, 0, TEXT("PreferredSubtitlesLanguage=%s\n"), m_PreferredSubtitlesLanguage.c_str());
+
+	log(0, false, 0, TEXT("\n"));
+
+
+	// Growl notification parameters
+	log(0, false, 0, TEXT("[Growl]\n"));
+	
+	GetPrivateProfileString(TEXT("Growl"), TEXT("GrowlIP"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	m_GrowlIP = buffer;
+	log(0, false, 0, TEXT("GrowlIP=%s\n"), m_GrowlIP.c_str());
+
+	GetPrivateProfileString(TEXT("Growl"), TEXT("GrowlPassword"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	m_GrowlPassword = buffer;
+	log(0, false, 0, TEXT("GrowlPassword=%s\n"), m_GrowlPassword.c_str());
+
+	m_GrowlNotifyOnNewSID = GetPrivateProfileInt(TEXT("Growl"), TEXT("GrowlNotifyOnNewSID"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("GrowlNotifyOnNewSID=%u\n"), m_GrowlNotifyOnNewSID ? 1:0 );
+
+	m_GrowlNotifyOnNewBouquetCh = GetPrivateProfileInt(TEXT("Growl"), TEXT("GrowlNotifyOnNewBouquetCh"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("GrowlNotifyOnNewBouquetCh=%u\n"), m_GrowlNotifyOnNewBouquetCh ? 1:0 );
+
+	m_GrowlNotifyOnTune = GetPrivateProfileInt(TEXT("Growl"), TEXT("GrowlNotifyOnTune"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("GrowlNotifyOnTune=%u\n"), m_GrowlNotifyOnTune ? 1:0 );
+
 
 	log(0, false, 0, TEXT("\n"));
 

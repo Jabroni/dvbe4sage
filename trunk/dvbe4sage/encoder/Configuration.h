@@ -50,7 +50,16 @@ class Configuration
 	bool						m_AutoDiscoverONID;
 	bool						m_CacheServices;
 	bool						m_TrustKeys;
+	bool						m_GrowlNotification;
+	
+
+	//Growl variables
 	string						m_GrowlIP;
+	string						m_GrowlPassword;
+	bool						m_GrowlNotifyOnNewSID;
+	bool						m_GrowlNotifyOnNewBouquetCh;
+	bool						m_GrowlNotifyOnTune;
+
 
 	// All advanced stuff goes here
 	USHORT						m_PMTDilutionFactor;
@@ -118,7 +127,12 @@ public:
 	bool getUseDiseqc() const							{ return m_UseDiseqc; };
 	bool getAutoDiscoverONID() const					{ return m_AutoDiscoverONID; };
 	bool getCacheServices() const						{ return m_CacheServices; };
-	const string& getGrowlIP() const					{ return m_GrowlIP; }
+	bool getGrowlNotification() const					{ return m_GrowlNotification; };
+	const string& getGrowlIP() const					{ return m_GrowlIP; };
+	const string& getGrowlPassword() const				{ return m_GrowlPassword; };
+	bool getGrowlNotifyOnNewSID() const					{ return m_GrowlNotifyOnNewSID; };
+	bool getGrowlNotifyOnNewBouqeuet() const			{ return m_GrowlNotifyOnNewBouquetCh; };
+	bool getGrowlNotifyOnTune() const					{ return m_GrowlNotifyOnTune; };
 
 	// All advanced stuff goes here
 	USHORT getPMTDilutionFactor() const					{ return m_PMTDilutionFactor; }

@@ -8,7 +8,9 @@ GrowlHandler* g_pGrowlHandler = NULL;
 
 // Note: This needs to match the NotificationType enumeration
 static const char *notifications[] = { 	"Error",
-										"NewChannel"};
+										"NewChannel",
+										"NewSID",
+										"OnTune"};
 
 GrowlHandler::GrowlHandler(void)
 {
@@ -17,11 +19,12 @@ GrowlHandler::GrowlHandler(void)
 		m_pGrowl = NULL;
 
 		string ipAddr = g_pConfiguration->getGrowlIP();
-		if(ipAddr.length() > 0)
-		{
-			m_pGrowl = new Growl(GROWL_UDP, ipAddr.c_str(), "DVBE4SAGE", notifications, sizeof(notifications) / sizeof(notifications[0]));	
-			log(0, true, 0, TEXT("Growl configured to send notifications to \"%s\"\n"), ipAddr.c_str());
-		}			
+		if(ipAddr.length() == 0)
+				ipAddr = "127.0.0.1";
+		string password = g_pConfiguration->getGrowlPassword();
+		m_pGrowl = new Growl(GROWL_UDP, ipAddr.c_str(), password.c_str(), "DVB4Sage", notifications, sizeof(notifications) / sizeof(notifications[0]));	
+		log(0, true, 0, TEXT("Growl configured to send notifications to \"%s\"\n"), ipAddr.c_str());
+					
 	}
 	catch(...) {}
 }
