@@ -22,7 +22,7 @@ GrowlHandler::GrowlHandler(void)
 		if(ipAddr.length() == 0)
 				ipAddr = "127.0.0.1";
 		string password = g_pConfiguration->getGrowlPassword();
-		m_pGrowl = new Growl(GROWL_UDP, ipAddr.c_str(), password.c_str(), "DVB4Sage", notifications, sizeof(notifications) / sizeof(notifications[0]));	
+		m_pGrowl = new Growl(GROWL_UDP, ipAddr.c_str(), password.c_str(), "DVBE4Sage", notifications, sizeof(notifications) / sizeof(notifications[0]));	
 		log(0, true, 0, TEXT("Growl configured to send notifications to \"%s\"\n"), ipAddr.c_str());
 					
 	}
