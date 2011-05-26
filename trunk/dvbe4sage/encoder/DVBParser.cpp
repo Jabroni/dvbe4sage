@@ -1231,21 +1231,17 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 				if(!g_pConfiguration->includeONIDs() || g_pConfiguration->includeONID(newService.onid))
 				{
 					if(!g_pConfiguration->excludeONID(newService.onid))
-					{
-						
-						
+					{						
 						if( g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnNewSID()  ) {
 
-							// See if service ID already initialized on the Network Provider
-							/*
-							NetworkProvider encoderNetworkProvider = m_pParent->getNetworkProvider();
-							m_pParent->unlock();
-							if(encoderNetworkProvider.isServiceExist(usid)==false) {
+							// See if service ID already initialized on the Network Provider (no reason to SPAM our Growl user)
+							if(m_Provider.isServiceExist(usid) == false) 
+							{
 								char buff[500];
-								sprintf_s(buff,"Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu", 
+								sprintf_s(buff, "Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu", 
 											newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
-								g_pGrowlHandler->SendNotificationMessage(NotificationType::NOTIFICATION_ERROR,"New service Discovered",buff); 
-							}*/
+								g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_NEWSID, "New Service Discovered", buff); 
+							}
 						}
 										
 						m_Provider.m_Services[usid] = newService;

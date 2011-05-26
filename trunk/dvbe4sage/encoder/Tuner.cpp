@@ -33,7 +33,7 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 	{
 		g_pGrowlHandler = new GrowlHandler;
 		if(g_pConfiguration->getGrowlNotification())
-			g_pGrowlHandler->SendNotificationMessage(NotificationType::NOTIFICATION_ERROR,"Cannot build BDA Graph","ERROR: Could not build BDA filter graph");
+			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ERROR,"Cannot build BDA Graph","ERROR: Could not build BDA filter graph");
 		log(0, true, ordinal, TEXT("Error: Could not Build the BDA filter graph\n"));
 		m_IsSourceOK = false;
 	}
