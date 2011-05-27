@@ -53,12 +53,13 @@ class Configuration
 	bool						m_GrowlNotification;
 	
 
-	//Growl variables
+	// Growl variables
 	string						m_GrowlIP;
 	string						m_GrowlPassword;
 	bool						m_GrowlNotifyOnNewSID;
 	bool						m_GrowlNotifyOnNewBouquetCh;
 	bool						m_GrowlNotifyOnTune;
+	bool						m_GrowlNotifyOnRecordFailure;
 
 
 	// All advanced stuff goes here
@@ -133,6 +134,7 @@ public:
 	bool getGrowlNotifyOnNewSID() const					{ return m_GrowlNotifyOnNewSID; };
 	bool getGrowlNotifyOnNewBouqeuet() const			{ return m_GrowlNotifyOnNewBouquetCh; };
 	bool getGrowlNotifyOnTune() const					{ return m_GrowlNotifyOnTune; };
+	bool getGrowlNotifyOnRecordFailure() const			{ return m_GrowlNotifyOnRecordFailure; };
 
 	// All advanced stuff goes here
 	USHORT getPMTDilutionFactor() const					{ return m_PMTDilutionFactor; }

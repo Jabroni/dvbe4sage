@@ -13,11 +13,15 @@ GrowlHandler* g_pGrowlHandler = NULL;
 static const char *notifications[] = { 	"Error",
 										"NewChannel",
 										"NewSID",
-										"OnTune"};
+										"OnTune",
+										"RecordFailure"};
 
 // Default constructor.  Connects to the Growl Listener.
 GrowlHandler::GrowlHandler(void)
 {
+	// Initialize the clitical section
+	InitializeCriticalSection(&m_cs);
+
 	try
 	{
 		m_pGrowl = NULL;
@@ -38,6 +42,9 @@ GrowlHandler::~GrowlHandler(void)
 {
 	if(m_pGrowl != NULL)
 		delete(m_pGrowl);
+
+	// Delete the critical section
+	DeleteCriticalSection(&m_cs);
 }
 
 // Send a formatted message to the configured Growl listener
@@ -49,6 +56,9 @@ void GrowlHandler::SendNotificationMessage(NotificationType nType, string title,
 	if(m_pGrowl == NULL)
 		return;
 
+	// Do this in critical section
+	EnterCriticalSection(&m_cs);
+
 	try
 	{
 		va_list argList;
@@ -58,5 +68,8 @@ void GrowlHandler::SendNotificationMessage(NotificationType nType, string title,
 		m_pGrowl->Notify(notifications[nType], title.c_str(), message);
 	}
 	catch(...) {}
+
+	// Leave the critical section
+	LeaveCriticalSection(&m_cs);
 }
 

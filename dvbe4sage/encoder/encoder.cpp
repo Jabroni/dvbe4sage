@@ -16,6 +16,7 @@
 #include "MDAPIPluginHandler.h"
 #include "VGPluginHandler.h"
 #include "FileSource.h"
+#include "GrowlHandler.h"
 
 #define READ_BUFFER_SIZE	100000
 
@@ -202,6 +203,11 @@ void Encoder::socketOperation(SOCKET socket,
 						// Last is the file name for recording (can use UNICODE characters
 						int fileNameEndPos = fullCommand.find(L'|', durationEndPos + 1);
 						wstring fileName(fullCommandUTF16 + durationEndPos + 1, fileNameEndPos - durationEndPos - 1);
+
+						if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnTune()) 
+							g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ONTUNE, "Start Recording Event", 
+								TEXT("Received START command to start recording on source \"%S\", channel=%d, duration=%I64d, file=\"%S\""),
+								source.c_str(), channelInt, durationInt, fileName.c_str());
 
 						// Log the command with all its parameters
 						log(0, true, 0, TEXT("Received START command to start recording on source \"%S\", channel=%d, duration=%I64d, file=\"%S\"\n"),
@@ -528,6 +534,11 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		}
 		else
 		{
+			if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnRecordFailure()) 
+				g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_RECORDFAILURE, "Recording Failure Event", 
+					TEXT("Autodiscovery requested, but cannot find the transponder for SID=%hu on ONID=%hu (\"%s\"), no recording done!"),
+					sid, onid, channelName);
+
 			// If transponder is not found, report an error
 			log(0, true, 0, TEXT("Autodiscovery requested, but cannot find the transponder for SID=%hu on ONID=%hu (\"%s\"), no recording done!\n"), sid, onid, channelName);
 
@@ -548,6 +559,11 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// Boil out if an appropriate tuner is not found
 	if(tuner == NULL)
 	{
+		if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnRecordFailure()) 
+			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_RECORDFAILURE, "Recording Failure Event", 
+				TEXT("Cannot start recording for %s=%d (\"%s\"), no suitable source found!"),
+				useSid ? TEXT("SID") : TEXT("Channel"), channel, channelName);
+		
 		log(0, true, 0, TEXT("Cannot start recording for %s=%d (\"%s\"), no suitable source found!\n"), useSid ? TEXT("SID") : TEXT("Channel"), channel, channelName);
 		return false;
 	}
@@ -569,6 +585,11 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	// Let's see if the recorder has an error, just delete it and exit
 	if(recorder->hasError())
 	{
+		if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnRecordFailure()) 
+			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_RECORDFAILURE, "Recording Failure Event", 
+				TEXT("Cannot start recording for %s=%d (\"%s\"), Recorder start failure!"),
+				useSid ? TEXT("SID") : TEXT("Channel"), channel, channelName);
+
 		log(0, true, tuner->getSourceOrdinal(), TEXT("Cannot start recording!\n")),
 		delete recorder;
 		return false;

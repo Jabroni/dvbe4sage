@@ -6,7 +6,7 @@ using namespace std;
 using namespace stdext;
 
 // Note: This needs to match static const char *notifications[]
-enum NotificationType {NOTIFICATION_ERROR, NOTIFICATION_NEWCHANNEL, NOTIFICATION_NEWSID, NOTIFICATION_ONTUNE };
+enum NotificationType {NOTIFICATION_ERROR, NOTIFICATION_NEWCHANNEL, NOTIFICATION_NEWSID, NOTIFICATION_ONTUNE, NOTIFICATION_RECORDFAILURE};
 
 class GrowlHandler
 {
@@ -19,6 +19,7 @@ public:
 
 private:
 	Growl *m_pGrowl;
+	CRITICAL_SECTION	m_cs;
 };
 
 extern GrowlHandler* g_pGrowlHandler;
