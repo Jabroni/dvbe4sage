@@ -25,6 +25,7 @@
 
 extern Encoder*	g_pEncoder;
 
+
 // Start dumping the full transponder
 void DVBParser::startTransponderDump()
 {
@@ -1239,15 +1240,16 @@ void PSIParser::parseSDTTable(const sdt_t* const table,
 
 							// See if service ID already initialized on the Network Provider (no reason to SPAM our Growl user)
 							NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
-			
+					
 							// Lock network provider and parser
 							encoderNetworkProvider.lock();
-							if(encoderNetworkProvider.isServiceExist(usid) == false) 
+							
+							if(!m_pParent->getInitialScan() && !encoderNetworkProvider.isServiceExist(usid) ) 
 							{
-								char buff[500];
-								sprintf_s(buff, "Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu", 
-											newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), (USHORT)newService.serviceType, (USHORT)newService.runningStatus);
-								g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_NEWSID, "New Service Discovered", buff); 
+								g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_NEWSID, "New Service Discovered", 
+									TEXT("Service Discovered: SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu. Tuner #%hu"),
+									newService.sid, newService.onid, newService.tid, (USHORT)newService.channelNumber, newService.serviceNames["eng"].c_str(), 
+									(USHORT)newService.serviceType, (USHORT)newService.runningStatus, m_pParent->getTunerOrdinal() ); 
 							}
 
 							// Unlock network provider and parser
@@ -1468,6 +1470,26 @@ void PSIParser::parseBATTable(const nit_t* const table,
 								log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found in Bouquet=\"%s\" ID=%d\n"), bouquetName.c_str(), bouquetID);
 								firstTime = false;
 							}
+							
+							if( g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnNewBouqeuet()  ) {
+								// See if service ID already initialized on the Network Provider (no reason to SPAM our Growl user)
+								NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
+					
+								// Lock network provider and parser
+								encoderNetworkProvider.lock();
+
+								if(!m_pParent->getInitialScan() && !encoderNetworkProvider.isChNoExist(channelNumber)) 
+								{
+									g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_NEWCHANNEL, "New Channel Map Discovered", 
+										TEXT("Mapped SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu. Tuner#%hu"),
+									sid, onid, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus,m_pParent->getTunerOrdinal());
+								}
+	
+								// Unlock network provider and parser
+								encoderNetworkProvider.unlock();
+
+							}
+
 
 							// Print log message
 							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Mapped SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
@@ -1552,6 +1574,26 @@ void PSIParser::parseBATTable(const nit_t* const table,
 								log(2, true, m_pParent->getTunerOrdinal(), TEXT("Found in Bouquet=\"%s\", BouquetID=%hu\n"), bouquetName.c_str(), bouquetID);
 								firstTime = false;
 							}
+
+							if( g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnNewBouqeuet()  ) {
+								// See if service ID already initialized on the Network Provider (no reason to SPAM our Growl user)
+								NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
+					
+								// Lock network provider and parser
+								encoderNetworkProvider.lock();
+
+								if(!m_pParent->getInitialScan() && !encoderNetworkProvider.isChNoExist(channelNumber)) 
+								{
+									g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_NEWCHANNEL, "New Channel Map Discovered", 
+										TEXT("Mapped SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu. Tuner#%hu"),
+									sid, onid, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus,m_pParent->getTunerOrdinal());
+								}
+	
+								// Unlock network provider and parser
+								encoderNetworkProvider.unlock();
+
+							}
+
 
 							// Print log message
 							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Mapped SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),

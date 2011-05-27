@@ -18,6 +18,7 @@ private:
 	static int				m_USB2Tuners;
 	USHORT					m_TID;
 	USHORT					m_ONID;
+	bool					m_isInitialScan;
 
 	// We disable unsafe constructors
 	DVBSTuner();

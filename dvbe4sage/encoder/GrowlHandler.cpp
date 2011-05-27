@@ -35,12 +35,18 @@ GrowlHandler::~GrowlHandler(void)
 		delete(m_pGrowl);
 }
 
-void GrowlHandler::SendNotificationMessage(NotificationType nType, string title, string message)
+void GrowlHandler::SendNotificationMessage(NotificationType nType, string title, LPCTSTR format, ...)
 {	
+	TCHAR m_Message[200];
 	try
 	{
+		va_list argList;
+		va_start(argList, format);
+
+		vsprintf(m_Message, format, argList);
+
 		if(m_pGrowl != NULL)
-			m_pGrowl->Notify(notifications[nType], title.c_str(), message.c_str());
+			m_pGrowl->Notify(notifications[nType], title.c_str(), m_Message);
 	}
 	catch(...) {}
 }

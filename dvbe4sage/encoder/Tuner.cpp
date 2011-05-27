@@ -31,9 +31,11 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 	// Build the graph
 	if(FAILED(m_pFilterGraph->BuildGraph()))
 	{
-		g_pGrowlHandler = new GrowlHandler;
-		if(g_pConfiguration->getGrowlNotification())
-			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ERROR,"Cannot build BDA Graph","ERROR: Could not build BDA filter graph");
+		
+		if(g_pConfiguration->getGrowlNotification()) {
+			g_pGrowlHandler = new GrowlHandler;
+			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ERROR,"Cannot build BDA Graph",TEXT("ERROR: Could not build BDA filter graph on tuner #%hu"),ordinal);
+		}
 		log(0, true, ordinal, TEXT("Error: Could not Build the BDA filter graph\n"));
 		m_IsSourceOK = false;
 	}
@@ -260,9 +262,9 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 				
 				pTuner->getParser()->setProviderInfoHasBeenCopied();
 				
-				
 				log(3,true,0,TEXT("Network Provider has been copied from parser to encoder\n"));
 		}
+		
 		
 		//if(autoDiscover) { This was removed to always to autodiscover, just it would be less time when cache is available
 		// Tune to the configured transponder		
@@ -275,6 +277,11 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 		if(pTuner->startPlayback((pDiseqc != NULL ? pDiseqc->GetInitialONID(onidIndex) : 0), false))
 		{
 			
+			// We mark the tuner as doing the initial scan
+			DVBParser* const tunerParser = pTuner->getParser();
+			tunerParser->setInitialScan(true);
+			
+
 			// Log entry
 			log(0, true, pTuner->getSourceOrdinal(), TEXT("Starting initial run for autodiscovery, transponder data: Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 				pTuner->getFrequency(), pTuner->getSymbolRate(), printablePolarization(pTuner->getPolarization()), printableModulation(pTuner->getModulation()), printableFEC(pTuner->getFECRate()));
@@ -300,7 +307,10 @@ DWORD WINAPI RunIdleCallback(LPVOID vpTuner)
 
 			// Copy provider data and stop recording, for the first time
 			pTuner->copyProviderDataAndStopRecording();
-	
+			
+			// We mark the tuner as already did the initial scan
+			tunerParser->setInitialScan(false);
+
 			// After the initial autodiscovery, if enabled save the services and transponders to cache file
 			if(g_pConfiguration->getCacheServices()) {
 				TCHAR reason[MAX_ERROR_MESSAGE_SIZE];
