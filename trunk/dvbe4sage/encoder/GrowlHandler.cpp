@@ -53,7 +53,7 @@ void GrowlHandler::SendNotificationMessage(NotificationType nType, string title,
 	{
 		va_list argList;
 		va_start(argList, format);
-		vsprintf(message, format, argList);
+		vsprintf_s(message, 1024, format, argList);
 		
 		m_pGrowl->Notify(notifications[nType], title.c_str(), message);
 	}
