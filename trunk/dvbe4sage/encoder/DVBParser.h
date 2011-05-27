@@ -383,6 +383,8 @@ private:
 	DVBParser();
 	DVBParser(const DVBParser&);
 
+	bool	m_isInitialScan;				// True if parser is running the initial scan
+
 public:
 	// The only available constructor
 	DVBParser(UINT ordinal) :	
@@ -423,6 +425,10 @@ public:
 
 	// Setter for the internal parser "HasBeenCopied" flag
 	void setProviderInfoHasBeenCopied()												{ m_PSIParser.setProviderInfoHasBeenCopied(); }
+
+	// Functions to set/get the InitialScan 
+	void setInitialScan(bool value) 			{ m_isInitialScan = value; }
+	bool getInitialScan() 						{ return m_isInitialScan; }
 
 	// Lock and unlock
 	void lock();

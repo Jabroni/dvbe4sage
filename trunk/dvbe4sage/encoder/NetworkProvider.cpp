@@ -285,11 +285,13 @@ void NetworkProvider::clear()
 
 bool NetworkProvider::dumpNetworkProvider(LPTSTR reason) const
 {
-	ofstream t("transponders.cache");
-	ofstream sat("satelliteInfo.cache");
-	ofstream s("services.cache");
+	//DeleteFile("transponders.cache");
+	//DeleteFile("satelliteInfo.cache");
+	//DeleteFile("services.cache");
 
-	
+	ofstream t("transponders.cache",ios_base::trunc);
+	ofstream sat("satelliteInfo.cache",ios_base::trunc);
+	ofstream s("services.cache",ios_base::trunc);
 
 	int counter = 0;
 	// We start generating the transponders.cache
