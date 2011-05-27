@@ -436,6 +436,8 @@ Configuration::Configuration()
 	m_GrowlNotifyOnTune = GetPrivateProfileInt(TEXT("Growl"), TEXT("GrowlNotifyOnTune"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("GrowlNotifyOnTune=%u\n"), m_GrowlNotifyOnTune ? 1:0 );
 
+	m_GrowlNotifyOnRecordFailure = GetPrivateProfileInt(TEXT("Growl"), TEXT("GrowlNotifyOnRecordFailure"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("GrowlNotifyOnRecordFailure=%u\n"), m_GrowlNotifyOnRecordFailure ? 1:0 );
 
 	log(0, false, 0, TEXT("\n"));
 

@@ -9,6 +9,7 @@
 #include "encoder.h"
 #include "GenericSource.h"
 #include "FileSource.h"
+#include "GrowlHandler.h"
 
 DWORD WINAPI StopRecordingCallback(LPVOID vpRecorder)
 {
@@ -266,7 +267,12 @@ void Recorder::startRecording()
 
 void Recorder::stopRecording()
 {
-	log(0, false, 0, TEXT("stopping recording of %s %d (\"%s\") on source=\"%s\", Ordinal=%d\n"),
+	if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnTune()) 
+			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ONTUNE, "Stop Recording Event", 
+				TEXT("Stopping recording of %s %d (\"%s\") on source=\"%s\", Ordinal=%d"),
+				!m_UseSid ? TEXT("channel") : TEXT("service"), m_ChannelNumber, m_ChannelName, m_pSource->getSourceFriendlyName(), m_pSource->getSourceOrdinal()); 
+							
+	log(0, false, 0, TEXT("Stopping recording of %s %d (\"%s\") on source=\"%s\", Ordinal=%d\n"),
 		!m_UseSid ? TEXT("channel") : TEXT("service"), m_ChannelNumber, m_ChannelName, m_pSource->getSourceFriendlyName(), m_pSource->getSourceOrdinal());
 
 	// Make sure start recording test is finished
