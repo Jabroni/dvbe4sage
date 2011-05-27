@@ -3,6 +3,9 @@
 #include "Logger.h"
 #include "configuration.h"
 
+// Interface to send notifications to a congfigured Growl listener.
+// You can find growl at http://growl.info/
+// And growl for Windows at http://www.growlforwindows.com/gfw/
 
 GrowlHandler* g_pGrowlHandler = NULL;
 
@@ -12,6 +15,7 @@ static const char *notifications[] = { 	"Error",
 										"NewSID",
 										"OnTune"};
 
+// Default constructor.  Connects to the Growl Listener.
 GrowlHandler::GrowlHandler(void)
 {
 	try
@@ -29,24 +33,29 @@ GrowlHandler::GrowlHandler(void)
 	catch(...) {}
 }
 
+// Default destructor
 GrowlHandler::~GrowlHandler(void)
 {
 	if(m_pGrowl != NULL)
 		delete(m_pGrowl);
 }
 
+// Send a formatted message to the configured Growl listener
 void GrowlHandler::SendNotificationMessage(NotificationType nType, string title, LPCTSTR format, ...)
 {	
-	TCHAR m_Message[200];
+	TCHAR message[1024];
+
+	// If no listener, don't bother
+	if(m_pGrowl == NULL)
+		return;
+
 	try
 	{
 		va_list argList;
 		va_start(argList, format);
-
-		vsprintf(m_Message, format, argList);
-
-		if(m_pGrowl != NULL)
-			m_pGrowl->Notify(notifications[nType], title.c_str(), m_Message);
+		vsprintf(message, format, argList);
+		
+		m_pGrowl->Notify(notifications[nType], title.c_str(), message);
 	}
 	catch(...) {}
 }
