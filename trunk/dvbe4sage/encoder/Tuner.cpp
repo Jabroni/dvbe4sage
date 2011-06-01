@@ -36,9 +36,10 @@ DVBSTuner::DVBSTuner(Encoder* const pEncoder,
 			g_pGrowlHandler = new GrowlHandler;
 			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ERROR,"Cannot build BDA Graph",TEXT("ERROR: Could not build BDA filter graph on tuner #%hu"),ordinal);
 		}
+		
 		log(0, true, ordinal, TEXT("Error: Could not Build the BDA filter graph\n"));
 		m_IsSourceOK = false;
-	}
+	} 
 
 	// Get driver and device info and print it - works only for Twinhan cards
 	DEVICE_INFO DevInfo;

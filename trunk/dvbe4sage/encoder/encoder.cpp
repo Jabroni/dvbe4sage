@@ -483,6 +483,11 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	else if(!m_Provider.getSidForChannel((USHORT)channel, usid))
 	{
 		// If not found, report an error
+
+		if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnRecordFailure()) 
+			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_RECORDFAILURE, "Recording Failure Event", 
+				TEXT("Cannot obtain SID number for the channel \"%d\", no recording done!\n"), channel);
+
 		log(0, true, 0, TEXT("Cannot obtain SID number for the channel \"%d\", no recording done!\n"), channel);
 
 		// Unlock the parser
@@ -569,15 +574,27 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	}
 	
 	// Make a log entry
-	if(useSid)
+	if(useSid) {
+		if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnTune()) 
+			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ONTUNE, "Start Recording Event", 
+						 TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu on ONID=%hu (\"%s\"), Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), sid, onid, channelName, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
+
 		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, SID=%hu on ONID=%hu (\"%s\"), Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), sid, onid, channelName, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
-	else
-		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu on ONID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+	} else {
+		if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnTune()) 
+			g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ONTUNE, "Start Recording Event", 
+						 TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu on ONID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
 			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), channel, channelName, sid, onid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
 			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
 
+		log(0, true, tuner->getSourceOrdinal(), TEXT("Starting recording on tuner=\"%s\", Ordinal=%d, Channel=%d (\"%s\"), SID=%hu on ONID=%hu, Autodiscovery=%s, Duration=%I64d, Frequency=%lu, Symbol Rate=%lu, Polarization=%s, Modulation=%s, FEC=%s\n"),
+			tuner->getSourceFriendlyName(), tuner->getSourceOrdinal(), channel, channelName, sid, onid, autodiscoverTransponder ? TEXT("TRUE") : TEXT("FALSE"), duration,
+			frequency, symbolRate, printablePolarization(polarization),	printableModulation(modulation), printableFEC(fecRate));
+	}
 	// If we found the tuner
 	// Create the recorder
 	Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, outFileName, useSid, channel, sid, onid, channelName, duration, this, size, bySage);
