@@ -140,10 +140,10 @@ void csvline_populate(vector<string> &record, const string& line, char delimiter
 
 
 // Reads the services.cache / transponders.cache
+// If any file reading failes, we return false so it forces an autodiscover
 bool DVBParser::readTransponderServicesFromFile() 
 {
-	bool returnValue=true;
-			
+	
 	vector<string> row;
 	string line;
 	ifstream in2("services.cache");
@@ -152,7 +152,7 @@ bool DVBParser::readTransponderServicesFromFile()
 	else
 	{ 
 		log(1, true, m_TunerOrdinal,TEXT("Error while trying to open services.cache\n"));
-		returnValue = false;
+		return false;
 	}
 
 	int counter = 0;
@@ -207,7 +207,7 @@ bool DVBParser::readTransponderServicesFromFile()
 	else 
 	{ 
 		log(1, true, m_TunerOrdinal,TEXT("Error while trying to open transponders.cache\n"));
-		returnValue = false; 
+		return false; 
 	}
 	
 	counter=0;
@@ -257,7 +257,7 @@ bool DVBParser::readTransponderServicesFromFile()
 	else
 	{ 
 		log(1, true, m_TunerOrdinal,TEXT("Error while trying to open satelliteInfo.cache\n"));
-		returnValue = false;
+		return false;
 	}
 
 	counter = 0;
@@ -289,7 +289,7 @@ bool DVBParser::readTransponderServicesFromFile()
 
 	
 
-	return returnValue;
+	return true;
 }
 
 
