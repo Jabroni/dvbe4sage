@@ -454,6 +454,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		if(onid == 0 && g_pConfiguration->getAutoDiscoverONID())
 		{
 			if(m_Provider.getSidForChannel((USHORT)channel, usid)) {
+				sid = NetworkProvider::getSIDFromUniqueSID(usid);
 				log(2, true, 0, TEXT("Found a channel Number %hu on mapping table. Translating to SID %hu , discovered ONID=%hu\n"), channel, NetworkProvider::getSIDFromUniqueSID(usid), onid);	
 
 			} else if(m_Provider.getOnidForSid(sid, onid))	{
@@ -468,11 +469,12 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			}		
 		}
 
-		if(onid == 0 && m_Provider.getDefaultONID() != 0)
+		if(onid == 0 && m_Provider.getDefaultONID() != 0  )
 		{
 			onid = m_Provider.getDefaultONID();
 			log(2, true, 0, TEXT("A short SID specified, assuming default ONID=%hu\n"), onid);
-			usid = NetworkProvider::getUniqueSID(onid, sid);
+			if(usid == channel || usid == 0 )
+				usid = NetworkProvider::getUniqueSID(onid, sid);
 		}
 
 		// Get the channel name
