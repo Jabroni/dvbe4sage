@@ -453,8 +453,10 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		onid = NetworkProvider::getONIDFromUniqueSID(usid);
 		if(onid == 0 && g_pConfiguration->getAutoDiscoverONID())
 		{
-			if(m_Provider.getOnidForSid(sid, onid))
-			{
+			if(m_Provider.getSidForChannel((USHORT)channel, usid)) {
+				log(2, true, 0, TEXT("Found a channel Number %hu on mapping table. Translating to SID %hu , discovered ONID=%hu\n"), channel, NetworkProvider::getSIDFromUniqueSID(usid), onid);	
+
+			} else if(m_Provider.getOnidForSid(sid, onid))	{
 				log(2, true, 0, TEXT("A short SID specified, discovered ONID=%hu\n"), onid);	
 				usid = NetworkProvider::getUniqueSID(onid, sid);
 			}
