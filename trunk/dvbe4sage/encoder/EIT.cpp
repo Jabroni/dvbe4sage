@@ -155,7 +155,7 @@ void EIT::RealEitCollectionCallback()
 
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
-	log(3, true, 0, TEXT("Waiting until %d:%d to collect and process EIT data.\n"), m_CollectionTimeHour, m_CollectionTimeMin);
+	log(3, true, 0, TEXT("Waiting until %02d:%02d to collect and process EIT data.\n"), m_CollectionTimeHour, m_CollectionTimeMin);
 	
 	while(1 == 1)
 	{
@@ -177,7 +177,7 @@ void EIT::RealEitCollectionCallback()
 		{
 			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
 			// Send socket command make to us tune and lock the tuner
-			sprintf_s(command, sizeof(command), "START %s|0|%d|0|%s\\TempEitGathering.ts|Fair\r\n",  eIter->tuner.c_str(), eIter->chan, tempFile);
+			sprintf_s(command, sizeof(command), "START %s|0|%d|0|%s|Fair\r\n",  eIter->tuner.c_str(), eIter->chan, tempFile);
 			if(SendSocketCommand(command) == false)
 				continue;
 				
