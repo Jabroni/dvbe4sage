@@ -167,16 +167,16 @@ Recorder::Recorder(PluginsHandler* const plugins,
 		// Open the output file
 		m_fout = _wfsopen(outFileName, L"wb", _SH_DENYWR);
 
-		// Make it use no buffer if used as cyclic buffer
-		if(g_pConfiguration->getDisableWriteBuffering() || m_Size != (__int64)-1)
-			setvbuf(m_fout, NULL, _IONBF, 0);
-
 		// Check if opening file succeeded
 		if(m_fout == NULL)
 		{
 			log(0, true, getSource()->getSourceOrdinal(), TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), CW2CT(outFileName), GetLastError());
 			m_HasError = true;
 		}
+
+		// Make it use no buffer if used as cyclic buffer
+		if(g_pConfiguration->getDisableWriteBuffering() || m_Size != (__int64)-1)
+			setvbuf(m_fout, NULL, _IONBF, 0);
 	}
 	else
 	{
@@ -210,16 +210,16 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				// Open the output file
 				m_fout = _wfsopen((outFilePath + findData.cFileName).c_str(), L"wb", _SH_DENYWR);
 
-				// Make it use no buffer if used as cyclic buffer
-				if(g_pConfiguration->getDisableWriteBuffering() || m_Size != (__int64)-1)
-					setvbuf(m_fout, NULL, _IONBF, 0);
-
 				// Check if opening file succeeded
 				if(m_fout == NULL)
 				{
 					log(0, true, getSource()->getSourceOrdinal(), TEXT("Cannot open the file \"%s\", error code=0x%.08X\n"), CW2CT(outFileName), GetLastError());
 					m_HasError = true;
 				}
+
+				// Make it use no buffer if used as cyclic buffer
+				if(g_pConfiguration->getDisableWriteBuffering() || m_Size != (__int64)-1)
+					setvbuf(m_fout, NULL, _IONBF, 0);
 			}
 			else
 			{
