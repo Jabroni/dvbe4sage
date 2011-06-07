@@ -51,6 +51,7 @@ class Configuration
 	bool						m_CacheServices;
 	bool						m_TrustKeys;
 	bool						m_GrowlNotification;
+	bool						m_EpgCollection;
 	
 
 	// Growl variables
@@ -129,6 +130,7 @@ public:
 	bool getAutoDiscoverONID() const					{ return m_AutoDiscoverONID; };
 	bool getCacheServices() const						{ return m_CacheServices; };
 	bool getGrowlNotification() const					{ return m_GrowlNotification; };
+	bool getEpgCollection() const						{ return m_EpgCollection; };
 	const string& getGrowlIP() const					{ return m_GrowlIP; };
 	const string& getGrowlPassword() const				{ return m_GrowlPassword; };
 	bool getGrowlNotifyOnNewSID() const					{ return m_GrowlNotifyOnNewSID; };

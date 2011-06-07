@@ -1439,4 +1439,54 @@ typedef struct descr_announcement_support_struct {
 } descr_announcement_support_t;
 #define CastAnnouncementSupportDescriptor(x) ((descr_announcement_support_t *)(x))
 
+/* 0x89 star/MPAA rating descriptor (North America Only) */
+
+#define DESCR_STARMPAA_IDENTIFIER_LEN 4
+typedef struct descr_starmpaa_identifier_struct {
+	unsigned char descriptor_tag                         :8;
+	unsigned char descriptor_length                      :8;
+	unsigned char rating_hi								 :8; 
+	unsigned char rating_lo                              :8; 
+} descr_starmpaa_identifier_t;
+#define CastStarMpaaDescriptor(x) ((descr_starmpaa_identifier_t *)(x))
+
+/* 0x86 Provider ID */
+
+#define DESCR_PROVID_IDENTIFIER_LEN 4
+typedef struct descr_provid_identifier_struct {
+	unsigned char descriptor_tag                         :8;
+	unsigned char descriptor_length                      :8;
+	unsigned char id_hi									 :8; 
+	unsigned char id_lo                                  :8; 
+} descr_provid_identifier_t;
+#define CastProvIdDescriptor(x) ((descr_provid_identifier_t *)(x))
+
+/* 0x95 vchip_descriptor (North America Only) */
+
+#define DESCR_VCHIP_IDENTIFIER_LEN 4
+typedef struct descr_vchip_identifier_struct {
+	unsigned char descriptor_tag                         :8;
+	unsigned char descriptor_length                      :8;
+	unsigned char rating								 :8; 
+	unsigned char advisory                               :8; 
+} descr_vchip_identifier_t;
+#define CastVChipDescriptor(x) ((descr_vchip_identifier_t *)(x))
+
+/* 0x96 series_descriptor (North America Only) */
+
+#define DESCR_SERIES_IDENTIFIER_LEN 4
+typedef struct descr_series_identifier_struct {
+	unsigned char descriptor_tag                         :8;
+	unsigned char descriptor_length                      :8;
+	unsigned char seriesInfo							 :8;
+	unsigned char seriesId_nibble_1                      :8;
+	unsigned char seriesId_nibble_2					     :8; 
+	unsigned char seriesId_nibble_3					     :8; 
+	unsigned char seriesId_nibble_4                      :2; 
+	unsigned char epiosodeNum_hi						 :6; 
+	unsigned char epiosodeNum_lo						 :8; 
+	unsigned char originalAirDate_hi                     :8; 
+	unsigned char originalAirDate_lo                     :8; 
+} descr_series_identifier_t;
+#define CastSeriesDescriptor(x) ((descr_series_identifier_t *)(x))
 

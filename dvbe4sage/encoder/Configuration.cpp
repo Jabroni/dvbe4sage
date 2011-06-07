@@ -57,9 +57,11 @@ Configuration::Configuration()
 	m_IsNorthAmerica = GetPrivateProfileInt(TEXT("General"), TEXT("NorthAmerica"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("NorthAmerica=%u\n"), m_IsNorthAmerica ? 1 : 0);
 
-
 	m_GrowlNotification = GetPrivateProfileInt(TEXT("General"), TEXT("GrowlNotification"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("GrowlNotification=%u\n"), m_GrowlNotification ? 1 : 0);
+
+	m_EpgCollection = GetPrivateProfileInt(TEXT("General"), TEXT("EpgCollection"), 0, iniFileFullPath) == 0 ? false : true;
+	log(0, false, 0, TEXT("EpgCollection=%u\n"), m_EpgCollection ? 1 : 0);
 
 	log(0, false, 0, TEXT("\n"));
 
