@@ -201,6 +201,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\AutoString.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\cards.cxx"
 				>
 				<FileConfiguration
@@ -381,6 +385,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\Decompress.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Decrypter.cpp"
 				>
 			</File>
@@ -443,6 +451,10 @@
 						GenPolymorphic="true"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\EIT.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\encoder.cpp"
@@ -611,6 +623,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\AutoString.h"
+				>
+			</File>
+			<File
 				RelativePath=".\cards.hxx"
 				>
 			</File>
@@ -643,11 +659,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Decompress.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Decrypter.h"
 				>
 			</File>
 			<File
 				RelativePath=".\Diseqc.h"
+				>
+			</File>
+			<File
+				RelativePath=".\DishNetworkHelper.h"
 				>
 			</File>
 			<File
@@ -668,6 +692,10 @@
 			</File>
 			<File
 				RelativePath=".\ECMCache.h"
+				>
+			</File>
+			<File
+				RelativePath=".\EIT.h"
 				>
 			</File>
 			<File

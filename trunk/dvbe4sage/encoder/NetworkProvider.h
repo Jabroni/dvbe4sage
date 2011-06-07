@@ -37,6 +37,7 @@ class NetworkProvider
 {
 	// PSIParser is our friend
 	friend class PSIParser;
+	friend class EIT;
 
 	// This is provide-wide data
 	hash_map<UINT32, Transponder>					m_Transponders;			// ONID&TID to Transponder map

@@ -25,7 +25,6 @@
 
 extern Encoder*	g_pEncoder;
 
-
 // Start dumping the full transponder
 void DVBParser::startTransponderDump()
 {
@@ -424,6 +423,12 @@ void DVBParser::resetParser(bool clearPSIParser)
 	assignParserToPid(0x10, &m_PSIParser);
 	// Pass the internal PSI parser to PID 0x11 (SDT and BAT)
 	assignParserToPid(0x11, &m_PSIParser);
+	// Pass the internal PSI parser to PID 0x12 (Standard EIT)
+	assignParserToPid(0x12, &m_PSIParser);
+	// Pass the internal PSI parser to PID 0x300 (Dish Network 9 day EIT)
+	assignParserToPid(0x300, &m_PSIParser);
+	// Pass the internal PSI parser to PID 0x441 (Bell Express 9 day EIT)
+	assignParserToPid(0x441, &m_PSIParser);
 	// Reset the connected clients flag
 	m_HasConnectedClients = false;
 }
@@ -454,6 +459,27 @@ void DVBParser::dropParser(TSPacketParser* parser)
 		else
 			parsers++;
 	}
+}
+
+PSIParser::PSIParser(DVBParser* const pParent) : 
+		TSPacketParser(pParent),
+		m_CurrentTID(0),
+		m_CurrentONID(0),
+		m_AllowParsing(true),
+		m_PMTCounter(0),
+		m_TimeStamp(0),
+		m_ProviderInfoHasBeenCopied(false),
+		m_AustarDigitalDone(false),
+		m_EIT(NULL)
+{
+	if(g_pConfiguration->getEpgCollection() == true)
+		m_EIT = new EIT(pParent);
+}
+
+PSIParser::~PSIParser()
+{
+	if(m_EIT != NULL)
+		delete m_EIT;
 }
 
 // This routine is called before the beginning of running the PSI parser
@@ -688,6 +714,11 @@ void PSIParser::parseTable(const pat_t* const table,
 				// Or if this is a CAT table
 				else if(table->table_id == (BYTE)'\x01')
 					parseCATTable((const cat_t* const)table, (short)tableLength);	// Parse the CAT table
+				// Or if this is an EIT table
+				else if(((table->table_id >= (BYTE)'\x4E' && table->table_id <= (BYTE)'\x6F') ||  // EPG
+						(table->table_id >= (BYTE)'\x80' && table->table_id <= (BYTE)'\xFE')) &&  // Dish/Bell-Express 9 day EEPG
+						(m_EIT != NULL))
+					m_EIT->parseEITTable((const eit_t* const)table, tableLength);	// Parse the EIT table
 				// Of it is everything else
 				else
 					parseUnknownTable(table, (short)tableLength);					// Parse the unknown table
@@ -1481,8 +1512,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 								if(!m_pParent->getInitialScan() && !encoderNetworkProvider.isChNoExist(channelNumber)) 
 								{
 									g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_NEWCHANNEL, "New Channel Map Discovered", 
-										TEXT("Mapped SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu. Tuner#%hu"),
-									sid, onid, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus,m_pParent->getTunerOrdinal());
+										TEXT("Mapped SID=%hu, ONID=%hu, Bouquet ID=%d, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu. Tuner#%hu"),
+									sid, onid, bouquetID, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus,m_pParent->getTunerOrdinal());
 								}
 	
 								// Unlock network provider and parser
@@ -1492,8 +1523,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 
 
 							// Print log message
-							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Mapped SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
-									sid, onid, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
+							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Mapped SID=%hu, ONID=%hu, Bouquet ID=%d, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+									sid, onid, bouquetID, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
 						}
 					}
 				}
@@ -1585,8 +1616,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 								if(!m_pParent->getInitialScan() && !encoderNetworkProvider.isChNoExist(channelNumber)) 
 								{
 									g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_NEWCHANNEL, "New Channel Map Discovered", 
-										TEXT("Mapped SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu. Tuner#%hu"),
-									sid, onid, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus,m_pParent->getTunerOrdinal());
+										TEXT("Mapped SID=%hu, ONID=%hu, Bouquet ID=%d, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu. Tuner#%hu"),
+									sid, onid, bouquetID, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus,m_pParent->getTunerOrdinal());
 								}
 	
 								// Unlock network provider and parser
@@ -1596,8 +1627,8 @@ void PSIParser::parseBATTable(const nit_t* const table,
 
 
 							// Print log message
-							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Mapped SID=%hu, ONID=%hu, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
-								sid, onid, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
+							log(2, true, m_pParent->getTunerOrdinal(), TEXT("Mapped SID=%hu, ONID=%hu, Bouquet ID=%d, TSID=%hu, Channel=%hu, Name=\"%s\", Type=%hu, Running Status=%hu\n"),
+								sid, onid, bouquetID, myService.tid, (USHORT)channelNumber, myService.serviceNames["eng"].c_str(), (USHORT)myService.serviceType, (USHORT)myService.runningStatus);
 						}
 					}
 				}

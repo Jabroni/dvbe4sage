@@ -289,9 +289,17 @@ bool NetworkProvider::dumpNetworkProvider(LPTSTR reason) const
 	//DeleteFile("satelliteInfo.cache");
 	//DeleteFile("services.cache");
 
-	ofstream t("transponders.cache",ios_base::trunc);
-	ofstream sat("satelliteInfo.cache",ios_base::trunc);
-	ofstream s("services.cache",ios_base::trunc);
+	TCHAR szPath[MAX_PATH];
+	GetModuleFileName(NULL, szPath, MAX_PATH);
+	string fullPath = szPath;
+	string path = fullPath.substr(0, fullPath.find_last_of('\\') + 1);
+	string servicesFilename = path + "services.cache";
+	string transpondersFilename = path + "transponders.cache";
+	string satelliteInfoFilename = path + "satelliteInfo.cache";
+
+	ofstream t(transpondersFilename.c_str(),ios_base::trunc);
+	ofstream sat(satelliteInfoFilename.c_str(),ios_base::trunc);
+	ofstream s(servicesFilename.c_str(),ios_base::trunc);
 
 	int counter = 0;
 	// We start generating the transponders.cache

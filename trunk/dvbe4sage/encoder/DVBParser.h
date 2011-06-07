@@ -5,7 +5,7 @@
 #include "pluginshandler.h"
 #include "configuration.h"
 #include "NetworkProvider.h"
-
+#include "EIT.h"
 
 #define MAX_PSI_SECTION_LENGTH	4096
 
@@ -129,23 +129,18 @@ private:
 
 	bool											m_AustarDigitalDone;			// True after Austar Digital has been scanned
 
+	EIT*											m_EIT;							// Guide data handler object
+
 	// Disallow default and copy constructors
 	PSIParser();
 	PSIParser(const PSIParser&);
 
 public:
 	// Constructor
-	PSIParser(DVBParser* const pParent) : 
-		TSPacketParser(pParent),
-		m_CurrentTID(0),
-		m_CurrentONID(0),
-		m_AllowParsing(true),
-		m_PMTCounter(0),
-		m_TimeStamp(0),
-		m_ProviderInfoHasBeenCopied(false),
-		m_AustarDigitalDone(false)
-	{
-	}
+	PSIParser(DVBParser* const pParent);
+
+	// Destructor
+	virtual ~PSIParser();
 
 	// Query methods
 	const NetworkProvider& getNetworkProvider() const							{ return m_Provider; }
