@@ -171,14 +171,10 @@ void EIT::RealEitCollectionCallback()
 		// Loop for all configured providers
 		for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
 		{
-			// Create the file (not sure why, but Sage does it so we have to)
-			FILE *fp;
-			if(fopen_s(&fp, tempFile, "w") != 0)
-				fclose(fp);
 
 			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
 			// Send socket command make to us tune and lock the tuner
-			sprintf_s(command, sizeof(command), "START dummy|0|%d|0|%s|Fair\r\n", eIter->chan, tempFile);
+			sprintf_s(command, sizeof(command), "STARTEPG dummy|0|%d|%d|%s|Fair\r\n", eIter->chan, tempFile, m_CollectionDurationMinutes * 60);
 			if(SendSocketCommand(command) == false)
 				continue;
 				
