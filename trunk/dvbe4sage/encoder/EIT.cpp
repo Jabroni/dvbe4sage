@@ -87,9 +87,7 @@ void EIT::ParseIniFile(void)
 			struct eitRecord newrec;
 			newrec.ONID = atoi(sections[i].c_str());
 			newrec.lineup = CIniFile::GetValue("Lineup", sections[i], fileName);	
-			newrec.tuner = CIniFile::GetValue("Tuner", sections[i], fileName);
 			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
-//			newrec.useLongChennelName = (atoi(CIniFile::GetValue("UseLongChannelName", sections[i], fileName).c_str()) == 1) ? true : false;
 
 			newrec.includedSIDs.clear();
 			buffer = CIniFile::GetValue("IncludedSIDs", sections[i], fileName);
@@ -105,9 +103,7 @@ void EIT::ParseIniFile(void)
 
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
 			log(0, false, 0, TEXT("Lineup = %s\n"), newrec.lineup.c_str());
-			log(0, false, 0, TEXT("Tuner = %s\n"), newrec.tuner.c_str());
 			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
-//			log(0, false, 0, TEXT("UseLongChannelName=%u\n"), newrec.useLongChennelName ? 1 : 0);
 
 			log(0, false, 0, TEXT("IncludedSIDs="));
 			for(hash_set<USHORT>::const_iterator it = newrec.includedSIDs.begin(); it != newrec.includedSIDs.end();)
@@ -175,10 +171,14 @@ void EIT::RealEitCollectionCallback()
 		// Loop for all configured providers
 		for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
 		{
+			// Create the file (not sure why, but Sage does it so we have to)
+			FILE *fp;
+			if(fopen_s(&fp, tempFile, "w") != 0)
+				fclose(fp);
+
 			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
 			// Send socket command make to us tune and lock the tuner
-			sprintf_s(command, sizeof(command), "START %s|0|%d|0|%s|Fair\r\n",  eIter->tuner.c_str(), eIter->chan, tempFile);
-		//	sprintf_s(command, sizeof(command), "BUFFER %s|0|%d|%d|%s\r\n",  eIter->tuner.c_str(), eIter->chan, 999, tempFile);
+			sprintf_s(command, sizeof(command), "START dummy|0|%d|0|%s|Fair\r\n", eIter->chan, tempFile);
 			if(SendSocketCommand(command) == false)
 				continue;
 				
@@ -197,9 +197,12 @@ void EIT::RealEitCollectionCallback()
 				Sleep(5000);
 				if(m_EitCollectionThreadCanEnd == true)
 				{
+					SendSocketCommand("STOP dummy\r\n");
 					lock();
 					m_CollectEIT = false;
 					unlock();
+					Sleep(2000);
+					DeleteFile(tempFile);
 					return;
 				}
 
@@ -220,8 +223,9 @@ void EIT::RealEitCollectionCallback()
 
 			// Send socket command make to stop the recording and release the tuner
 			// "STOP SageTV DVB-S2 Enhancer 1 Digital TV Tuner"
-			sprintf_s(command, sizeof(command), "STOP %s\r\n", eIter->tuner.c_str());
-			SendSocketCommand(command);
+			SendSocketCommand("STOP dummy\r\n");
+
+			Sleep(2000);
 
 			// Clean up after ourselves
 			DeleteFile(tempFile);
@@ -1671,7 +1675,6 @@ struct eitRecord EIT::GetEitRecord(int onid)
 			found = true;
 			ret.ONID = iter->ONID;
 			ret.lineup = iter->lineup;
-			ret.tuner = iter->tuner;
 			ret.chan = iter->chan;
 //			ret.useLongChennelName = iter->useLongChennelName;
 

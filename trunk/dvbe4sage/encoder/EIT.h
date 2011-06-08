@@ -20,9 +20,7 @@ struct eitRecord
 {
 	int ONID;
 	string lineup;
-	string tuner;
 	ULONG chan;
-//	bool useLongChennelName;
 	hash_set<USHORT> includedSIDs;
 };
 
