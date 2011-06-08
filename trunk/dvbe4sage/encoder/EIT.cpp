@@ -174,7 +174,7 @@ void EIT::RealEitCollectionCallback()
 
 			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
 			// Send socket command make to us tune and lock the tuner
-			sprintf_s(command, sizeof(command), "STARTEPG dummy|0|%d|%d|%s|Fair\r\n", eIter->chan, tempFile, m_CollectionDurationMinutes * 60);
+			sprintf_s(command, sizeof(command), "START ***EITGATHERING***|0|%d|%d|%s|Fair\r\n", eIter->chan, (m_CollectionDurationMinutes + 10) * 60, tempFile);
 			if(SendSocketCommand(command) == false)
 				continue;
 				
@@ -219,7 +219,7 @@ void EIT::RealEitCollectionCallback()
 
 			// Send socket command make to stop the recording and release the tuner
 			// "STOP SageTV DVB-S2 Enhancer 1 Digital TV Tuner"
-			SendSocketCommand("STOP dummy\r\n");
+			SendSocketCommand("STOP ***EITGATHERING***\r\n");
 
 			Sleep(2000);
 
@@ -271,156 +271,159 @@ void EIT::dumpXmltvFile(int onid)
 	TCHAR channelName[256];
 	FILE* outFile = NULL;
 
-	NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
-
-	eitRecord eitRec = GetEitRecord(onid);
-
-	string fileName = m_SaveXmltvFileLocation + "\\" + eitRec.lineup + ".xml";
-
-	log(3, true, 0, TEXT("EIT is attempting to dump XMLTV data to %s.\n"), fileName.c_str());
-	
-	_tfopen_s(&outFile, fileName.c_str(), TEXT("wt"));
-	if(outFile != NULL)
+	try
 	{
-		// Standard header
-		_ftprintf(outFile, TEXT("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));
-		_ftprintf(outFile, TEXT("<!DOCTYPE tv SYSTEM \"xmltv.dtd\">\n"));
-		_ftprintf(outFile, TEXT("<tv source-info-name=\"%s\" generator-info-name=\"DVBE4SAGE\" generator-info-url=\"http://code.google.com/p/dvbe4sage/\">\n"), eitRec.lineup);
+		NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
 
-		// Loop through the services and create all the channel records
-		for(hash_map<UINT32, Service>::const_iterator it = encoderNetworkProvider.m_Services.begin(); it != encoderNetworkProvider.m_Services.end(); it++)
+		eitRecord eitRec = GetEitRecord(onid);
+
+		string fileName = m_SaveXmltvFileLocation + "\\" + eitRec.lineup + ".xml";
+
+		log(3, true, 0, TEXT("EIT is attempting to dump XMLTV data to %s.\n"), fileName.c_str());
+		
+		if(_tfopen_s(&outFile, fileName.c_str(), TEXT("wt")) == 0)
 		{
-			hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find(it->second.sid); 
-			if(onid == it->second.onid && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+			// Standard header
+			_ftprintf(outFile, TEXT("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));
+			_ftprintf(outFile, TEXT("<!DOCTYPE tv SYSTEM \"xmltv.dtd\">\n"));
+			_ftprintf(outFile, TEXT("<tv source-info-name=\"%s\" generator-info-name=\"DVBE4SAGE\" generator-info-url=\"http://code.google.com/p/dvbe4sage/\">\n"), eitRec.lineup);
+
+			// Loop through the services and create all the channel records
+			for(hash_map<UINT32, Service>::const_iterator it = encoderNetworkProvider.m_Services.begin(); it != encoderNetworkProvider.m_Services.end(); it++)
 			{
-				// Get the channel name and the mapped number 
-				channelName[0] = TCHAR('\0');
-				const UINT32 usid = NetworkProvider::getUniqueSID(it->second.onid, it->second.sid);
-				int chanNo = (encoderNetworkProvider.isServiceExist(usid) == false) ? it->second.sid : it->second.channelNumber;
-				encoderNetworkProvider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
+				hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find(it->second.sid); 
+				if(onid == it->second.onid && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+				{
+					// Get the channel name and the mapped number 
+					channelName[0] = TCHAR('\0');
+					const UINT32 usid = NetworkProvider::getUniqueSID(it->second.onid, it->second.sid);
+					int chanNo = (encoderNetworkProvider.isServiceExist(usid) == false) ? it->second.sid : it->second.channelNumber;
+					encoderNetworkProvider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
-				_ftprintf(outFile, TEXT("\t<channel id=\"I%d.%d.DVBE4SAGE\">\n"), it->second.sid, it->second.onid);
-				_ftprintf(outFile, TEXT("\t\t<display-name>%d %s</display-name>\n"), chanNo, channelName);
-				_ftprintf(outFile, TEXT("\t\t<display-name>%d</display-name>\n"), chanNo);
-				_ftprintf(outFile, TEXT("\t\t<display-name>%s</display-name>\n"), channelName);
+					_ftprintf(outFile, TEXT("\t<channel id=\"I%d.%d.DVBE4SAGE\">\n"), it->second.sid, it->second.onid);
+					_ftprintf(outFile, TEXT("\t\t<display-name>%d %s</display-name>\n"), chanNo, channelName);
+					_ftprintf(outFile, TEXT("\t\t<display-name>%d</display-name>\n"), chanNo);
+					_ftprintf(outFile, TEXT("\t\t<display-name>%s</display-name>\n"), channelName);
 
-				_ftprintf(outFile, TEXT("\t</channel>\n"));
+					_ftprintf(outFile, TEXT("\t</channel>\n"));
+				}
 			}
-		}
 
-		// Loop through the EIT data and create all of the programme records
-		for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
-		{
-			hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
-			if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+			// Loop through the EIT data and create all of the programme records
+			for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 			{
-				EPGLanguage lang = GetDescriptionRecord(it->second);
-
-				_ftprintf(outFile, TEXT("\t<programme start=\"%s\" stop=\"%s\" channel=\"I%d.%d.DVBE4SAGE\">\n"), it->second.startDateTime.c_str(), it->second.stopDateTime.c_str(), it->second.SID, it->second.ONID);
-
-				lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
-				_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), lang.shortDescription.c_str());
-
-				lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
-				lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
-				_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
-
-				if(it->second.category.empty() == false)
-					_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.category.c_str());
-
-				if(it->second.dishCategory1.empty() == false)
-					_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.dishCategory1.c_str());
-
-				if(it->second.dishCategory2.empty() == false)
-					_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.dishCategory2.c_str());
-
-				if(it->second.seriesID.empty() == false)
-					_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), it->second.seriesID.c_str());
-
-				if(it->second.year != 0)
-					_ftprintf(outFile, TEXT("\t\t<date>%d</date>\n"), it->second.year);
-
-				if(it->second.stereo == true)
+				hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
+				if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
 				{
-					_ftprintf(outFile, TEXT("\t\t<audio>\n"));
-					_ftprintf(outFile, TEXT("\t\t\t<stereo>stereo</stereo>\n"));
-					_ftprintf(outFile, TEXT("\t\t</audio>\n"));
+					EPGLanguage lang = GetDescriptionRecord(it->second);
+
+					_ftprintf(outFile, TEXT("\t<programme start=\"%s\" stop=\"%s\" channel=\"I%d.%d.DVBE4SAGE\">\n"), it->second.startDateTime.c_str(), it->second.stopDateTime.c_str(), it->second.SID, it->second.ONID);
+
+					lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
+					_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), lang.shortDescription.c_str());
+
+					lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
+					lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
+					_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
+
+					if(it->second.category.empty() == false)
+						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.category.c_str());
+
+					if(it->second.dishCategory1.empty() == false)
+						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.dishCategory1.c_str());
+
+					if(it->second.dishCategory2.empty() == false)
+						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.dishCategory2.c_str());
+
+					if(it->second.seriesID.empty() == false)
+						_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), it->second.seriesID.c_str());
+
+					if(it->second.year != 0)
+						_ftprintf(outFile, TEXT("\t\t<date>%d</date>\n"), it->second.year);
+
+					if(it->second.stereo == true)
+					{
+						_ftprintf(outFile, TEXT("\t\t<audio>\n"));
+						_ftprintf(outFile, TEXT("\t\t\t<stereo>stereo</stereo>\n"));
+						_ftprintf(outFile, TEXT("\t\t</audio>\n"));
+					}
+
+					if(it->second.aspect != 0)
+					{
+						_ftprintf(outFile, TEXT("\t\t<video>\n"));
+						_ftprintf(outFile, TEXT("\t\t\t<aspect>%s</aspect>\n"), getAspect(it->second.aspect).c_str());
+						_ftprintf(outFile, TEXT("\t\t\t<quality>%s</quality>\n"), getQuality(it->second.aspect).c_str());
+						_ftprintf(outFile, TEXT("\t\t</video>\n"));
+					}
+
+					if(it->second.CC == true)
+						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"closed caption\"/>\n"));
+
+					if(it->second.teletext == true)
+						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"teletext\"/>\n"));
+
+					if(it->second.onscreen == true)
+						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"on screen\"/>\n"));
+
+					if(it->second.vchipRating.empty() == false)
+					{
+						_ftprintf(outFile, TEXT("\t\t<rating system=\"VCHIP\">\n"));
+						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.vchipRating.c_str());
+						_ftprintf(outFile, TEXT("\t\t</rating>\n"));
+					}
+
+					if(it->second.vchipAdvisory != 0)
+					{
+						if(it->second.vchipAdvisory & 0x01) dumpXmltvAdvisory(outFile, "Fantasy Violence");
+						if(it->second.vchipAdvisory & 0x02) dumpXmltvAdvisory(outFile, "Violence");
+						if(it->second.vchipAdvisory & 0x04) dumpXmltvAdvisory(outFile, "Sexual Situations");
+						if(it->second.vchipAdvisory & 0x08) dumpXmltvAdvisory(outFile, "Crude Language");
+						if(it->second.vchipAdvisory & 0x10) dumpXmltvAdvisory(outFile, "Suggestive Dialog");
+					}
+
+					if(it->second.mpaaRating.empty() == false)
+					{
+						_ftprintf(outFile, TEXT("\t\t<rating system=\"MPAA\">\n"));
+						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.mpaaRating.c_str());
+						_ftprintf(outFile, TEXT("\t\t</rating>\n"));
+					}
+
+					if(it->second.mpaaAdvisory != 0)
+					{
+						if(it->second.mpaaAdvisory & 0x01) dumpXmltvAdvisory(outFile, "Sexual Content");
+						if(it->second.mpaaAdvisory & 0x02) dumpXmltvAdvisory(outFile, "Language");
+						if(it->second.mpaaAdvisory & 0x04) dumpXmltvAdvisory(outFile, "Mild Sensuality");
+						if(it->second.mpaaAdvisory & 0x08) dumpXmltvAdvisory(outFile, "Fantasy Violence");
+						if(it->second.mpaaAdvisory & 0x10) dumpXmltvAdvisory(outFile, "Violence");
+						if(it->second.mpaaAdvisory & 0x20) dumpXmltvAdvisory(outFile, "Mild Peril");
+						if(it->second.mpaaAdvisory & 0x40) dumpXmltvAdvisory(outFile, "Nudity");
+					}
+
+					if(it->second.starRating.empty() == false)
+					{
+						_ftprintf(outFile, TEXT("\t\t<star-rating>\n"));
+						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.starRating.c_str());
+						_ftprintf(outFile, TEXT("\t\t</star-rating>\n"));
+					}
+
+					if(it->second.parentalRating != 0)
+					{
+						_ftprintf(outFile, TEXT("\t\t<rating>\n"));
+						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), getParentalRating(it->second.parentalRating).c_str());
+						_ftprintf(outFile, TEXT("\t\t</rating>\n"));
+					}
+
+					_ftprintf(outFile, TEXT("</programme>\n"));
 				}
-
-				if(it->second.aspect != 0)
-				{
-					_ftprintf(outFile, TEXT("\t\t<video>\n"));
-					_ftprintf(outFile, TEXT("\t\t\t<aspect>%s</aspect>\n"), getAspect(it->second.aspect).c_str());
-					_ftprintf(outFile, TEXT("\t\t\t<quality>%s</quality>\n"), getQuality(it->second.aspect).c_str());
-					_ftprintf(outFile, TEXT("\t\t</video>\n"));
-				}
-
-				if(it->second.CC == true)
-					_ftprintf(outFile, TEXT("\t\t<subtitles type=\"closed caption\"/>\n"));
-
-				if(it->second.teletext == true)
-					_ftprintf(outFile, TEXT("\t\t<subtitles type=\"teletext\"/>\n"));
-
-				if(it->second.onscreen == true)
-					_ftprintf(outFile, TEXT("\t\t<subtitles type=\"on screen\"/>\n"));
-
-				if(it->second.vchipRating.empty() == false)
-				{
-					_ftprintf(outFile, TEXT("\t\t<rating system=\"VCHIP\">\n"));
-					_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.vchipRating.c_str());
-					_ftprintf(outFile, TEXT("\t\t</rating>\n"));
-				}
-
-				if(it->second.vchipAdvisory != 0)
-				{
-					if(it->second.vchipAdvisory & 0x01) dumpXmltvAdvisory(outFile, "Fantasy Violence");
-					if(it->second.vchipAdvisory & 0x02) dumpXmltvAdvisory(outFile, "Violence");
-					if(it->second.vchipAdvisory & 0x04) dumpXmltvAdvisory(outFile, "Sexual Situations");
-					if(it->second.vchipAdvisory & 0x08) dumpXmltvAdvisory(outFile, "Crude Language");
-					if(it->second.vchipAdvisory & 0x10) dumpXmltvAdvisory(outFile, "Suggestive Dialog");
-				}
-
-				if(it->second.mpaaRating.empty() == false)
-				{
-					_ftprintf(outFile, TEXT("\t\t<rating system=\"MPAA\">\n"));
-					_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.mpaaRating.c_str());
-					_ftprintf(outFile, TEXT("\t\t</rating>\n"));
-				}
-
-				if(it->second.mpaaAdvisory != 0)
-				{
-					if(it->second.mpaaAdvisory & 0x01) dumpXmltvAdvisory(outFile, "Sexual Content");
-					if(it->second.mpaaAdvisory & 0x02) dumpXmltvAdvisory(outFile, "Language");
-					if(it->second.mpaaAdvisory & 0x04) dumpXmltvAdvisory(outFile, "Mild Sensuality");
-					if(it->second.mpaaAdvisory & 0x08) dumpXmltvAdvisory(outFile, "Fantasy Violence");
-					if(it->second.mpaaAdvisory & 0x10) dumpXmltvAdvisory(outFile, "Violence");
-					if(it->second.mpaaAdvisory & 0x20) dumpXmltvAdvisory(outFile, "Mild Peril");
-					if(it->second.mpaaAdvisory & 0x40) dumpXmltvAdvisory(outFile, "Nudity");
-				}
-
-				if(it->second.starRating.empty() == false)
-				{
-					_ftprintf(outFile, TEXT("\t\t<star-rating>\n"));
-					_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.starRating.c_str());
-					_ftprintf(outFile, TEXT("\t\t</star-rating>\n"));
-				}
-
-				if(it->second.parentalRating != 0)
-				{
-					_ftprintf(outFile, TEXT("\t\t<rating>\n"));
-					_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), getParentalRating(it->second.parentalRating).c_str());
-					_ftprintf(outFile, TEXT("\t\t</rating>\n"));
-				}
-
-				_ftprintf(outFile, TEXT("</programme>\n"));
 			}
+
+			_ftprintf(outFile, TEXT("</tv>\n"));
+			fclose(outFile);
+
+			log(3, true, 0, TEXT("EIT dump of XMLTV data to %s is complete.\n"), fileName.c_str());
 		}
-
-		_ftprintf(outFile, TEXT("</tv>\n"));
-		fclose(outFile);
-
-		log(3, true, 0, TEXT("EIT dump of XMLTV data to %s is complete.\n"), fileName.c_str());
 	}
+	catch (...) {}
 }
 
 void EIT::dumpXmltvAdvisory(FILE* outFile, string value)
