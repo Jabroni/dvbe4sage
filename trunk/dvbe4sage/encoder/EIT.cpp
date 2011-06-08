@@ -292,7 +292,8 @@ void EIT::dumpXmltvFile(int onid)
 			for(hash_map<UINT32, Service>::const_iterator it = encoderNetworkProvider.m_Services.begin(); it != encoderNetworkProvider.m_Services.end(); it++)
 			{
 				hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find(it->second.sid); 
-				if(onid == it->second.onid && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+			//	if(onid == it->second.onid && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+				if(eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end())
 				{
 					// Get the channel name and the mapped number 
 					channelName[0] = TCHAR('\0');
@@ -313,7 +314,8 @@ void EIT::dumpXmltvFile(int onid)
 			for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 			{
 				hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
-				if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+			//	if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+				if(eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end())
 				{
 					EPGLanguage lang = GetDescriptionRecord(it->second);
 
