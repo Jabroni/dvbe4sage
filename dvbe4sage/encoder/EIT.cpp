@@ -178,6 +178,7 @@ void EIT::RealEitCollectionCallback()
 			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
 			// Send socket command make to us tune and lock the tuner
 			sprintf_s(command, sizeof(command), "START %s|0|%d|0|%s|Fair\r\n",  eIter->tuner.c_str(), eIter->chan, tempFile);
+		//	sprintf_s(command, sizeof(command), "BUFFER %s|0|%d|%d|%s\r\n",  eIter->tuner.c_str(), eIter->chan, 999, tempFile);
 			if(SendSocketCommand(command) == false)
 				continue;
 				
@@ -186,6 +187,9 @@ void EIT::RealEitCollectionCallback()
 			m_EITevents.clear();
 			m_CollectEIT = true;
 			unlock();
+
+			time(&now);
+			time(&m_Time);
 
 			// Allow for collection of the data
 			while(difftime(now, m_Time) < (m_CollectionDurationMinutes * 60))
@@ -198,16 +202,13 @@ void EIT::RealEitCollectionCallback()
 					unlock();
 					return;
 				}
+
+				time(&now);
 			}
 
 			lock();
 			m_CollectEIT = false;
 			unlock();
-
-			// Send socket command make to stop the recording and release the tuner
-			// "STOP SageTV DVB-S2 Enhancer 1 Digital TV Tuner"
-			sprintf_s(command, sizeof(command), "STOP %s\r\n", eIter->tuner.c_str());
-			SendSocketCommand(command);
 
 			// Dump data to xmltv file if configured to do so
 			if(m_SaveXmltvFileLocation.length() > 0)
@@ -216,6 +217,11 @@ void EIT::RealEitCollectionCallback()
 			// Send data to SageTV server if configured to do so
 			if(m_SageEitIP.length() > 0)
 				sendToSage(eIter->ONID);
+
+			// Send socket command make to stop the recording and release the tuner
+			// "STOP SageTV DVB-S2 Enhancer 1 Digital TV Tuner"
+			sprintf_s(command, sizeof(command), "STOP %s\r\n", eIter->tuner.c_str());
+			SendSocketCommand(command);
 
 			// Clean up after ourselves
 			DeleteFile(tempFile);
