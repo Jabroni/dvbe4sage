@@ -213,51 +213,14 @@ void Encoder::socketOperation(SOCKET socket,
 						log(0, true, 0, TEXT("Received START command to start recording on source \"%S\", channel=%d, duration=%I64d, file=\"%S\"\n"),
 							source.c_str(), channelInt, durationInt, fileName.c_str());
 
+						// This source name indicates that this is being requested internally for EIT operations, not by sage
+						bool bySage = (source.compare(CT2CW("***EITGATHERING***")) == 0) ? false : true;
+
 						// Start the recording itself
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, true, false);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, bySage, false);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
-					}
-					else if(command == L"STARTEPG") {
-						// For now we just do something similar to START command, this should be changed to something more optimal (ie not require to tune in to a SID)
-
-						// First we've got the source
-						int sourceEndPos = fullCommand.find(L'|');
-						wstring source(fullCommandUTF16 + 6, sourceEndPos - 6);
-
-						// Then a security key (added in version 3.0, we ignore it for now)
-						int keyEndPos = fullCommand.find(L'|', sourceEndPos + 1);
-
-						// Then the channel number
-						int channelEndPos = fullCommand.find(L'|', keyEndPos + 1);
-						wstring channel(fullCommandUTF16 + keyEndPos + 1, channelEndPos - keyEndPos - 1);
-						int channelInt = _wtoi(channel.c_str());
-
-						// Then the duration of the recording (usually meaningless)
-						int durationEndPos = fullCommand.find(L'|', channelEndPos + 1);
-						wstring duration(fullCommandUTF16 + channelEndPos + 1, durationEndPos - channelEndPos - 1);
-						__int64 durationInt = _wtoi64(duration.c_str()) / 1000;
-
-						// Last is the file name for recording (can use UNICODE characters
-						int fileNameEndPos = fullCommand.find(L'|', durationEndPos + 1);
-						wstring fileName(fullCommandUTF16 + durationEndPos + 1, fileNameEndPos - durationEndPos - 1);
-
-						if(g_pConfiguration->getGrowlNotification() && g_pConfiguration->getGrowlNotifyOnTune()) 
-							g_pGrowlHandler->SendNotificationMessage(NOTIFICATION_ONTUNE, "Start EPG Recording Event", 
-								TEXT("Received STARTEPG command to start recording on source \"%S\", channel=%d, duration=%I64d, file=\"%S\""),
-								source.c_str(), channelInt, durationInt, fileName.c_str());
-
-						// Log the command with all its parameters
-						log(0, true, 0, TEXT("Received STARTEPG command to start recording on source \"%S\", channel=%d, duration=%I64d, file=\"%S\"\n"),
-							source.c_str(), channelInt, durationInt, fileName.c_str());
-
-						// Start the recording itself
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, false, false);
-
-						// Report OK code to the client
-						send(socket, "OK\r\n", 4, 0);
-
 					}
 					else if(command == L"STOP")
 					{
