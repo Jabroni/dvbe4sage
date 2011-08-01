@@ -130,6 +130,7 @@ private:
 	bool											m_AustarDigitalDone;			// True after Austar Digital has been scanned
 
 	EIT*											m_EIT;							// Guide data handler object
+	DVBParser*										m_pParent;
 
 	// Disallow default and copy constructors
 	PSIParser();
@@ -380,10 +381,13 @@ private:
 
 	bool	m_isInitialScan;				// True if parser is running the initial scan
 
+	// True if this is currently being used for EIT data collection
+	bool m_forEIT;
+
 public:
 	// The only available constructor
 	DVBParser(UINT ordinal) :	
-	  m_PSIParser(this),	m_HasConnectedClients(false), m_LeftoverLength(0), m_TunerOrdinal(ordinal),	m_FullTransponderFile(NULL) {}
+	  m_PSIParser(this),	m_HasConnectedClients(false), m_LeftoverLength(0), m_TunerOrdinal(ordinal),	m_FullTransponderFile(NULL), m_forEIT(false) {}
 	
 	// Destructor
 	virtual ~DVBParser()															{ stopTransponderDump(); }
@@ -417,6 +421,8 @@ public:
 	USHORT getCurrentTID() const													{ return m_PSIParser.getCurrentTID(); }
 	USHORT getCurrentONID() const													{ return m_PSIParser.getCurrentONID(); }
 	BYTE getTypeForPid(USHORT pid) const											{ return m_PSIParser.getTypeForPid(pid); }
+	bool getForEIT() const															{ return m_forEIT; }
+	void setForEIT(bool value)														{ m_forEIT = value; }
 
 	// Setter for the internal parser "HasBeenCopied" flag
 	void setProviderInfoHasBeenCopied()												{ m_PSIParser.setProviderInfoHasBeenCopied(); }

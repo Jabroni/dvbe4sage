@@ -470,10 +470,9 @@ PSIParser::PSIParser(DVBParser* const pParent) :
 		m_TimeStamp(0),
 		m_ProviderInfoHasBeenCopied(false),
 		m_AustarDigitalDone(false),
-		m_EIT(NULL)
+		m_EIT(NULL),
+		m_pParent(pParent)
 {
-	if(g_pConfiguration->getEpgCollection() == true)
-		m_EIT = new EIT(pParent);
 }
 
 PSIParser::~PSIParser()
@@ -512,6 +511,13 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 	// If the packet contains only the adaptaion field, just skip it
 	if(packet->adaptation_field_control == 2)
 		return;
+
+	// Create the EIT parsing object if we need to	
+	if(g_pConfiguration->getEpgCollection() == true)
+	{
+		if(m_pParent->getForEIT() == true && m_EIT == NULL)
+			m_EIT = new EIT(m_pParent);
+	}
 
 	// Offset of the data, 0 unless the packet has adaptation field
 	USHORT offset = 0;

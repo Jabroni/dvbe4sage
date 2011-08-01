@@ -36,7 +36,8 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 extern "C" ENCODER_API bool startRecordingFromFile(LPCWSTR inFileName,
 												   int sid,
 												   __int64 duration,
-												   LPCWSTR outFileName);
+												   LPCWSTR outFileName,
+												   bool forEIT);
 extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName, LPTSTR reason);
 extern "C" ENCODER_API bool loadECMCache(LPCTSTR fileName, LPTSTR reason);
 

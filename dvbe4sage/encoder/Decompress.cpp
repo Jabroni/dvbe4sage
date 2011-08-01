@@ -14,10 +14,9 @@ void CDecompress::GetString468A(BYTE *b, int maxLen,char *text)
 	int i = 0;
 	int num=0;
 	unsigned char c;
-#pragma warning(disable:4310)
 	char em_ON = (char)0x86;
 	char em_OFF = (char)0x87;
-#pragma warning(default:4310)
+
 	bool threeByteEncoding = false; 
 
   if (maxLen< 1) return;

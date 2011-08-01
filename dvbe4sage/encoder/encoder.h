@@ -53,6 +53,7 @@ public:
 						VirtualTuner* virtualTuner,
 						__int64 size,
 						bool bySage,
+						bool forEIT,
 						bool startFullTransponderDump);
 	bool stopRecording(Recorder* recorder);
 	bool dumpECMCache(LPCTSTR fileName, LPTSTR reason) const;
@@ -72,5 +73,6 @@ public:
 	bool startRecordingFromFile(LPCWSTR inFileName,
 								int sid,
 								__int64 duration,
-								LPCWSTR outFileName);
+								LPCWSTR outFileName,
+								bool forEIT);
 };
