@@ -129,7 +129,8 @@ Recorder::Recorder(PluginsHandler* const plugins,
 				   const __int64 duration,
 				   Encoder* pEncoder,
 				   const __int64 size,
-				   bool bySage) :
+				   bool bySage,
+				   bool forEIT) :
 	m_pPluginsHandler(plugins),
 	m_pSource(source),
 	m_fout(NULL),
@@ -150,7 +151,8 @@ Recorder::Recorder(PluginsHandler* const plugins,
 	m_StartRecordingThread(NULL),
 	m_StopRecordingThread(NULL),
 	m_StopRecordingThreadId(0),
-	m_StartRecordingThreadId(0)
+	m_StartRecordingThreadId(0),
+	m_ForEIT(forEIT)
 {
 	// If the source is not OK, boil out first
 	if(!source->isSourceOK())

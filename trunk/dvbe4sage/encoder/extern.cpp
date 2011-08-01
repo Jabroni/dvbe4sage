@@ -6,9 +6,12 @@
 #include "extern.h"
 #include "SatelliteInfo.h"
 #include "GrowlHandler.h"
+#include "EIT.h"
 
 // This it the global encoder object
 Encoder*	g_pEncoder = NULL;
+
+EITtimer* g_pEITtimer = NULL;
 
 extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance,
 										  HWND hWnd,
@@ -20,13 +23,18 @@ extern "C" ENCODER_API void createEncoder(HINSTANCE hInstance,
 	g_pSatelliteInfo = new SatelliteInfo;
 	if(g_pConfiguration->getGrowlNotification())
 		g_pGrowlHandler = new GrowlHandler;
+	if(g_pConfiguration->getEpgCollection() == true)
+		g_pEITtimer = new EITtimer();
 }
 
 extern "C" ENCODER_API void deleteEncoder()
 {
 	delete g_pEncoder;
 	delete g_pLogger;
-	delete g_pGrowlHandler;
+	if(g_pGrowlHandler != NULL)
+		delete g_pGrowlHandler;
+	if(g_pEITtimer != NULL)
+		delete g_pEITtimer;
 }
 
 extern "C" ENCODER_API LRESULT encoderWindowProc(UINT message,
@@ -92,15 +100,16 @@ extern "C" ENCODER_API bool startRecording(bool autodiscoverTransponder,
 										   bool startFullTransponderDump)
 {
 	return g_pEncoder != NULL ? g_pEncoder->startRecording(autodiscoverTransponder, frequency, symbolRate, polarization, modulation, fecRate,
-		tunerOrdinal, false, channel, useSid, duration, outFileName, NULL, size, false, startFullTransponderDump) : false;
+		tunerOrdinal, false, channel, useSid, duration, outFileName, NULL, size, false, false, startFullTransponderDump) : false;
 }
 
 extern "C" ENCODER_API bool startRecordingFromFile(LPCWSTR inFileName,
 												   int sid,
 												   __int64 duration,
-												   LPCWSTR outFileName)
+												   LPCWSTR outFileName,
+												   bool forEIT)
 {
-	return g_pEncoder != NULL ? g_pEncoder->startRecordingFromFile(inFileName, sid, duration, outFileName) : false;
+	return g_pEncoder != NULL ? g_pEncoder->startRecordingFromFile(inFileName, sid, duration, outFileName, forEIT) : false;
 }
 
 extern "C" ENCODER_API bool dumpECMCache(LPCTSTR fileName,

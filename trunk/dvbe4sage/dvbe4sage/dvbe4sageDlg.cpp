@@ -203,7 +203,8 @@ void CDVBE4SageDlg::OnOperationsStartrecording()
 			startRecordingFromFile(CT2CW(newRecording.m_InputFileName),
 								   (_ttoi(newRecording.m_RecordingNetworkNumber) << 16) +_ttoi(newRecording.m_RecordingChannelNumber),
 								   _ttoi64(newRecording.m_RecordingDuration),
-								   CT2CW(newRecording.m_OutputFileName));
+								   CT2CW(newRecording.m_OutputFileName),
+								   false);
 								   
 }
 

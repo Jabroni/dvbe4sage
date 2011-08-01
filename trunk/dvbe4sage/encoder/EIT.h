@@ -68,6 +68,36 @@ struct EITEvent
 	typedef vector<EPGLanguage>::iterator ivecLanguages;
 };
 
+
+class EITtimer
+{
+public:
+	EITtimer();
+	~EITtimer(void);
+
+	// Stop collecting EIT data
+	void stopCollectingEIT();
+
+	void RealEitCollectionCallback();
+	void StartEitMonitoring();
+
+private:
+	time_t	m_Time;
+	HANDLE	m_EitTimerThread;
+	DWORD	m_EitTimerThreadId;
+	bool	m_EitTimerThreadCanEnd;
+	string	m_TempFileLocation;
+
+	void ParseIniFile(void);
+	int m_CollectionTimeHour;
+	int m_CollectionTimeMin;
+	int m_CollectionDurationMinutes;
+
+	vector<eitRecord> m_eitRecords;
+
+	bool SendSocketCommand(char *command);
+};
+
 class EIT
 {
 public:
@@ -87,6 +117,7 @@ public:
 	void StartEitMonitoring();
 
 private:
+	int							m_onid;
 	time_t						m_Time;
 	HANDLE						m_EitCollectionThread;
 	DWORD						m_EitCollectionThreadId;
@@ -104,8 +135,6 @@ private:
 	USHORT m_SageEitPort;
 	string m_SaveXmltvFileLocation;
 	string m_TempFileLocation;
-	int m_CollectionTimeHour;
-	int m_CollectionTimeMin;
 	int m_CollectionDurationMinutes;
 	bool m_CollectEIT;
 	hash_map<UINT32, EITEvent>	m_EITevents;			// All events for the service. The key is sid and event ID, the value is an EITEvent structure

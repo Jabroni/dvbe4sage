@@ -215,9 +215,10 @@ void Encoder::socketOperation(SOCKET socket,
 
 						// This source name indicates that this is being requested internally for EIT operations, not by sage
 						bool bySage = (source.compare(CT2CW("***EITGATHERING***")) == 0) ? false : true;
+						bool forEIT = (source.compare(CT2CW("***EITGATHERING***")) == 0) ? true : false;
 
 						// Start the recording itself
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, bySage, false);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), durationInt, fileName.c_str(), virtualTuner, (__int64)-1, bySage, forEIT, false);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
@@ -286,7 +287,7 @@ void Encoder::socketOperation(SOCKET socket,
 							source.c_str(), channelInt, sizeInt, fileName.c_str());
 
 						// Start the actual recording
-						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt, true, false);
+						startRecording(true, 0, 0, BDA_POLARISATION_NOT_SET, BDA_MOD_NOT_SET, BDA_BCC_RATE_NOT_SET, -1, true, channelInt, g_pConfiguration->getUseSidForTuning(), 3600, fileName.c_str(), virtualTuner, sizeInt, true, false, false);
 
 						// Report OK code to the client
 						send(socket, "OK\r\n", 4, 0);
@@ -429,6 +430,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 							 VirtualTuner* virtualTuner,
 							 __int64 size,
 							 bool bySage,
+							 bool forEIT,
 							 bool startFullTransponderDump)
 {
 
@@ -605,7 +607,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	}
 	// If we found the tuner
 	// Create the recorder
-	Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, outFileName, useSid, channel, sid, onid, channelName, duration, this, size, bySage);
+	Recorder* recorder = new Recorder(m_pPluginsHandler, tuner, outFileName, useSid, channel, sid, onid, channelName, duration, this, size, bySage, forEIT);
 
 	// Let's see if the recorder has an error, just delete it and exit
 	if(recorder->hasError())
@@ -619,6 +621,10 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		delete recorder;
 		return false;
 	}
+
+	// Let the parser know if this is being done for EIT data collection
+	DVBParser* const sourceParser = recorder->getSource()->getParser();
+	sourceParser->setForEIT(forEIT);
 
 	// Lock access to global structure
 	m_cs.Lock();
@@ -816,7 +822,8 @@ bool Encoder::logEPG(LPTSTR reason) const
 bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 									 int usid,
 									 __int64 duration,
-									 LPCWSTR outFileName)
+									 LPCWSTR outFileName,
+									 bool forEIT)
 {
 	// Create a file source
 	FileSource* source = new FileSource(inFileName);
@@ -840,7 +847,7 @@ bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 		log(2, true, 0, TEXT("Service SID=%hu on ONID=%hu has Name=\"%s\"\n"), sid, onid, channelName);
 
 	// Create the recorder
-	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, (int)sid, sid, onid, channelName, duration, this, -1, false);
+	Recorder* recorder = new Recorder(m_pPluginsHandler, source, outFileName, true, (int)sid, sid, onid, channelName, duration, this, -1, false, forEIT);
 
 	// Let's see if the recorder has an error, just delete it and exit
 	if(recorder->hasError())
@@ -854,7 +861,6 @@ bool Encoder::startRecordingFromFile(LPCWSTR inFileName,
 	if(g_pConfiguration->getCacheServices())
 	{
 		DVBParser* const sourceParser = recorder->getSource()->getParser();
-
 		sourceParser->readTransponderServicesFromFile();
 	}
 

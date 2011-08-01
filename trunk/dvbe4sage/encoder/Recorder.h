@@ -40,6 +40,7 @@ private:
 	bool						m_UseSid;
 	const wstring				m_FileName;
 	const __int64				m_Size;
+	bool						m_ForEIT;
 
 public:
 	Recorder(PluginsHandler* const plugins,
@@ -53,7 +54,8 @@ public:
 			 __int64 duration,
 			 Encoder* pEncoder,
 			 __int64 size,
-			 bool bySage);
+			 bool bySage,
+			 bool forEIT);
 	virtual ~Recorder(void);
 	bool isRecording() const							{ return m_IsRecording; }
 	bool hasError() const								{ return m_HasError; }

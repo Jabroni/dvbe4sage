@@ -14,11 +14,224 @@
 #define TABLE_PREFIX_LEN	3
 
 extern Encoder*	g_pEncoder;
+int g_onid = 0;
+
+EITtimer::EITtimer() :
+m_EitTimerThreadCanEnd(false)
+{
+	ParseIniFile();
+
+	StartEitMonitoring();
+}
+
+EITtimer::~EITtimer(void)
+{
+	stopCollectingEIT();
+	Sleep(6000);
+}
+
+void EITtimer::ParseIniFile(void)
+{
+	string buffer;
+	LPTSTR context;
+	TCHAR tbuffer[1024];
+	vector<string> sections;
+
+	TCHAR iniFileFullPath[MAXSHORT];
+	DWORD iniFileFullPathLen = GetCurrentDirectory(sizeof(iniFileFullPath) / sizeof(iniFileFullPath[0]), iniFileFullPath);
+	_tcscpy_s(&iniFileFullPath[iniFileFullPathLen], sizeof(iniFileFullPath) / sizeof(iniFileFullPath[0]) - iniFileFullPathLen, "\\eit.ini");
+	string fileName = iniFileFullPath;
+
+	sections = CIniFile::GetSectionNames(fileName);
+
+	// Log info
+	log(0, false, 0, TEXT("\n"));
+	log(0, true, 0, TEXT("Loading EIT Timer info from \"%s\"\n"), iniFileFullPath);
+	log(0, false, 0, TEXT("=========================================================\n"));
+	log(0, false, 0, TEXT("EIT Timer file dump:\n\n"));
+
+	for(int i = 0; i < (int)sections.size(); i++)
+	{
+		if(sections[i].compare("General") == 0)
+		{
+			log(0, false, 0, TEXT("[General]\n"));
+
+			m_CollectionTimeHour = atoi(CIniFile::GetValue("CollectionTimeHour", sections[i], fileName).c_str());
+			log(0, false, 0, TEXT("CollectionTimeHour = %d\n"), m_CollectionTimeHour);
+						
+			m_CollectionTimeMin = atoi(CIniFile::GetValue("CollectionTimeMin", sections[i], fileName).c_str());
+			log(0, false, 0, TEXT("CollectionTimeMin = %d\n"), m_CollectionTimeMin);
+
+			m_TempFileLocation = CIniFile::GetValue("TempFileLocation", sections[i], fileName);
+			log(0, false, 0, TEXT("TempFileLocation = %s\n"), m_TempFileLocation.c_str());
+
+			m_CollectionDurationMinutes = atoi(CIniFile::GetValue("CollectionDurationMinutes", sections[i], fileName).c_str());
+			log(0, false, 0, TEXT("CollectionDurationMinutes = %d\n"), m_CollectionDurationMinutes);
+
+			log(0, false, 0, TEXT("\n"));
+		}
+		else
+		{
+			struct eitRecord newrec;
+			newrec.ONID = atoi(sections[i].c_str());
+			newrec.lineup = CIniFile::GetValue("Lineup", sections[i], fileName);	
+			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
+
+			newrec.includedSIDs.clear();
+			buffer = CIniFile::GetValue("IncludedSIDs", sections[i], fileName);
+#pragma warning(disable:4996)
+			size_t length = buffer.copy(tbuffer, buffer.length(), 0);
+#pragma warning(default:4996)
+			buffer[length] = '\0';
+			if(buffer[0] != TCHAR(0))
+			{
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+					newrec.includedSIDs.insert((USHORT)_ttoi(token));
+			}
+
+			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
+			log(0, false, 0, TEXT("Lineup = %s\n"), newrec.lineup.c_str());
+			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
+
+			log(0, false, 0, TEXT("IncludedSIDs="));
+			for(hash_set<USHORT>::const_iterator it = newrec.includedSIDs.begin(); it != newrec.includedSIDs.end();)
+			{
+				log(0, false, 0, TEXT("%d"), *it);
+				if(++it != newrec.includedSIDs.end())
+					log(0, false, 0, TEXT(","));
+			}
+			log(0, false, 0, TEXT("\n"));
+			log(0, false, 0, TEXT("\n"));
+
+			m_eitRecords.push_back(newrec);
+		}
+	}
+
+	log(0, false, 0, TEXT("\n"));
+
+	log(0, false, 0, TEXT("End of EIT Timer file dump\n"));
+	log(0, false, 0, TEXT("=========================================================\n\n"));
+}
+
+DWORD WINAPI EitTimerCallback(LPVOID vpEit)
+{
+	EITtimer* eitObj = (EITtimer*)vpEit;
+
+	// Jump back up into the object
+	eitObj->RealEitCollectionCallback();
+
+	return 0;
+}
+
+void EITtimer::StartEitMonitoring()
+{
+	// Start the timer thread
+	m_EitTimerThreadCanEnd = false;
+	m_EitTimerThread = CreateThread(NULL, 0, EitTimerCallback, this, 0, &m_EitTimerThreadId);
+}
+
+void EITtimer::RealEitCollectionCallback()
+{
+	struct tm lTime;
+	time_t now;
+	char command[MAX_PATH];
+	char tempFile[MAX_PATH];
+
+	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
+
+	log(3, true, 0, TEXT("Waiting until %02d:%02d to collect and process EIT data.\n"), m_CollectionTimeHour, m_CollectionTimeMin);
+	
+	while(1 == 1)
+	{
+		// Wait until the start time or told to quit
+		while (1 == 1)
+		{
+			Sleep(5000);
+			if(m_EitTimerThreadCanEnd == true)
+				return;
+			
+			time(&now);
+			localtime_s(&lTime, &now);
+			if(lTime.tm_hour == m_CollectionTimeHour && lTime.tm_min == m_CollectionTimeMin)
+				break;
+		}
+
+		// Loop for all configured providers
+		for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
+		{
+			g_onid = eIter->ONID;
+
+			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
+			// Send socket command make to us tune and lock the tuner
+			sprintf_s(command, sizeof(command), "START ***EITGATHERING***|0|%d|%d|%s|Fair\r\n", eIter->chan, (m_CollectionDurationMinutes + 10) * 60, tempFile);
+			SendSocketCommand(command);
+
+			time(&now);
+			time(&m_Time);
+
+			// Allow for collection of the data
+			while(difftime(now, m_Time) < ((m_CollectionDurationMinutes + 5) * 60))
+			{
+				Sleep(10000);
+				time(&now);
+			}
+
+			Sleep(10000);
+		}
+
+		// Wait for 2 minutes then start over
+		for(int i = 0; i < 24; i++)
+		{
+			Sleep(5000);
+			if(m_EitTimerThreadCanEnd == true)
+				return;			
+		}
+	}
+}
+
+bool EITtimer::SendSocketCommand(char *command)
+{
+	int port = g_pConfiguration->getListeningPort();
+
+	SOCKET s; 
+    SOCKADDR_IN target; 
+    target.sin_family = AF_INET; 
+    target.sin_port = htons((USHORT)port); 
+    target.sin_addr.s_addr = inet_addr ("127.0.0.1"); 
+
+	log(3, true, 0, TEXT("EIT Timer is attempting to send the following command to DVBE4SAGE:\n"));
+	log(3, false, 0, TEXT("%s\n"), command);
+
+    if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET)
+        return false; 
+
+    if (connect(s, (SOCKADDR *)&target, sizeof(target)) == SOCKET_ERROR)
+        return false; 
+	
+	if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
+	{
+		shutdown(s, SD_SEND);
+		closesocket(s);
+        return false; 
+	}
+
+	shutdown(s, SD_SEND);
+	closesocket(s);
+
+	return true;
+}
+
+// Stop collecting EIT data
+void EITtimer::stopCollectingEIT()
+{
+	m_EitTimerThreadCanEnd = true;
+}
 
 EIT::EIT(DVBParser* const pParent) :
 m_CollectEIT(false)
 , m_TimerInitialized(false)
 , m_EitCollectionThreadCanEnd(false)
+, m_onid(g_onid)
 {
 	m_pDVBParser = pParent;
 
@@ -70,12 +283,6 @@ void EIT::ParseIniFile(void)
 
 			m_TempFileLocation = CIniFile::GetValue("TempFileLocation", sections[i], fileName);
 			log(0, false, 0, TEXT("TempFileLocation = %s\n"), m_TempFileLocation.c_str());
-
-			m_CollectionTimeHour = atoi(CIniFile::GetValue("CollectionTimeHour", sections[i], fileName).c_str());
-			log(0, false, 0, TEXT("CollectionTimeHour = %d\n"), m_CollectionTimeHour);
-						
-			m_CollectionTimeMin = atoi(CIniFile::GetValue("CollectionTimeMin", sections[i], fileName).c_str());
-			log(0, false, 0, TEXT("CollectionTimeMin = %d\n"), m_CollectionTimeMin);
 
 			m_CollectionDurationMinutes = atoi(CIniFile::GetValue("CollectionDurationMinutes", sections[i], fileName).c_str());
 			log(0, false, 0, TEXT("CollectionDurationMinutes = %d\n"), m_CollectionDurationMinutes);
@@ -144,89 +351,60 @@ void EIT::StartEitMonitoring()
 
 void EIT::RealEitCollectionCallback()
 {
-	struct tm lTime;
 	time_t now;
-	char command[MAX_PATH];
 	char tempFile[MAX_PATH];
 
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
-	log(3, true, 0, TEXT("Waiting until %02d:%02d to collect and process EIT data.\n"), m_CollectionTimeHour, m_CollectionTimeMin);
-	
-	while(1 == 1)
-	{
-		// Wait until the start time or told to quit
-		while (1 == 1)
-		{
-			Sleep(5000);
-			if(m_EitCollectionThreadCanEnd == true)
-				return;
+	log(2, true, 0, TEXT("Collecting EIT Data for onid %hu.\n"), m_onid);
 			
-			time(&now);
-			localtime_s(&lTime, &now);
-			if(lTime.tm_hour == m_CollectionTimeHour && lTime.tm_min == m_CollectionTimeMin)
-				break;
-		}
+	lock();
+	// Get rid of the old stuff
+	m_EITevents.clear();
+	m_CollectEIT = true;
+	unlock();
 
-		// Loop for all configured providers
-		for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
+	time(&now);
+	time(&m_Time);
+
+	// Allow for collection of the data
+	while(difftime(now, m_Time) < (m_CollectionDurationMinutes * 60))
+	{
+		Sleep(5000);
+		if(m_EitCollectionThreadCanEnd == true)
 		{
-
-			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
-			// Send socket command make to us tune and lock the tuner
-			sprintf_s(command, sizeof(command), "START ***EITGATHERING***|0|%d|%d|%s|Fair\r\n", eIter->chan, ((m_CollectionDurationMinutes + 1) * 60) * 1000, tempFile);
-			if(SendSocketCommand(command) == false)
-				continue;
-				
-			lock();
-			// Get rid of the old stuff
-			m_EITevents.clear();
-			m_CollectEIT = true;
-			unlock();
-
-			time(&now);
-			time(&m_Time);
-
-			// Allow for collection of the data
-			while(difftime(now, m_Time) < (m_CollectionDurationMinutes * 60))
-			{
-				Sleep(5000);
-				if(m_EitCollectionThreadCanEnd == true)
-				{
-					SendSocketCommand("STOP dummy\r\n");
-					lock();
-					m_CollectEIT = false;
-					unlock();
-					Sleep(2000);
-					DeleteFile(tempFile);
-					return;
-				}
-
-				time(&now);
-			}
-
+			SendSocketCommand("STOP ***EITGATHERING***\r\n");
 			lock();
 			m_CollectEIT = false;
 			unlock();
-
-			// Dump data to xmltv file if configured to do so
-			if(m_SaveXmltvFileLocation.length() > 0)
-				dumpXmltvFile(eIter->ONID);
-
-			// Send data to SageTV server if configured to do so
-			if(m_SageEitIP.length() > 0)
-				sendToSage(eIter->ONID);
-
-			// Send socket command make to stop the recording and release the tuner
-			// "STOP SageTV DVB-S2 Enhancer 1 Digital TV Tuner"
-			SendSocketCommand("STOP ***EITGATHERING***\r\n");
-
 			Sleep(2000);
-
-			// Clean up after ourselves
 			DeleteFile(tempFile);
+			return;
 		}
+
+		time(&now);
 	}
+
+	lock();
+	m_CollectEIT = false;
+	unlock();
+
+	// Dump data to xmltv file if configured to do so
+	if(m_SaveXmltvFileLocation.length() > 0)
+		dumpXmltvFile(m_onid);
+
+	// Send data to SageTV server if configured to do so
+	if(m_SageEitIP.length() > 0)
+		sendToSage(m_onid);
+
+	// Send socket command make to stop the recording and release the tuner
+	// "STOP SageTV DVB-S2 Enhancer 1 Digital TV Tuner"
+	SendSocketCommand("STOP ***EITGATHERING***\r\n");
+
+	Sleep(5000);
+
+	// Clean up after ourselves
+	DeleteFile(tempFile);
 }
 
 void EIT::sendToSage(int onid)
@@ -435,7 +613,7 @@ void EIT::dumpXmltvAdvisory(FILE* outFile, string value)
 		_ftprintf(outFile, TEXT("\t\t</rating>\n"));
 }
 
-// The age breakdowns are my quess
+// Convert the DVB standrad mininum age to a rating.  The age breakdowns are my guess
 string EIT::getParentalRating(int rating)
 {
 	string ret = "";
