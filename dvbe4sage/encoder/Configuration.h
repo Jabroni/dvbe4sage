@@ -65,6 +65,7 @@ class Configuration
 
 
 	// All advanced stuff goes here
+	string						m_InstanceName;
 	USHORT						m_PMTDilutionFactor;
 	USHORT						m_PATDilutionFactor;
 	USHORT						m_PMTThreshold;
@@ -141,6 +142,7 @@ public:
 	bool getGrowlNotifyOnRecordFailure() const			{ return m_GrowlNotifyOnRecordFailure; };
 
 	// All advanced stuff goes here
+	const string& getInstanceName() const						{ return m_InstanceName; }
 	USHORT getPMTDilutionFactor() const					{ return m_PMTDilutionFactor; }
 	USHORT getPATDilutionFactor() const					{ return m_PATDilutionFactor; }
 	USHORT getPMTThreshold() const						{ return m_PMTThreshold; }

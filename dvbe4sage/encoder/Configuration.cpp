@@ -54,6 +54,11 @@ Configuration::Configuration()
 	m_NumberOfVirtualTuners = (USHORT)GetPrivateProfileInt(TEXT("General"), TEXT("NumberOfVirtualTuners"), 1, iniFileFullPath);
 	log(0, false, 0, TEXT("NumberOfVirtualTuners=%hu\n"), m_NumberOfVirtualTuners);
 
+
+	GetPrivateProfileString(TEXT("General"), TEXT("InstanceName"), TEXT("SageTV"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	m_InstanceName = buffer;
+	log(0, false, 0, TEXT("InstanceName=%s\n"), m_InstanceName.c_str());
+
 	m_IsNorthAmerica = GetPrivateProfileInt(TEXT("General"), TEXT("NorthAmerica"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("NorthAmerica=%u\n"), m_IsNorthAmerica ? 1 : 0);
 
