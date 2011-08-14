@@ -367,6 +367,21 @@ Configuration::Configuration()
 		m_ExcludedONIDs.insert(onid);
 	}
 
+	// List of Bouqets to be excluded 
+	GetPrivateProfileString(TEXT("Tuning"), TEXT("ExcludeBouquets"), TEXT(""), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
+	for(LPCTSTR token = _tcstok_s(buffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+		m_ExcludedBouquets.insert(_ttoi(token));
+
+	log(0, false, 0, TEXT("ExcludeBouqets="));
+	for(hash_set<UINT>::const_iterator it = m_ExcludedBouquets.begin(); it != m_ExcludedBouquets.end();)
+	{
+		log(0, false, 0, TEXT("%hu"), *it);
+		if(++it != m_ExcludedBouquets.end())
+			log(0, false, 0, TEXT(","));
+	}
+	log(0, false, 0, TEXT("\n"));
+
+
 	log(0, false, 0, TEXT("ExcludeONIDs="));
 	for(hash_set<USHORT>::const_iterator it = m_ExcludedONIDs.begin(); it != m_ExcludedONIDs.end();)
 	{
@@ -470,6 +485,16 @@ Configuration::Configuration()
 	GetPrivateProfileString(TEXT("Advanced"), TEXT("BouquetName"), TEXT("BSkyB Bouquet 1 - DTH England"), buffer, sizeof(buffer) / sizeof(buffer[0]), iniFileFullPath);
 	m_BouquetName = buffer;
 	log(0, false, 0, TEXT("BouquetName=%s\n"), m_BouquetName.c_str());
+
+	log(0, false, 0, TEXT("ExcludeTIDs="));
+	for(hash_set<USHORT>::const_iterator it = m_ExcludedTIDs.begin(); it != m_ExcludedTIDs.end();)
+	{
+		log(0, false, 0, TEXT("%hu"), (USHORT)*it);
+		if(++it != m_ExcludedTIDs.end())
+			log(0, false, 0, TEXT(","));
+	}
+
+
 
 	m_PreferSDOverHD = GetPrivateProfileInt(TEXT("Advanced"), TEXT("PreferSDOverHD"), 0, iniFileFullPath) == 0 ? false : true;
 	log(0, false, 0, TEXT("PreferSDOverHD=%u\n"), m_PreferSDOverHD ? 1 : 0);

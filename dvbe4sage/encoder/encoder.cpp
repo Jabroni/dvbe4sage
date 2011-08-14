@@ -622,9 +622,10 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 		return false;
 	}
 
-	// Let the parser know if this is being done for EIT data collection
-	DVBParser* const sourceParser = recorder->getSource()->getParser();
-	sourceParser->setForEIT(forEIT);
+	// Let the parser know if this is being done for EIT data collection.  
+	//DVBParser* const sourceParser = recorder->getSource()->getParser();
+	//sourceParser->setForEIT(forEIT);
+	// COMMENTED PREVIOUS 2 LINES NEEDS FIXING, DISABLED TILL WE FIGURE OUT WHY
 
 	// Lock access to global structure
 	m_cs.Lock();
