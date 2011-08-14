@@ -121,10 +121,17 @@ BOOL CDVBE4SageDlg::OnInitDialog()
 	// Make log edit box scrollable
 	m_LogBox.ShowScrollBar(SB_BOTH);
 
+	TCHAR caption[256] = _T("DVB Enhancer for SageTV");
+	_tcscat_s(caption, 256, TEXT(" - "));
+	_tcscat_s(caption, 256, getInstanceName());
+	SetWindowText(caption);
+	
 	// Tray stuff
 	TraySetIcon(IDR_MAINFRAME);
-    TraySetToolTip(TEXT("DVB Enhancer for SageTV"));
+	TraySetToolTip(caption);
+
     TraySetMenu(m_MainMenu);
+
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }

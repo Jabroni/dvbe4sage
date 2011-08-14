@@ -61,6 +61,11 @@ extern "C" ENCODER_API LPCTSTR getLogFileName()
 		return NULL;
 }
 
+extern "C" ENCODER_API LPCTSTR getInstanceName()
+{
+	return g_pConfiguration->getInstanceName().c_str();
+}
+
 extern "C" ENCODER_API int getNumberOfTuners()
 {
 	if(g_pEncoder != NULL)

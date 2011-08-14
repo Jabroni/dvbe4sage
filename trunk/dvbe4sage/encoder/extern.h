@@ -17,6 +17,7 @@ extern "C" ENCODER_API void waitForFullInitialization();
 #ifdef NEED_ACCESS_FUNCTIONS
 // External getters
 extern "C" ENCODER_API LPCTSTR getLogFileName();
+extern "C" ENCODER_API LPCTSTR getInstanceName();
 extern "C" ENCODER_API int getNumberOfTuners();
 extern "C" ENCODER_API LPCTSTR getTunerFriendlyName(int i);
 extern "C" ENCODER_API int getTunerOrdinal(int i);

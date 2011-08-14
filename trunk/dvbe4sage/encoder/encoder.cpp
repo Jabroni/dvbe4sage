@@ -741,6 +741,7 @@ int Encoder::getNumberOfTuners() const
 	return m_Tuners.size();
 }
 
+
 LPCTSTR Encoder::getTunerFriendlyName(int i) const
 {
 	return m_Tuners[i]->getSourceFriendlyName();
