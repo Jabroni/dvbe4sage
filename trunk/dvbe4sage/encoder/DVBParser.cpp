@@ -1405,6 +1405,13 @@ void PSIParser::parseBATTable(const nit_t* const table,
 		bouquetDescriptorsLength -= bouquetDescriptor->descriptor_length + DESCR_BOUQUET_NAME_LEN;
 	}
 
+
+	// We check if the Bouquet ID is not exlcuded, if it is we skip it
+	if(g_pConfiguration->excludeBouquet(bouquetID)) {
+		log(3, true, m_pParent->getTunerOrdinal(), TEXT("### Ignoring found bouquet with name %s ID=%d\n"), bouquetName.c_str(), bouquetID);
+		return;
+	}
+
 	// Flags for supported "remote channel number tuning" providers
 	bool isYES = (bouquetName == "Yes Bouquet 1");
 	bool isFoxtel = bouquetID == 25191 || bouquetID == 25184;

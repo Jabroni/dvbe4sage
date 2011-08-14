@@ -422,7 +422,8 @@ public:
 	USHORT getCurrentONID() const													{ return m_PSIParser.getCurrentONID(); }
 	BYTE getTypeForPid(USHORT pid) const											{ return m_PSIParser.getTypeForPid(pid); }
 	bool getForEIT() const															{ return m_forEIT; }
-	void setForEIT(bool value)														{ m_forEIT = value; }
+	void setForEIT(bool value)														{ //m_forEIT = value;  
+																					}
 
 	// Setter for the internal parser "HasBeenCopied" flag
 	void setProviderInfoHasBeenCopied()												{ m_PSIParser.setProviderInfoHasBeenCopied(); }

@@ -31,6 +31,7 @@ class Configuration
 	hash_set<string>			m_IncludedTunersMAC;
 	hash_set<USHORT>			m_IncludedONIDs;
 	hash_set<USHORT>			m_ExcludedONIDs;
+	hash_set<UINT>			m_ExcludedBouquets;
 	bool						m_ScanAllTransponders;
 
 	hash_set<UINT>				m_DVBS2Tuners;
@@ -84,6 +85,7 @@ public:
 	bool excludeTuner(UINT tunerOrdinal) const			{ return m_ExcludedTuners.count(tunerOrdinal) > 0; }
 	bool excludeTunersByMAC(const string mac) const		{ return m_ExcludedTunersMAC.count(mac) > 0 ; }
 	bool includeTuner(UINT tunerOrdinal) const			{ return m_IncludedTuners.count(tunerOrdinal) > 0; }
+	bool excludeBouquet(UINT bouquetId) const			{ return m_ExcludedBouquets.count(bouquetId) > 0 ; }
 	bool includeTunersByMAC(const string mac) const		{ return m_IncludedTunersMAC.count(mac) > 0 ; }
 	bool includeTuners() const							{ return !m_IncludedTuners.empty() || !m_IncludedTunersMAC.empty(); }
 	bool includeONID(const USHORT onid) const			{ return m_IncludedONIDs.count(onid) > 0 ; }
