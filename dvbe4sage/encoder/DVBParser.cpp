@@ -514,9 +514,9 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 
 	// Create the EIT parsing object if we need to	
 	if(g_pConfiguration->getEpgCollection() == true)
-	{
-		if(m_pParent->getForEIT() == true && m_EIT == NULL)
+		if(m_pParent->getForEIT() == true && m_EIT == NULL) {
 			m_EIT = new EIT(m_pParent);
+		}
 	}
 
 	// Offset of the data, 0 unless the packet has adaptation field

@@ -461,6 +461,7 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 			if(m_Provider.getSidForChannel((USHORT)channel, usid)) 
 			{
 				sid = NetworkProvider::getSIDFromUniqueSID(usid);
+				onid = NetworkProvider::getONIDFromUniqueSID(usid);
 				log(2, true, 0, TEXT("Found a channel Number %hu on mapping table. Translating to SID %hu , discovered ONID=%hu\n"), channel, NetworkProvider::getSIDFromUniqueSID(usid), onid);	
 
 			} else if(m_Provider.getOnidForSid(sid, onid))	{
@@ -623,9 +624,9 @@ bool Encoder::startRecording(bool autodiscoverTransponder,
 	}
 
 	// Let the parser know if this is being done for EIT data collection.  
-	//DVBParser* const sourceParser = recorder->getSource()->getParser();
-	//sourceParser->setForEIT(forEIT);
-	// COMMENTED PREVIOUS 2 LINES NEEDS FIXING, DISABLED TILL WE FIGURE OUT WHY
+	DVBParser* const sourceParser = recorder->getSource()->getParser();
+	sourceParser->setForEIT(forEIT);
+	
 
 	// Lock access to global structure
 	m_cs.Lock();

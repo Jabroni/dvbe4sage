@@ -381,9 +381,6 @@ private:
 
 	bool	m_isInitialScan;				// True if parser is running the initial scan
 
-	// True if this is currently being used for EIT data collection
-	bool m_forEIT;
-
 public:
 	// The only available constructor
 	DVBParser(UINT ordinal) :	
@@ -422,8 +419,11 @@ public:
 	USHORT getCurrentONID() const													{ return m_PSIParser.getCurrentONID(); }
 	BYTE getTypeForPid(USHORT pid) const											{ return m_PSIParser.getTypeForPid(pid); }
 	bool getForEIT() const															{ return m_forEIT; }
-	void setForEIT(bool value)														{ //m_forEIT = value;  
-																					}
+	
+	// Setter for EIT processing value
+	void setForEIT(bool value)														{ 
+		m_forEIT = value; 
+	}
 
 	// Setter for the internal parser "HasBeenCopied" flag
 	void setProviderInfoHasBeenCopied()												{ m_PSIParser.setProviderInfoHasBeenCopied(); }
@@ -468,4 +468,9 @@ public:
 
 	// Read cache files for services and transponders
 	bool readTransponderServicesFromFile();
+
+	// True if this is currently being used for EIT data collection
+	bool	m_forEIT;
+
+
 };
