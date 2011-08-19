@@ -470,7 +470,7 @@ void EIT::dumpXmltvFile(int onid)
 			// Standard header
 			_ftprintf(outFile, TEXT("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));
 			_ftprintf(outFile, TEXT("<!DOCTYPE tv SYSTEM \"xmltv.dtd\">\n"));
-			_ftprintf(outFile, TEXT("<tv source-info-name=\"%s\" generator-info-name=\"DVBE4SAGE\" generator-info-url=\"http://code.google.com/p/dvbe4sage/\">\n"), eitRec.lineup);
+			_ftprintf(outFile, TEXT("<tv source-info-name=\"%s\" generator-info-name=\"DVBE4SAGE\" generator-info-url=\"http://code.google.com/p/dvbe4sage/\">\n"), eitRec.lineup.c_str());
 
 			// Loop through the services and create all the channel records
 			for(hash_map<UINT32, Service>::const_iterator it = encoderNetworkProvider.m_Services.begin(); it != encoderNetworkProvider.m_Services.end(); it++)
