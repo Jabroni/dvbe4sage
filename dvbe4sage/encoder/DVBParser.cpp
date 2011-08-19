@@ -513,7 +513,7 @@ void PSIParser::parseTSPacket(const ts_t* const packet,
 		return;
 
 	// Create the EIT parsing object if we need to	
-	if(g_pConfiguration->getEpgCollection() == true)
+	if(g_pConfiguration->getEpgCollection() == true) {
 		if(m_pParent->getForEIT() == true && m_EIT == NULL) {
 			m_EIT = new EIT(m_pParent);
 		}

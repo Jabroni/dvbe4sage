@@ -368,7 +368,7 @@ void EIT::RealEitCollectionCallback()
 	time(&m_Time);
 
 	// Allow for collection of the data
-	while(difftime(now, m_Time) < (m_CollectionDurationMinutes * 60))
+	while(difftime(now, m_Time) < ( (m_CollectionDurationMinutes-1) * 60))
 	{
 		Sleep(5000);
 		if(m_EitCollectionThreadCanEnd == true)
@@ -385,26 +385,33 @@ void EIT::RealEitCollectionCallback()
 		time(&now);
 	}
 
-	lock();
+
+	//lock();
 	m_CollectEIT = false;
-	unlock();
+	//unlock();
 
-	// Dump data to xmltv file if configured to do so
-	if(m_SaveXmltvFileLocation.length() > 0)
-		dumpXmltvFile(m_onid);
-
-	// Send data to SageTV server if configured to do so
-	if(m_SageEitIP.length() > 0)
-		sendToSage(m_onid);
 
 	// Send socket command make to stop the recording and release the tuner
 	// "STOP SageTV DVB-S2 Enhancer 1 Digital TV Tuner"
-	SendSocketCommand("STOP ***EITGATHERING***\r\n");
+	//SendSocketCommand("STOP ***EITGATHERING***\r\n");
 
-	Sleep(5000);
+	//Sleep(5000);
 
+
+	// Dump data to xmltv file if configured to do so
+	if(m_SaveXmltvFileLocation.length() > 0) {
+		log(3, true, 0, TEXT("tries to dump xml\n"));
+		dumpXmltvFile(m_onid);
+	}
+
+	// Send data to SageTV server if configured to do so
+	if(m_SageEitIP.length() > 0) {
+		log(3, true, 0, TEXT("tries to send to sage\n"));
+		sendToSage(m_onid);
+	}
 	// Clean up after ourselves
 	DeleteFile(tempFile);
+
 }
 
 void EIT::sendToSage(int onid)
@@ -449,8 +456,7 @@ void EIT::dumpXmltvFile(int onid)
 	TCHAR channelName[256];
 	FILE* outFile = NULL;
 
-	try
-	{
+
 		NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
 
 		eitRecord eitRec = GetEitRecord(onid);
@@ -476,7 +482,8 @@ void EIT::dumpXmltvFile(int onid)
 					// Get the channel name and the mapped number 
 					channelName[0] = TCHAR('\0');
 					const UINT32 usid = NetworkProvider::getUniqueSID(it->second.onid, it->second.sid);
-					int chanNo = (encoderNetworkProvider.isServiceExist(usid) == false) ? it->second.sid : it->second.channelNumber;
+
+					int chanNo = (encoderNetworkProvider.getChannelForSid(usid) == NULL) ? it->second.sid : it->second.channelNumber;
 					encoderNetworkProvider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 					_ftprintf(outFile, TEXT("\t<channel id=\"I%d.%d.DVBE4SAGE\">\n"), it->second.sid, it->second.onid);
@@ -488,6 +495,7 @@ void EIT::dumpXmltvFile(int onid)
 				}
 			}
 
+	
 			// Loop through the EIT data and create all of the programme records
 			for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 			{
@@ -499,13 +507,15 @@ void EIT::dumpXmltvFile(int onid)
 
 					_ftprintf(outFile, TEXT("\t<programme start=\"%s\" stop=\"%s\" channel=\"I%d.%d.DVBE4SAGE\">\n"), it->second.startDateTime.c_str(), it->second.stopDateTime.c_str(), it->second.SID, it->second.ONID);
 
-					lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
+				
+				
+					//lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
 					_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), lang.shortDescription.c_str());
 
-					lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
-					lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
+					//lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
+					//lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
 					_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
-
+										
 					if(it->second.category.empty() == false)
 						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.category.c_str());
 
@@ -592,18 +602,14 @@ void EIT::dumpXmltvFile(int onid)
 						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), getParentalRating(it->second.parentalRating).c_str());
 						_ftprintf(outFile, TEXT("\t\t</rating>\n"));
 					}
-
-					_ftprintf(outFile, TEXT("</programme>\n"));
+					_ftprintf(outFile, TEXT("\t</programme>\n"));
 				}
 			}
 
 			_ftprintf(outFile, TEXT("</tv>\n"));
 			fclose(outFile);
-
-			log(3, true, 0, TEXT("EIT dump of XMLTV data to %s is complete.\n"), fileName.c_str());
-		}
 	}
-	catch (...) {}
+			log(3, true, 0, TEXT("EIT dump of XMLTV data to %s is complete.\n"), fileName.c_str());
 }
 
 void EIT::dumpXmltvAdvisory(FILE* outFile, string value)
@@ -812,7 +818,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				newEvent.stopDateTime = date_strbuf;
 			
 				// Event ID
-				log(3, false, 0, TEXT("\tEvent ID = 0x%x\n"), eventID);
+				//log(3, false, 0, TEXT("\tEvent ID = 0x%x\n"), eventID);
 				newEvent.eventID = eventID;
 
 				// Service ID and Network ID
@@ -822,7 +828,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				// Descriptions and everything else
 				parseEventDescriptors(inputBuffer + EIT_EVENT_LEN, descriptorLoopLength, table, &newEvent);
 
-				log(3, false, 0, TEXT("<program end>\n"));
+				//log(3, false, 0, TEXT("<program end>\n"));
 
 				// Add the newly created event to the list
 				m_EITevents[getUniqueKey(eventID, serviceID)] = newEvent;
@@ -903,11 +909,11 @@ void EIT::decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent
 	std::string eventText(buffer.GetBuffer()); 
 
 	// Sky seems to have these characters as some sort of delimiter
-	eventText = ReplaceAll(eventText, "", " ");
+	eventText = ReplaceAll(eventText, "", "");
 
 	// log the title of the event
-	log(3, false, 0, TEXT("\tTitle: %s\n"), eventText.c_str());
-	log(3, false, 0, TEXT("\tLanguage: %.3s\n"), language.c_str());
+	log(3, false, 0, TEXT("\tTitle: !%s!\n"), eventText.c_str());
+	log(3, false, 0, TEXT("\tLanguage: !%.3s!\n"), language.c_str());
 
 	// Now let's get the length of the description
 	int descriptionLength = *(inputBuffer + DESCR_SHORT_EVENT_LEN + shortDescription->event_name_length);
@@ -918,7 +924,7 @@ void EIT::decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent
 	std::string descriptionText(buffer2.GetBuffer()); 
 
 	// Sky seems to have these characters as some sort of delimiter
-	descriptionText = ReplaceAll(descriptionText, "", " ");
+	descriptionText = ReplaceAll(descriptionText, "", "");
 
 	unsigned long ISO_639_language_code = (shortDescription->lang_code1<<16) + (shortDescription->lang_code2<<8) + shortDescription->lang_code3;
 
@@ -944,8 +950,8 @@ void EIT::decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent
 	newEvent->vecLanguages.push_back(lang);
 
 	// Log the description of the event
-	log(3, false, 0, TEXT("\tDescription: %s\n"), descriptionText.c_str());
-	log(3, false, 0, TEXT("\tLanguage: %d\n"), ISO_639_language_code);
+	log(3, false, 0, TEXT("\tDescription: !%s!\n"), descriptionText.c_str());
+	log(3, false, 0, TEXT("\tLanguage: !%d!\n"), ISO_639_language_code);
 }
 
 // Not used in North America
@@ -1798,6 +1804,8 @@ void EIT::decodeDishSeriesDescriptor(const BYTE* inputBuffer, EITEvent* newEvent
 	sprintf_s(temp, sizeof(temp), "%s%08d%04d", (seriesDescriptor->seriesInfo == 0x7e && episode == 0) ? "SH" : prefix.c_str(), series, episode);
 	programID = std::string(temp);
 	newEvent->programID = programID;
+
+	log(3, false, 0, TEXT("\tProgram ID BEFORE: %s\n"), programID.c_str());
 
 	if(seriesDescriptor->seriesInfo == 0x7e)
 		sprintf_s(temp, sizeof(temp), "%s%08d0000", prefix.c_str(), series);
