@@ -509,11 +509,11 @@ void EIT::dumpXmltvFile(int onid)
 
 				
 				
-					//lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
+					lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
 					_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), lang.shortDescription.c_str());
 
-					//lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
-					//lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
+					lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
+					lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
 					_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
 										
 					if(it->second.category.empty() == false)
@@ -1703,9 +1703,10 @@ std::string EIT::ReplaceAll(
   const std::string& replaceWhat, 
   const std::string& replaceWithWhat)
 {
+  int pos = -1;
   while(1)
   {
-    const int pos = result.find(replaceWhat);
+    pos = result.find(replaceWhat, pos+1);
     if (pos==-1) break;
     result.replace(pos,replaceWhat.size(),replaceWithWhat);
   }
