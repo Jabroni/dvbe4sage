@@ -542,7 +542,7 @@ void EIT::dumpXmltvFile(int onid)
 				{
 					EPGLanguage lang = GetDescriptionRecord(it->second);
 
-					_ftprintf(outFile, TEXT("\t<programme start=\"%s\" stop=\"%s\" channel=\"I%d.%d.DVBE4SAGE\">\n"), it->second.startDateTime.c_str(), it->second.stopDateTime.c_str(), it->second.SID, it->second.ONID);
+					_ftprintf(outFile, TEXT("\t<programme start=\"%s +0000\" stop=\"%s +0000\" channel=\"I%d.%d.DVBE4SAGE\">\n"), it->second.startDateTime.c_str(), it->second.stopDateTime.c_str(), it->second.SID, it->second.ONID);
 				
 					lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
 					lang.shortDescription = trim(lang.shortDescription);
