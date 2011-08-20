@@ -486,10 +486,12 @@ void EIT::dumpXmltvFile(int onid)
 					int chanNo = (encoderNetworkProvider.getChannelForSid(usid) == NULL) ? it->second.sid : it->second.channelNumber;
 					encoderNetworkProvider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
+					string chName = ReplaceAll((string)channelName, "&", "&amp;");
+
 					_ftprintf(outFile, TEXT("\t<channel id=\"I%d.%d.DVBE4SAGE\">\n"), it->second.sid, it->second.onid);
-					_ftprintf(outFile, TEXT("\t\t<display-name>%d %s</display-name>\n"), chanNo, channelName);
+					_ftprintf(outFile, TEXT("\t\t<display-name>%d %s</display-name>\n"), chanNo, chName.c_str());
 					_ftprintf(outFile, TEXT("\t\t<display-name>%d</display-name>\n"), chanNo);
-					_ftprintf(outFile, TEXT("\t\t<display-name>%s</display-name>\n"), channelName);
+					_ftprintf(outFile, TEXT("\t\t<display-name>%s</display-name>\n"), chName.c_str());
 
 					_ftprintf(outFile, TEXT("\t</channel>\n"));
 				}
