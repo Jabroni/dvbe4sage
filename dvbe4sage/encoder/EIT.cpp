@@ -817,13 +817,15 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 			dvb_time.tm_sec =  bcdtoint(currentEvent->start_time_s);
 			dvb_time.tm_min =  bcdtoint(currentEvent->start_time_m);
 			dvb_time.tm_hour = bcdtoint(currentEvent->start_time_h);
-			const time_t startTime = _mkgmtime(&dvb_time);
+		//	const time_t startTime = _mkgmtime(&dvb_time);
+			const time_t startTime = mktime(&dvb_time);
 
 			// Get program end time
 			dvb_time.tm_sec  += bcdtoint(currentEvent->duration_s);
 			dvb_time.tm_min  += bcdtoint(currentEvent->duration_m);
 			dvb_time.tm_hour += bcdtoint(currentEvent->duration_h);
-			const time_t stopTime = _mkgmtime(&dvb_time);
+		//	const time_t stopTime = _mkgmtime(&dvb_time);
+			const time_t stopTime = mktime(&dvb_time);
 
 			// Get time of right now
 			time_t now;
