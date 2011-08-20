@@ -16,6 +16,26 @@
 extern Encoder*	g_pEncoder;
 int g_onid = 0;
 
+// strimg trim
+inline std::string trim_right(const std::string &source , const std::string& t = " ")
+{
+	std::string str = source;
+	return str.erase(str.find_last_not_of(t) + 1);
+}
+
+inline std::string trim_left( const std::string& source, const std::string& t = " ")
+{
+	std::string str = source;
+	return str.erase(0 , source.find_first_not_of(t));
+}
+
+inline std::string trim(const std::string& source, const std::string& t = " ")
+{
+	std::string str = source;
+	return trim_left(trim_right(str , t) , t);
+} 
+//
+
 EITtimer::EITtimer() :
 m_EitTimerThreadCanEnd(false)
 {
@@ -523,14 +543,15 @@ void EIT::dumpXmltvFile(int onid)
 					EPGLanguage lang = GetDescriptionRecord(it->second);
 
 					_ftprintf(outFile, TEXT("\t<programme start=\"%s\" stop=\"%s\" channel=\"I%d.%d.DVBE4SAGE\">\n"), it->second.startDateTime.c_str(), it->second.stopDateTime.c_str(), it->second.SID, it->second.ONID);
-
-				
 				
 					lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
+					lang.shortDescription = trim(lang.shortDescription);
 					_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), lang.shortDescription.c_str());
 
 					lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
+					lang.longDescription = trim(lang.longDescription);
 					lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
+
 					_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
 										
 					if(it->second.category.empty() == false)
