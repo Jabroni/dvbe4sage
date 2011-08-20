@@ -493,6 +493,21 @@ void EIT::dumpXmltvFile(int onid)
 					_ftprintf(outFile, TEXT("\t\t<display-name>%d</display-name>\n"), chanNo);
 					_ftprintf(outFile, TEXT("\t\t<display-name>%s</display-name>\n"), chName.c_str());
 
+					switch(g_pConfiguration->getSetupType())
+					{
+						case SETUP_DVBS:
+							_ftprintf(outFile, TEXT("\t\t<display-name>Satellite</display-name>\n"));
+							break;
+						case SETUP_DVBC:
+							_ftprintf(outFile, TEXT("\t\t<display-name>Cable</display-name>\n"));
+							break;
+						case SETUP_DVBT:
+							_ftprintf(outFile, TEXT("\t\t<display-name>Terrestrial</display-name>\n"));
+							break;
+						default:
+							break;
+					}
+			
 					_ftprintf(outFile, TEXT("\t</channel>\n"));
 				}
 			}
@@ -768,7 +783,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 			const int day = mjd - 14956 - (int)(year * 365.25) - (int)(month * 30.6001);
 			int k = (month == 14 || month == 15) ? 1 : 0;
 			year += k;
-			month = month - 1 - (k * 12);
+			month = month - 2 - (k * 12);
 
 			tm dvb_time;
 			dvb_time.tm_mday = day;
