@@ -585,13 +585,13 @@ void EIT::dumpXmltvFile(int onid)
 					}
 
 					if(it->second.CC == true)
-						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"closed caption\"/>\n"));
+						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"onscreen\"/>\n"));
 
 					if(it->second.teletext == true)
 						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"teletext\"/>\n"));
 
 					if(it->second.onscreen == true)
-						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"on screen\"/>\n"));
+						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"onscreen\"/>\n"));
 
 					if(it->second.vchipRating.empty() == false)
 					{
@@ -846,13 +846,13 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				tm nuTime;
 				localtime_s(&nuTime, &startTime);					
 				static char	date_strbuf[MAX_DATE_LENGTH];
-				strftime(date_strbuf, sizeof(date_strbuf), "%Y.%m.%d %H:%M:%S", &nuTime);
+				strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);
 
 				log(3, false, 0, TEXT("start=%s +0000 "), date_strbuf);
 				newEvent.startDateTime = date_strbuf;
 
 				localtime_s(&nuTime, &stopTime);
-				strftime(date_strbuf, sizeof(date_strbuf), "%Y.%m.%d %H:%M:%S", &nuTime);
+				strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);
 
 				log(3, false, 0, TEXT("stop=%s +0000>\n"), date_strbuf);
 				newEvent.stopDateTime = date_strbuf;
