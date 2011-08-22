@@ -436,12 +436,12 @@ void EIT::RealEitCollectionCallback()
 
 void EIT::sendToSage(int onid)
 {
-	int port = 5979;
+
 	SOCKET s; 
     SOCKADDR_IN target; 
     target.sin_family = AF_INET; 
-    target.sin_port = htons((USHORT)port); 
-    target.sin_addr.s_addr = inet_addr ("192.168.5.104"); 
+    target.sin_port = htons((USHORT)m_SageEitPort); 
+    target.sin_addr.s_addr = inet_addr (m_SageEitIP.c_str()); 
 
 	
 	log(3, true, 0, TEXT("EIT is attempting to send EPG to SAGETV\n"));
@@ -454,7 +454,7 @@ void EIT::sendToSage(int onid)
         return ;
 	
 	log(3, true, 0, TEXT("Tries START\n"));
-	char *command = "START DISH Network - USA|\r\n";
+	char *command = "START Sky MX|\r\n";
 	if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
 	{
 		shutdown(s, SD_SEND);
@@ -475,40 +475,52 @@ void EIT::sendToSage(int onid)
 	for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 	{
 		hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
-		//	if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+		
 		if(eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end())
 		{
 			EPGLanguage lang = GetDescriptionRecord(it->second);
 
+			int sid = it->second.SID;
+
 			channelName[0] = TCHAR('\0');
 			UINT32 usid = encoderNetworkProvider.getUniqueSID(it->second.ONID,it->second.SID);
 			encoderNetworkProvider.getServiceName(usid , channelName, sizeof(channelName) / sizeof(channelName[0]));
-			
-			log(3, true, 0, TEXT("DEBUG usid: %d\n"),usid);
 
 			int chanNo = encoderNetworkProvider.getChannelForSid(usid);
 			if(chanNo == NULL) chanNo = encoderNetworkProvider.getSIDFromUniqueSID(usid);
 
-			log(3, true, 0, TEXT("DEBUG chno: %u\n"),usid);
 			int eventID = (it->second.eventID == NULL) ? 0 : it->second.eventID;
 
+			string showID = "";
+			if(it->second.seriesID.empty() == false)
+				showID = it->second.seriesID.c_str();
+			else 
+				showID = "EP4152486907";
 
-			log(3, true, 0, TEXT("DEBUG EventID: %u\n"),eventID);
-			string showID = (it->second.programID.empty()) ?  "" : it->second.programID;
-			log(3, true, 0, TEXT("DEBUG showID: %u\n"),showID);
+			string category = "NA";
+			string rating = "PG-13";
 
+			int firstAired = 0; // 0 = new
+			
+			int flag_lang = 0; //Detailed rating flag for Language
+			int flag_gl = 0; // GL - Detailed rating flag for "Graphic Language" ("1" or "0").
+			int flag_n = 0; //N - Detailed rating flag for "Nudity" ("1" or "0").
+			int flag_ssc = 0; //SSC - Detailed rating flag for "Strong Sexual Content" ("1" or "0").
+			int flag_v = 0; //V - Detailed rating flag for "Violence" ("1" or "0").
+			int flag_gv = 0 ; //GV - Detailed rating flag for "Graphic Violence" ("1" or "0").
+			int flag_ac = 0 ; //AC - Detailed rating flag for "Adult Content" ("1" or "0").
+			int flag_hd = 0 ; //HD - Flag for HD content ("1" or "0").
+			int flag_cc = 0 ; //CC - Flag for closed captioning present ("1" or "0").
+			int flag_stereo = 0; //Stereo - Flag for stereo sound ("1" or "0").
 
-			int sid = it->second.SID;
-			log(3, true, 0, TEXT("DEBUG starttime: %s\n"),it->second.startDateTimeSage.c_str());
-			log(3, true, 0, TEXT("DEBUG duration: %s\n"),it->second.durationTime.c_str());
-
-
-			log(3, true, 0, TEXT("DEBUG sid: %d\n"),sid);
-
-
+			string eventName= lang.shortDescription;
+			string shortDesc = lang.shortDescription;
+			string longDesc = lang.longDescription;
+		
 			char buffer[2000];
-			//sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%u", chanNo,channelName,it->second.SID);
-			sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%d\t%d\t%s\t%s\t%s\t", chanNo,channelName,it->second.SID,eventID,showID,it->second.startDateTimeSage.c_str(),it->second.durationTime.c_str());
+			sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%d\t%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\r\n", 
+				chanNo,channelName,chanNo,eventID,showID.c_str(),it->second.startDateTimeSage.c_str(),it->second.durationTime.c_str(),category.c_str(), rating.c_str(),firstAired,
+				flag_lang, flag_gl, flag_n, flag_ssc, flag_v, flag_gv, flag_ac, flag_hd, flag_cc, flag_stereo, eventName.c_str(), shortDesc.c_str(), longDesc.c_str());
 			
 
 			// channel number
@@ -528,8 +540,8 @@ void EIT::sendToSage(int onid)
 			//strcat_s(command,2056,"\tShort5");                // Short Description
 			//strcat_s(command,2056,"\tLong5\r\n");                 // Long Description
 			
-			log(3, true, 0, TEXT("Tries to send: %s\n"),buffer);
-			if(send(s, command, strlen(buffer), 0) == SOCKET_ERROR)
+			log(3, true, 0, TEXT("Command send to SageTV: %s\n"),buffer);
+			if(send(s, buffer, strlen(buffer), 0) == SOCKET_ERROR)
 			{
 				shutdown(s, SD_SEND);
 				closesocket(s);
