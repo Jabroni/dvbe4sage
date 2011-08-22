@@ -420,13 +420,13 @@ void EIT::RealEitCollectionCallback()
 
 	// Dump data to xmltv file if configured to do so
 	if(m_SaveXmltvFileLocation.length() > 0) {
-		log(3, true, 0, TEXT("tries to dump xml\n"));
+		log(3, true, 0, TEXT("Tries to dump EPG XMLTV\n"));
 		dumpXmltvFile(m_onid);
 	}
 
 	// Send data to SageTV server if configured to do so
 	if(m_SageEitIP.length() > 0) {
-		log(3, true, 0, TEXT("tries to send to sage\n"));
+		log(3, true, 0, TEXT("Tries to send EPG to SageTV\n"));
 		sendToSage(m_onid);
 	}
 	// Clean up after ourselves
@@ -436,7 +436,125 @@ void EIT::RealEitCollectionCallback()
 
 void EIT::sendToSage(int onid)
 {
+	int port = 5979;
+	SOCKET s; 
+    SOCKADDR_IN target; 
+    target.sin_family = AF_INET; 
+    target.sin_port = htons((USHORT)port); 
+    target.sin_addr.s_addr = inet_addr ("192.168.5.104"); 
 
+	
+	log(3, true, 0, TEXT("EIT is attempting to send EPG to SAGETV\n"));
+	
+
+    if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET)
+        return ;
+
+    if (connect(s, (SOCKADDR *)&target, sizeof(target)) == SOCKET_ERROR)
+        return ;
+	
+	log(3, true, 0, TEXT("Tries START\n"));
+	char *command = "START DISH Network - USA|\r\n";
+	if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
+	{
+		shutdown(s, SD_SEND);
+		closesocket(s);
+        return ;
+	}
+
+	recv(s, command, strlen(command),0);
+	log(3, true, 0, TEXT("Responded START\n"));
+
+	NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
+
+	eitRecord eitRec = GetEitRecord(onid);
+
+	command = new char [2056];
+	TCHAR channelName[256];
+
+	for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
+	{
+		hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
+		//	if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+		if(eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end())
+		{
+			EPGLanguage lang = GetDescriptionRecord(it->second);
+
+			channelName[0] = TCHAR('\0');
+			UINT32 usid = encoderNetworkProvider.getUniqueSID(it->second.ONID,it->second.SID);
+			encoderNetworkProvider.getServiceName(usid , channelName, sizeof(channelName) / sizeof(channelName[0]));
+			
+			log(3, true, 0, TEXT("DEBUG usid: %d\n"),usid);
+
+			int chanNo = encoderNetworkProvider.getChannelForSid(usid);
+			if(chanNo == NULL) chanNo = encoderNetworkProvider.getSIDFromUniqueSID(usid);
+
+			log(3, true, 0, TEXT("DEBUG chno: %u\n"),usid);
+			int eventID = (it->second.eventID == NULL) ? 0 : it->second.eventID;
+
+
+			log(3, true, 0, TEXT("DEBUG EventID: %u\n"),eventID);
+			string showID = (it->second.programID.empty()) ?  "" : it->second.programID;
+			log(3, true, 0, TEXT("DEBUG showID: %u\n"),showID);
+
+
+			int sid = it->second.SID;
+			log(3, true, 0, TEXT("DEBUG starttime: %s\n"),it->second.startDateTimeSage.c_str());
+			log(3, true, 0, TEXT("DEBUG duration: %s\n"),it->second.durationTime.c_str());
+
+
+			log(3, true, 0, TEXT("DEBUG sid: %d\n"),sid);
+
+
+			char buffer[2000];
+			//sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%u", chanNo,channelName,it->second.SID);
+			sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%d\t%d\t%s\t%s\t%s\t", chanNo,channelName,it->second.SID,eventID,showID,it->second.startDateTimeSage.c_str(),it->second.durationTime.c_str());
+			
+
+			// channel number
+			//strcat_s(command,2056,"\tespnppv1");             // Channel name
+			//strcat_s(command,2056,it->second.SID);                  // SID
+			//strcat_s(command,2056,"\t1234");                // Event ID
+			//strcat_s(command,2056,"\tEP4152486907");         // Show ID
+			//strcat_s(command,2056,"\t08/20/2011");           // Start date
+			//strcat_s(command,2056," 21:00:00");              // Start time
+			//strcat_s(command,2056,"\t03:00:00");             // Duration
+			//strcat_s(command,2056,"\tSports/Basketball");    // Category/subcategory
+
+			//strcat_s(command,2056,"\tPG-13");                // Rating
+			//strcat_s(command,2056,"\t0");                    // Year first aired (0 for new)
+			//strcat_s(command,2056,"\t1\t1\t1\t1\t1\t1\t1\t1\t1\t1");  // Detailed ratings and stereo flag
+			//strcat_s(command,2056,"\tSport Name5");           // Event name 
+			//strcat_s(command,2056,"\tShort5");                // Short Description
+			//strcat_s(command,2056,"\tLong5\r\n");                 // Long Description
+			
+			log(3, true, 0, TEXT("Tries to send: %s\n"),buffer);
+			if(send(s, command, strlen(buffer), 0) == SOCKET_ERROR)
+			{
+				shutdown(s, SD_SEND);
+				closesocket(s);
+				return ;
+			}
+	
+			recv(s, command, strlen(command),0);
+			log(3, true, 0, TEXT("Responded command.\n"));
+		}
+	}
+
+
+	log(3, true, 0, TEXT("Tries END"));
+	command = "END\r\n";
+	if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
+	{
+		shutdown(s, SD_SEND);
+		closesocket(s);
+        return ;
+	}
+	recv(s, command, strlen(command),0);
+	log(3, true, 0, TEXT("Responded END"));
+
+	shutdown(s, SD_SEND);
+	closesocket(s);
 }
 
 bool EIT::SendSocketCommand(char *command)
@@ -502,8 +620,8 @@ void EIT::dumpXmltvFile(int onid)
 					// Get the channel name and the mapped number 
 					channelName[0] = TCHAR('\0');
 					const UINT32 usid = NetworkProvider::getUniqueSID(it->second.onid, it->second.sid);
-
-					int chanNo = (encoderNetworkProvider.getChannelForSid(usid) == NULL) ? it->second.sid : it->second.channelNumber;
+					
+					int chanNo = (it->second.channelNumber == NULL) ? it->second.sid : it->second.channelNumber;
 					encoderNetworkProvider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 					string chName = ReplaceAll((string)channelName, "&", "&amp;");
@@ -812,7 +930,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 			dvb_time.tm_year = year;
 			dvb_time.tm_isdst = 0;
 			dvb_time.tm_wday = dvb_time.tm_yday = 0;
-
+			
 			// Get program start time
 			dvb_time.tm_sec =  bcdtoint(currentEvent->start_time_s);
 			dvb_time.tm_min =  bcdtoint(currentEvent->start_time_m);
@@ -826,6 +944,11 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 			dvb_time.tm_hour += bcdtoint(currentEvent->duration_h);
 		//	const time_t stopTime = _mkgmtime(&dvb_time);
 			const time_t stopTime = mktime(&dvb_time);
+
+			// We save the duration of the program
+			char buffer[50];
+			sprintf_s(buffer, "%02d:%02d:%02d", bcdtoint(currentEvent->duration_h), bcdtoint(currentEvent->duration_m), bcdtoint(currentEvent->duration_s));
+			newEvent.durationTime = buffer;
 
 			// Get time of right now
 			time_t now;
@@ -850,6 +973,11 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 				log(3, false, 0, TEXT("start=%s +0000 "), date_strbuf);
 				newEvent.startDateTime = date_strbuf;
+
+
+				localtime_s(&nuTime, &startTime);					
+				strftime(date_strbuf, sizeof(date_strbuf), "%m/%d/%Y %H:%M:%S", &nuTime);
+				newEvent.startDateTimeSage = date_strbuf;
 
 				localtime_s(&nuTime, &stopTime);
 				strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);

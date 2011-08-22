@@ -35,18 +35,20 @@ typedef  struct stEPGLanguage
 	bool CR_added;
 } EPGLanguage;
 
-// Auxiliary structure for EIT events
+// Auxiliary structure for EIT eventsd
 struct EITEvent
 {
 	USHORT eventID;
-	int SID;
-	int ONID;
+	UINT32 SID;
+	UINT32 ONID;
 	time_t startTime;
 	time_t stopTime;
 	string shortDescription;
 	string longDescription;
 	string startDateTime;			// Event start date and time (local time)
+	string startDateTimeSage;			// Event start date and time (local time)
 	string stopDateTime;			// Event stop date and time (local time)
+	string durationTime;			// Event duration time
 	int    parentalRating;			// Note: Not the North American rating
 	string starRating;
 	string mpaaRating;				// North American rating
