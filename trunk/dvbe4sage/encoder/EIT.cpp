@@ -307,6 +307,9 @@ void EIT::ParseIniFile(void)
 			m_CollectionDurationMinutes = atoi(CIniFile::GetValue("CollectionDurationMinutes", sections[i], fileName).c_str());
 			log(0, false, 0, TEXT("CollectionDurationMinutes = %d\n"), m_CollectionDurationMinutes);
 
+			m_SageEitLocalPath = CIniFile::GetValue("SageEitLocalPath", sections[i], fileName);
+			log(0, false, 0, TEXT("SageEitLocalPath = %s\n"), m_TempFileLocation.c_str());
+
 			log(0, false, 0, TEXT("\n"));
 		}
 		else
@@ -446,6 +449,16 @@ void EIT::sendToSage(int onid)
 	
 	log(3, true, 0, TEXT("EIT is attempting to send EPG to SAGETV\n"));
 	
+	string lineup = "";
+	// Loop for all configured providers to look for the Lineup name of the specified ONID
+	for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
+	{
+		if(eIter->ONID == onid)
+			lineup = eIter->lineup;
+	}
+
+	
+
 
     if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET)
         return ;
@@ -493,7 +506,7 @@ void EIT::sendToSage(int onid)
 
 			string showID = "";
 			if(it->second.seriesID.empty() == false)
-				showID = it->second.seriesID.c_str();
+				showID = it->second.programID;
 			else 
 				showID = "EP4152486907";
 
@@ -633,7 +646,11 @@ void EIT::dumpXmltvFile(int onid)
 					channelName[0] = TCHAR('\0');
 					const UINT32 usid = NetworkProvider::getUniqueSID(it->second.onid, it->second.sid);
 					
-					int chanNo = (it->second.channelNumber == NULL) ? it->second.sid : it->second.channelNumber;
+					int chanNo = encoderNetworkProvider.getChannelForSid(usid);
+					if(chanNo== NULL) {
+						chanNo = it->second.sid;
+					}
+						(it->second.channelNumber == NULL) ? it->second.sid : it->second.channelNumber;
 					encoderNetworkProvider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 					string chName = ReplaceAll((string)channelName, "&", "&amp;");
@@ -987,7 +1004,8 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				newEvent.startDateTime = date_strbuf;
 
 
-				localtime_s(&nuTime, &startTime);					
+				localtime_s(&nuTime, &startTime);	
+				
 				strftime(date_strbuf, sizeof(date_strbuf), "%m/%d/%Y %H:%M:%S", &nuTime);
 				newEvent.startDateTimeSage = date_strbuf;
 

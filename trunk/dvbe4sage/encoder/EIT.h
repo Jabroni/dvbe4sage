@@ -135,6 +135,8 @@ private:
 	vector<eitRecord> m_eitRecords;
 	string m_SageEitIP;
 	USHORT m_SageEitPort;
+	string m_SageEitLocalPath;
+	string m_SageEitRemotePath;
 	string m_SaveXmltvFileLocation;
 	string m_TempFileLocation;
 	int m_CollectionDurationMinutes;
