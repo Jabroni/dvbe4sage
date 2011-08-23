@@ -755,8 +755,9 @@ void EIT::dumpXmltvFile(int onid)
 			for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 			{
 				hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
+				hash_map<UINT32, Service>::iterator it3 = encoderNetworkProvider.m_Services.find(NetworkProvider::getUniqueSID(it->second.ONID, it->second.SID)); 
 			//	if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
-				if(eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end())
+				if((eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()) && it3 != encoderNetworkProvider.m_Services.end())
 				{
 					EPGLanguage lang = GetDescriptionRecord(it->second);
 
