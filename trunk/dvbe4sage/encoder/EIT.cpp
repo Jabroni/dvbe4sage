@@ -16,6 +16,79 @@
 extern Encoder*	g_pEncoder;
 int g_onid = 0;
 
+// code page swapping
+// 65001 is utf-8.
+wchar_t *CodePageToUnicode(int codePage, const char *src)
+    {
+    if (!src) return 0;
+    int srcLen = strlen(src);
+    if (!srcLen)
+	{
+	wchar_t *w = new wchar_t[1];
+	w[0] = 0;
+	return w;
+	}
+	
+    int requiredSize = MultiByteToWideChar(codePage,
+        0,
+        src,srcLen,0,0);
+	
+    if (!requiredSize)
+        {
+        return 0;
+        }
+	
+    wchar_t *w = new wchar_t[requiredSize+1];
+    w[requiredSize] = 0;
+	
+    int retval = MultiByteToWideChar(codePage,
+        0,
+        src,srcLen,w,requiredSize);
+    if (!retval)
+        {
+        delete [] w;
+        return 0;
+        }
+	
+    return w;
+    }
+	
+char *UnicodeToCodePage(int codePage, const wchar_t *src)
+    {
+    if (!src) return 0;
+    int srcLen = wcslen(src);
+    if (!srcLen)
+	{
+	char *x = new char[1];
+	x[0] = '\0';
+	return x;
+	}
+	
+    int requiredSize = WideCharToMultiByte(codePage,
+        0,
+        src,srcLen,0,0,0,0);
+	
+    if (!requiredSize)
+        {
+        return 0;
+        }
+	
+    char *x = new char[requiredSize+1];
+    x[requiredSize] = 0;
+	
+    int retval = WideCharToMultiByte(codePage,
+        0,
+        src,srcLen,x,requiredSize,0,0);
+    if (!retval)
+        {
+        delete [] x;
+        return 0;
+        }
+	
+    return x;
+    }
+// end
+
 // strimg trim
 inline std::string trim_right(const std::string &source , const std::string& t = " ")
 {
@@ -493,10 +566,8 @@ void EIT::sendToSage(int onid)
 		{
 			EPGLanguage lang = GetDescriptionRecord(it->second);
 
-			int sid = it->second.SID;
-
 			channelName[0] = TCHAR('\0');
-			UINT32 usid = encoderNetworkProvider.getUniqueSID(it->second.ONID,it->second.SID);
+			UINT32 usid = encoderNetworkProvider.getUniqueSID((USHORT)it->second.ONID, (USHORT)it->second.SID);
 			encoderNetworkProvider.getServiceName(usid , channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 			int chanNo = encoderNetworkProvider.getChannelForSid(usid);
@@ -693,11 +764,18 @@ void EIT::dumpXmltvFile(int onid)
 				
 					lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
 					lang.shortDescription = trim(lang.shortDescription);
-					_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), lang.shortDescription.c_str());
+					// Convert utf-8 to ANSI:
+					wchar_t *wText2 = CodePageToUnicode(65001,lang.shortDescription.c_str());	
+					char *ansiText = UnicodeToCodePage(1252,wText2);
+					_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), ansiText);
 
 					lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
 					lang.longDescription = trim(lang.longDescription);
 					lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
+
+					// Convert utf-8 to ANSI:
+					wText2 = CodePageToUnicode(65001,lang.longDescription.c_str());	
+					ansiText = UnicodeToCodePage(1252,wText2);
 
 					_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
 										
