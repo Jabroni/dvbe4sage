@@ -1366,10 +1366,12 @@ void EIT::decodeExtendedEvent(const BYTE* inputBuffer, EITEvent* newEvent)
 void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 {
 	// If this is for dish network or bell express, use the alternate routine
-	//if(inputBuffer[3] == 0xFF)	{
+	if(inputBuffer[2] >> 4 == 0xF)
+		//if(inputBuffer[3] == 0xFF)
+	{
 		decodeContentDescriptorDish(inputBuffer,newEvent);
 		return;
-	//}
+	}
 
 	const descr_content_t* const contentDescriptor = CastContentDescriptor(inputBuffer);
 	int nibble=0;
