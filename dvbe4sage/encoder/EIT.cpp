@@ -230,6 +230,17 @@ void EITtimer::RealEitCollectionCallback()
 	char command[MAX_PATH];
 	char tempFile[MAX_PATH];
 
+	m_DebugEPG = 1;
+	// For debugging EPG, if m_DebugEPG == 1, it will run EPG on init without waiting for CollectionHour/Min
+	if(m_DebugEPG == 1) {
+		time_t rawtime;
+		time ( &rawtime );
+		struct tm * timeinfo;
+		timeinfo = localtime ( &rawtime );
+
+		m_CollectionTimeHour = timeinfo->tm_hour;
+		m_CollectionTimeMin = timeinfo->tm_min;
+	}
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
 	log(3, true, 0, TEXT("Waiting until %02d:%02d to collect and process EIT data.\n"), m_CollectionTimeHour, m_CollectionTimeMin);
@@ -486,7 +497,6 @@ void EIT::RealEitCollectionCallback()
 	m_CollectEIT = false;
 	//unlock();
 
-
 	// Send socket command make to stop the recording and release the tuner
 	// "STOP SageTV DVB-S2 Enhancer 1 Digital TV Tuner"
 	//SendSocketCommand("STOP ***EITGATHERING***\r\n");
@@ -507,6 +517,8 @@ void EIT::RealEitCollectionCallback()
 	}
 	// Clean up after ourselves
 	DeleteFile(tempFile);
+	m_EITevents.clear();
+
 
 }
 
@@ -1354,11 +1366,10 @@ void EIT::decodeExtendedEvent(const BYTE* inputBuffer, EITEvent* newEvent)
 void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 {
 	// If this is for dish network or bell express, use the alternate routine
-	if(inputBuffer[3] == 0xFF)
-	{
+	//if(inputBuffer[3] == 0xFF)	{
 		decodeContentDescriptorDish(inputBuffer,newEvent);
 		return;
-	}
+	//}
 
 	const descr_content_t* const contentDescriptor = CastContentDescriptor(inputBuffer);
 	int nibble=0;
@@ -1945,13 +1956,45 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 	if(decompressed)
 	{
 		std::string descriptionText((char *)decompressed); 
-
+		std::string descriptionText2;
 		// Get rid of annoying carriage returns
-		descriptionText = ReplaceAll(descriptionText, "\r", " ");
-		
-		if(descriptionText.length() > 0)
-			log(3, false, 0, TEXT("\tLong Desc: %s\n"), descriptionText.c_str());
+		//descriptionText = ReplaceAll(descriptionText, "\r", "");
 
+
+		/*
+		// Logic to grab category for DN (maybe other providers too?) from the Description
+		// Case 1: <Episode Name>\r <Category/subcategory>. <Long description>
+		// Case 2: <Category/subcategory>. <Long description>
+		// Case 3: <Category/subcategory>.
+		size_t foundR, foundP;
+		foundR = descriptionText.find("\r");
+		if(foundR!= -1) {
+			// String has a \r value. Thats for episode name. We go to \r position and continue parsing till we find a .
+			foundP = descriptionText.find(".",foundR);
+			if(foundP != -1) {
+				newEvent->category = descriptionText.substr(foundR+1,foundP-foundR-1);
+				descriptionText2 = descriptionText.substr(foundR+1 + (foundP-foundR-1));
+			} else { 
+				//nothing done
+			}
+		} else {
+			foundP = descriptionText.find(".");
+			if(foundP != -1) {
+				newEvent->category = descriptionText.substr(0,foundP);
+				descriptionText2 = descriptionText.substr(foundP);
+			}
+			else  {
+				// nothing done
+			}
+		}
+		*/
+
+		
+ 		if(descriptionText.length() > 0) {
+			log(3, false, 0, TEXT("\tLong Desc: %s\n"), descriptionText.c_str());
+			log(3, false, 0, TEXT("\tLong Category: %s\n"), newEvent->category.c_str());
+			log(3, false, 0, TEXT("\tLong Substr: %s\n"), descriptionText2.c_str());
+		}
 		newEvent->longDescription = descriptionText;
 
 		free(decompressed);

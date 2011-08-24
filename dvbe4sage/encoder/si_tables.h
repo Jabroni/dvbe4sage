@@ -1029,17 +1029,16 @@ typedef struct descr_content_struct {
 #define CastContentDescriptor(x) ((descr_content_t *)(x))
 
 typedef struct nibble_content_struct {
-#if 0
-	unsigned char content_nibble_level_1                 :4;
-	unsigned char content_nibble_level_2                 :4;
-	unsigned char user_nibble_1                          :4;
-	unsigned char user_nibble_2                          :4;
-#else
+/*#if 0
 	unsigned char user_nibble_2                          :4;
 	unsigned char user_nibble_1                          :4;
 	unsigned char content_nibble_level_2                 :4;
 	unsigned char content_nibble_level_1                 :4;
-#endif
+#else*/
+	unsigned char content_nibble_level_1                 :4;
+	unsigned char content_nibble_level_2                 :4;
+	unsigned char user_nibble_1                          :4;
+	unsigned char user_nibble_2                          :4;
 } nibble_content_t;
 #define CastContentNibble(x) ((nibble_content_t *)(x))
 
