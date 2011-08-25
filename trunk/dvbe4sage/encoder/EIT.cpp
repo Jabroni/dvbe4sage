@@ -161,6 +161,16 @@ void EITtimer::ParseIniFile(void)
 			m_CollectionDurationMinutes = atoi(CIniFile::GetValue("CollectionDurationMinutes", sections[i], fileName).c_str());
 			log(0, false, 0, TEXT("CollectionDurationMinutes = %d\n"), m_CollectionDurationMinutes);
 
+			m_SageEitLocalPath = CIniFile::GetValue("SageEitLocalPath", sections[i], fileName);
+			log(0, false, 0, TEXT("SageEitLocalPath = %s\n"), m_SageEitLocalPath.c_str());
+
+			m_SageEitRemotePath = CIniFile::GetValue("SageEitRemotePath", sections[i], fileName);
+			log(0, false, 0, TEXT("SageEitRemotePath = %s\n"), m_SageEitRemotePath.c_str());
+
+			m_debugEpg = atoi(CIniFile::GetValue("DebugEPG", sections[i], fileName).c_str());
+			log(0, false, 0, TEXT("DebugEPG = %d\n"), m_debugEpg);
+
+
 			log(0, false, 0, TEXT("\n"));
 		}
 		else
@@ -230,16 +240,16 @@ void EITtimer::RealEitCollectionCallback()
 	char command[MAX_PATH];
 	char tempFile[MAX_PATH];
 
-	m_DebugEPG = 1;
+	
 	// For debugging EPG, if m_DebugEPG == 1, it will run EPG on init without waiting for CollectionHour/Min
-	if(m_DebugEPG == 1) {
+	if(m_debugEpg == 1) {
 		time_t rawtime;
 		time ( &rawtime );
-		struct tm * timeinfo;
-		timeinfo = localtime ( &rawtime );
-
-		m_CollectionTimeHour = timeinfo->tm_hour;
-		m_CollectionTimeMin = timeinfo->tm_min;
+		struct tm timeinfo;
+		localtime_s (  &timeinfo, &rawtime );
+	
+		m_CollectionTimeHour = timeinfo.tm_hour;
+		m_CollectionTimeMin = timeinfo.tm_min;
 	}
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
@@ -391,8 +401,10 @@ void EIT::ParseIniFile(void)
 			m_CollectionDurationMinutes = atoi(CIniFile::GetValue("CollectionDurationMinutes", sections[i], fileName).c_str());
 			log(0, false, 0, TEXT("CollectionDurationMinutes = %d\n"), m_CollectionDurationMinutes);
 
-			m_SageEitLocalPath = CIniFile::GetValue("SageEitLocalPath", sections[i], fileName);
-			log(0, false, 0, TEXT("SageEitLocalPath = %s\n"), m_TempFileLocation.c_str());
+
+
+	
+
 
 			log(0, false, 0, TEXT("\n"));
 		}
@@ -517,8 +529,8 @@ void EIT::RealEitCollectionCallback()
 	}
 	// Clean up after ourselves
 	DeleteFile(tempFile);
-	m_EITevents.clear();
-
+	
+	m_EITevents.empty();
 
 }
 
@@ -541,9 +553,6 @@ void EIT::sendToSage(int onid)
 		if(eIter->ONID == onid)
 			lineup = eIter->lineup;
 	}
-
-	
-
 
     if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET)
         return ;
@@ -588,26 +597,61 @@ void EIT::sendToSage(int onid)
 			int eventID = (it->second.eventID == NULL) ? 0 : it->second.eventID;
 
 			string showID = "";
-			if(it->second.seriesID.empty() == false)
+			if(it->second.programID.empty() == false)
 				showID = it->second.programID;
 			else 
 				showID = "EP4152486907";
-
+			
 			string category = "NA";
+			if(it->second.dishCategory1.empty() == false) {
+				category = it->second.dishCategory1;
+				if(it->second.dishCategory2.empty() == false) {
+					category.append(it->second.dishCategory2);
+				}
+			} else {
+				if(it->second.category.empty() == false) 
+					category = it->second.category;
+				else 
+					category = "NA";
+			}
+			
 			string rating = "PG-13";
+			if(it->second.mpaaRating.empty() == false)
+			{
+				rating = it->second.mpaaRating;
+			}
 
 			int firstAired = 0; // 0 = new
+			if(it->second.year != 0)
+					firstAired = it->second.year;
+
 			
 			int flag_lang = 0; //Detailed rating flag for Language
+			
 			int flag_gl = 0; // GL - Detailed rating flag for "Graphic Language" ("1" or "0").
+			
 			int flag_n = 0; //N - Detailed rating flag for "Nudity" ("1" or "0").
+			
 			int flag_ssc = 0; //SSC - Detailed rating flag for "Strong Sexual Content" ("1" or "0").
+			
 			int flag_v = 0; //V - Detailed rating flag for "Violence" ("1" or "0").
+			
 			int flag_gv = 0 ; //GV - Detailed rating flag for "Graphic Violence" ("1" or "0").
+			
 			int flag_ac = 0 ; //AC - Detailed rating flag for "Adult Content" ("1" or "0").
+			
 			int flag_hd = 0 ; //HD - Flag for HD content ("1" or "0").
+			if(it->second.aspect >= 9) 
+				flag_hd = 1;
+
 			int flag_cc = 0 ; //CC - Flag for closed captioning present ("1" or "0").
+			if(it->second.CC == true)
+				flag_cc = 1;
+
+
 			int flag_stereo = 0; //Stereo - Flag for stereo sound ("1" or "0").
+			if(it->second.stereo == true)
+				flag_stereo = 1;
 
 			string eventName= lang.shortDescription;
 			string shortDesc = lang.shortDescription;
@@ -767,7 +811,7 @@ void EIT::dumpXmltvFile(int onid)
 			for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 			{
 				hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
-				hash_map<UINT32, Service>::iterator it3 = encoderNetworkProvider.m_Services.find(NetworkProvider::getUniqueSID(it->second.ONID, it->second.SID)); 
+				hash_map<UINT32, Service>::iterator it3 = encoderNetworkProvider.m_Services.find(NetworkProvider::getUniqueSID((USHORT)it->second.ONID, (USHORT)it->second.SID)); 
 			//	if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
 				if((eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()) && it3 != encoderNetworkProvider.m_Services.end())
 				{
@@ -795,14 +839,18 @@ void EIT::dumpXmltvFile(int onid)
 					if(it->second.category.empty() == false)
 						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.category.c_str());
 
-					if(it->second.dishCategory1.empty() == false)
-						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.dishCategory1.c_str());
-
-					if(it->second.dishCategory2.empty() == false)
-						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.dishCategory2.c_str());
-
-					if(it->second.seriesID.empty() == false)
-						_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), it->second.seriesID.c_str());
+					if(it->second.dishCategory1.empty() == false) {
+						if(it->second.dishCategory2.empty() == false) 
+							_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s%s</category>\n"), lang.text.c_str(), it->second.dishCategory1.c_str(), it->second.dishCategory2.c_str());
+						else
+							_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.dishCategory1.c_str());
+					}
+					if(it->second.programID.empty() == false) {
+						_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), it->second.programID.c_str());
+					} else {
+						if(it->second.seriesID.empty() == false)
+							_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), it->second.seriesID.c_str());
+					}
 
 					if(it->second.year != 0)
 						_ftprintf(outFile, TEXT("\t\t<date>%d</date>\n"), it->second.year);
@@ -1365,9 +1413,15 @@ void EIT::decodeExtendedEvent(const BYTE* inputBuffer, EITEvent* newEvent)
 
 void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 {
+
+	FILE* outFile = NULL;
+	_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
+	fprintf(outFile, TEXT("[0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
+	fclose(outFile);
+
+
 	// If this is for dish network or bell express, use the alternate routine
 	if(inputBuffer[2] >> 4 == 0xF)
-		//if(inputBuffer[3] == 0xFF)
 	{
 		decodeContentDescriptorDish(inputBuffer,newEvent);
 		return;
@@ -1572,7 +1626,7 @@ void EIT::decodeContentDescriptorDish (const BYTE* inputBuffer, EITEvent* newEve
 
 		// category
 //		BYTE category = (BYTE)((nc->user_nibble_1 << 4) + (BYTE)(nc->user_nibble_2));
-		switch(nc->user_nibble_1)
+		switch(inputBuffer[3])
 		{
             case 0x00: genreText2 = std::string(""); break;
             case 0x01: genreText2 = std::string(" - Action"); break;
@@ -1959,38 +2013,14 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 	{
 		std::string descriptionText((char *)decompressed); 
 		std::string descriptionText2;
+		
 		// Get rid of annoying carriage returns
-		//descriptionText = ReplaceAll(descriptionText, "\r", "");
+		descriptionText = ReplaceAll(descriptionText, "\r", "");
 
-
-		/*
-		// Logic to grab category for DN (maybe other providers too?) from the Description
-		// Case 1: <Episode Name>\r <Category/subcategory>. <Long description>
-		// Case 2: <Category/subcategory>. <Long description>
-		// Case 3: <Category/subcategory>.
-		size_t foundR, foundP;
-		foundR = descriptionText.find("\r");
-		if(foundR!= -1) {
-			// String has a \r value. Thats for episode name. We go to \r position and continue parsing till we find a .
-			foundP = descriptionText.find(".",foundR);
-			if(foundP != -1) {
-				newEvent->category = descriptionText.substr(foundR+1,foundP-foundR-1);
-				descriptionText2 = descriptionText.substr(foundR+1 + (foundP-foundR-1));
-			} else { 
-				//nothing done
-			}
-		} else {
-			foundP = descriptionText.find(".");
-			if(foundP != -1) {
-				newEvent->category = descriptionText.substr(0,foundP);
-				descriptionText2 = descriptionText.substr(foundP);
-			}
-			else  {
-				// nothing done
-			}
-		}
-		*/
-
+		FILE* outFile = NULL;
+		_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
+		fprintf(outFile, TEXT("Description: %s\n  "), descriptionText.c_str() );
+		fclose(outFile);
 		
  		if(descriptionText.length() > 0) {
 			log(3, false, 0, TEXT("\tLong Desc: %s\n"), descriptionText.c_str());

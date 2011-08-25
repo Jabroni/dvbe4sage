@@ -94,6 +94,9 @@ private:
 	int m_CollectionTimeHour;
 	int m_CollectionTimeMin;
 	int m_CollectionDurationMinutes;
+	string m_SageEitLocalPath;
+	string m_SageEitRemotePath;
+	int m_debugEpg;
 
 	vector<eitRecord> m_eitRecords;
 
@@ -135,10 +138,9 @@ private:
 	vector<eitRecord> m_eitRecords;
 	string m_SageEitIP;
 	USHORT m_SageEitPort;
-	string m_SageEitLocalPath;
-	string m_SageEitRemotePath;
 	string m_SaveXmltvFileLocation;
 	string m_TempFileLocation;
+	
 	int m_CollectionDurationMinutes;
 	bool m_CollectEIT;
 	hash_map<UINT32, EITEvent>	m_EITevents;			// All events for the service. The key is sid and event ID, the value is an EITEvent structure
