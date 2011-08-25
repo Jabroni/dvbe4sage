@@ -15,12 +15,20 @@ class DVBParser;
 #define MAX_DATE_LENGTH						256
 #define MAX_EXPANDED_DESCRIPTION			(256 * 6 * 2 + 1)
 
+typedef enum
+{
+	EIT_PROVIDER_STANDARD = 1,
+	EIT_PROVIDER_DISH = 2,
+	EIT_PROVIDER_SKY = 3
+} EIT_PROVIDER;
+
 // Records of the ini file
 struct eitRecord
 {
 	int ONID;
 	string lineup;
 	ULONG chan;
+	EIT_PROVIDER eitProvider;
 	hash_set<USHORT> includedSIDs;
 };
 
@@ -123,6 +131,7 @@ public:
 
 private:
 	int							m_onid;
+	EIT_PROVIDER				m_provider;
 	time_t						m_Time;
 	HANDLE						m_EitCollectionThread;
 	DWORD						m_EitCollectionThreadId;

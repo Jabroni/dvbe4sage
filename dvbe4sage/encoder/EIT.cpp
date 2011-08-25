@@ -15,6 +15,7 @@
 
 extern Encoder*	g_pEncoder;
 int g_onid = 0;
+EIT_PROVIDER g_provider = EIT_PROVIDER_STANDARD;
 
 // code page swapping
 // 65001 is utf-8.
@@ -179,6 +180,19 @@ void EITtimer::ParseIniFile(void)
 			newrec.ONID = atoi(sections[i].c_str());
 			newrec.lineup = CIniFile::GetValue("Lineup", sections[i], fileName);	
 			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
+			string temp = CIniFile::GetValue("Provider", sections[i], fileName);
+			transform(temp.begin(), temp.end(), temp.begin(), tolower);
+
+			if(temp.compare("standard") == 0)
+				newrec.eitProvider = EIT_PROVIDER_STANDARD;
+			else
+			if(temp.compare("dish") == 0)
+				newrec.eitProvider = EIT_PROVIDER_DISH;
+			else
+			if(temp.compare("sky") == 0)
+				newrec.eitProvider = EIT_PROVIDER_SKY;
+			else
+				newrec.eitProvider = EIT_PROVIDER_STANDARD;		
 
 			newrec.includedSIDs.clear();
 			buffer = CIniFile::GetValue("IncludedSIDs", sections[i], fileName);
@@ -274,6 +288,7 @@ void EITtimer::RealEitCollectionCallback()
 		for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
 		{
 			g_onid = eIter->ONID;
+			g_provider = eIter->eitProvider;
 
 			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
 			// Send socket command make to us tune and lock the tuner
@@ -346,6 +361,7 @@ m_CollectEIT(false)
 , m_TimerInitialized(false)
 , m_EitCollectionThreadCanEnd(false)
 , m_onid(g_onid)
+, m_provider(g_provider)
 {
 	m_pDVBParser = pParent;
 
@@ -475,7 +491,7 @@ void EIT::RealEitCollectionCallback()
 
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
-	log(2, true, 0, TEXT("Collecting EIT Data for onid %hu.\n"), m_onid);
+	log(2, true, 0, TEXT("Collecting EIT Data for provider %d onid %hu.\n"), m_provider, m_onid);
 			
 	lock();
 	// Get rid of the old stuff
@@ -1421,7 +1437,7 @@ void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 
 
 	// If this is for dish network or bell express, use the alternate routine
-	if(inputBuffer[2] >> 4 == 0xF)
+	if(m_provider == EIT_PROVIDER_DISH)
 	{
 		decodeContentDescriptorDish(inputBuffer,newEvent);
 		return;
