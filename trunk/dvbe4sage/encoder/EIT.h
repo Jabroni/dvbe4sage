@@ -139,6 +139,15 @@ private:
 
 	DVBParser* m_pDVBParser;
 
+	FILE *m_eitEventFile;
+	bool OpenEitEventFile(bool read);
+	void CloseEitEventFile();
+	void DeleteEitEventFile();
+	bool WriteEitEventRecord(struct EITEvent *rec);
+	bool ReadNextEitEventRecord(struct EITEvent *rec);
+	ULONG m_eventsCount;
+	hash_set<USHORT>	m_eitEventIDs;
+
 	struct eitRecord GetEitRecord(int onid);
 	EPGLanguage GetDescriptionRecord(struct EITEvent rec);
 
@@ -152,7 +161,7 @@ private:
 	
 	int m_CollectionDurationMinutes;
 	bool m_CollectEIT;
-	hash_map<UINT32, EITEvent>	m_EITevents;			// All events for the service. The key is sid and event ID, the value is an EITEvent structure
+//	hash_map<UINT32, EITEvent>	m_EITevents;			// All events for the service. The key is sid and event ID, the value is an EITEvent structure
 	bool						m_TimerInitialized;
 
 	// Dump EIT data to a xmltv file
