@@ -489,13 +489,16 @@ void EIT::RealEitCollectionCallback()
 	time_t now;
 	char tempFile[MAX_PATH];
 
+	OpenEitEventFile(false);
+	m_eitEventIDs.empty();
+
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
 	log(2, true, 0, TEXT("Collecting EIT Data for provider %d onid %hu.\n"), m_provider, m_onid);
 			
 	lock();
 	// Get rid of the old stuff
-	m_EITevents.clear();
+//	m_EITevents.clear();
 	m_CollectEIT = true;
 	unlock();
 
@@ -545,8 +548,10 @@ void EIT::RealEitCollectionCallback()
 	}
 	// Clean up after ourselves
 	DeleteFile(tempFile);
+
+	DeleteEitEventFile();
 	
-	m_EITevents.empty();
+//	m_EITevents.empty();
 
 }
 
@@ -595,51 +600,54 @@ void EIT::sendToSage(int onid)
 	command = new char [2056];
 	TCHAR channelName[256];
 
-	for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
+	OpenEitEventFile(true);
+	struct EITEvent currentRecord;
+	while(ReadNextEitEventRecord(&currentRecord) == true)
+//	for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 	{
-		hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
+		hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)currentRecord.SID); 
 		
 		if(eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end())
 		{
-			EPGLanguage lang = GetDescriptionRecord(it->second);
+			EPGLanguage lang = GetDescriptionRecord(currentRecord);
 
 			channelName[0] = TCHAR('\0');
-			UINT32 usid = encoderNetworkProvider.getUniqueSID((USHORT)it->second.ONID, (USHORT)it->second.SID);
+			UINT32 usid = encoderNetworkProvider.getUniqueSID((USHORT)currentRecord.ONID, (USHORT)currentRecord.SID);
 			encoderNetworkProvider.getServiceName(usid , channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 			int chanNo = encoderNetworkProvider.getChannelForSid(usid);
 			if(chanNo == NULL) chanNo = encoderNetworkProvider.getSIDFromUniqueSID(usid);
 
-			int eventID = (it->second.eventID == NULL) ? 0 : it->second.eventID;
+			int eventID = (currentRecord.eventID == NULL) ? 0 : currentRecord.eventID;
 
 			string showID = "";
-			if(it->second.programID.empty() == false)
-				showID = it->second.programID;
+			if(currentRecord.programID.empty() == false)
+				showID = currentRecord.programID;
 			else 
 				showID = "EP4152486907";
 			
 			string category = "NA";
-			if(it->second.dishCategory1.empty() == false) {
-				category = it->second.dishCategory1;
-				if(it->second.dishCategory2.empty() == false) {
-					category.append(it->second.dishCategory2);
+			if(currentRecord.dishCategory1.empty() == false) {
+				category = currentRecord.dishCategory1;
+				if(currentRecord.dishCategory2.empty() == false) {
+					category.append(currentRecord.dishCategory2);
 				}
 			} else {
-				if(it->second.category.empty() == false) 
-					category = it->second.category;
+				if(currentRecord.category.empty() == false) 
+					category = currentRecord.category;
 				else 
 					category = "NA";
 			}
 			
 			string rating = "PG-13";
-			if(it->second.mpaaRating.empty() == false)
+			if(currentRecord.mpaaRating.empty() == false)
 			{
-				rating = it->second.mpaaRating;
+				rating = currentRecord.mpaaRating;
 			}
 
 			int firstAired = 0; // 0 = new
-			if(it->second.year != 0)
-					firstAired = it->second.year;
+			if(currentRecord.year != 0)
+					firstAired = currentRecord.year;
 
 			
 			int flag_lang = 0; //Detailed rating flag for Language
@@ -657,16 +665,16 @@ void EIT::sendToSage(int onid)
 			int flag_ac = 0 ; //AC - Detailed rating flag for "Adult Content" ("1" or "0").
 			
 			int flag_hd = 0 ; //HD - Flag for HD content ("1" or "0").
-			if(it->second.aspect >= 9) 
+			if(currentRecord.aspect >= 9) 
 				flag_hd = 1;
 
 			int flag_cc = 0 ; //CC - Flag for closed captioning present ("1" or "0").
-			if(it->second.CC == true)
+			if(currentRecord.CC == true)
 				flag_cc = 1;
 
 
 			int flag_stereo = 0; //Stereo - Flag for stereo sound ("1" or "0").
-			if(it->second.stereo == true)
+			if(currentRecord.stereo == true)
 				flag_stereo = 1;
 
 			string eventName= lang.shortDescription;
@@ -675,13 +683,13 @@ void EIT::sendToSage(int onid)
 		
 			char buffer[2000];
 			sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%d\t%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\r\n", 
-				chanNo,channelName,chanNo,eventID,showID.c_str(),it->second.startDateTimeSage.c_str(),it->second.durationTime.c_str(),category.c_str(), rating.c_str(),firstAired,
+				chanNo,channelName,chanNo,eventID,showID.c_str(),currentRecord.startDateTimeSage.c_str(),currentRecord.durationTime.c_str(),category.c_str(), rating.c_str(),firstAired,
 				flag_lang, flag_gl, flag_n, flag_ssc, flag_v, flag_gv, flag_ac, flag_hd, flag_cc, flag_stereo, eventName.c_str(), shortDesc.c_str(), longDesc.c_str());
 			
 
 			// channel number
 			//strcat_s(command,2056,"\tespnppv1");             // Channel name
-			//strcat_s(command,2056,it->second.SID);                  // SID
+			//strcat_s(command,2056,currentRecord.SID);                  // SID
 			//strcat_s(command,2056,"\t1234");                // Event ID
 			//strcat_s(command,2056,"\tEP4152486907");         // Show ID
 			//strcat_s(command,2056,"\t08/20/2011");           // Start date
@@ -824,16 +832,19 @@ void EIT::dumpXmltvFile(int onid)
 
 	
 			// Loop through the EIT data and create all of the programme records
-			for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
+			OpenEitEventFile(true);
+			struct EITEvent currentRecord;
+			while(ReadNextEitEventRecord(&currentRecord) == true)
+//			for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 			{
-				hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)it->second.SID); 
-				hash_map<UINT32, Service>::iterator it3 = encoderNetworkProvider.m_Services.find(NetworkProvider::getUniqueSID((USHORT)it->second.ONID, (USHORT)it->second.SID)); 
-			//	if(onid == it->second.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
+				hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)currentRecord.SID); 
+				hash_map<UINT32, Service>::iterator it3 = encoderNetworkProvider.m_Services.find(NetworkProvider::getUniqueSID((USHORT)currentRecord.ONID, (USHORT)currentRecord.SID)); 
+			//	if(onid == currentRecord.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
 				if((eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()) && it3 != encoderNetworkProvider.m_Services.end())
 				{
-					EPGLanguage lang = GetDescriptionRecord(it->second);
+					EPGLanguage lang = GetDescriptionRecord(currentRecord);
 
-					_ftprintf(outFile, TEXT("\t<programme start=\"%s +0000\" stop=\"%s +0000\" channel=\"I%d.%d.DVBE4SAGE\">\n"), it->second.startDateTime.c_str(), it->second.stopDateTime.c_str(), it->second.SID, it->second.ONID);
+					_ftprintf(outFile, TEXT("\t<programme start=\"%s +0000\" stop=\"%s +0000\" channel=\"I%d.%d.DVBE4SAGE\">\n"), currentRecord.startDateTime.c_str(), currentRecord.stopDateTime.c_str(), currentRecord.SID, currentRecord.ONID);
 				
 					lang.shortDescription = ReplaceAll(lang.shortDescription, "&", "&amp;");
 					lang.shortDescription = trim(lang.shortDescription);
@@ -852,94 +863,94 @@ void EIT::dumpXmltvFile(int onid)
 
 					_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
 										
-					if(it->second.category.empty() == false)
-						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.category.c_str());
+					if(currentRecord.category.empty() == false)
+						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), currentRecord.category.c_str());
 
-					if(it->second.dishCategory1.empty() == false) {
-						if(it->second.dishCategory2.empty() == false) 
-							_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s%s</category>\n"), lang.text.c_str(), it->second.dishCategory1.c_str(), it->second.dishCategory2.c_str());
+					if(currentRecord.dishCategory1.empty() == false) {
+						if(currentRecord.dishCategory2.empty() == false) 
+							_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s%s</category>\n"), lang.text.c_str(), currentRecord.dishCategory1.c_str(), currentRecord.dishCategory2.c_str());
 						else
-							_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), it->second.dishCategory1.c_str());
+							_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), currentRecord.dishCategory1.c_str());
 					}
-					if(it->second.programID.empty() == false) {
-						_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), it->second.programID.c_str());
+					if(currentRecord.programID.empty() == false) {
+						_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), currentRecord.programID.c_str());
 					} else {
-						if(it->second.seriesID.empty() == false)
-							_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), it->second.seriesID.c_str());
+						if(currentRecord.seriesID.empty() == false)
+							_ftprintf(outFile, TEXT("\t\t<episode-num system=\"dd_progid\">%s</episode-num>\n"), currentRecord.seriesID.c_str());
 					}
 
-					if(it->second.year != 0)
-						_ftprintf(outFile, TEXT("\t\t<date>%d</date>\n"), it->second.year);
+					if(currentRecord.year != 0)
+						_ftprintf(outFile, TEXT("\t\t<date>%d</date>\n"), currentRecord.year);
 
-					if(it->second.stereo == true)
+					if(currentRecord.stereo == true)
 					{
 						_ftprintf(outFile, TEXT("\t\t<audio>\n"));
 						_ftprintf(outFile, TEXT("\t\t\t<stereo>stereo</stereo>\n"));
 						_ftprintf(outFile, TEXT("\t\t</audio>\n"));
 					}
 
-					if(it->second.aspect != 0)
+					if(currentRecord.aspect != 0)
 					{
 						_ftprintf(outFile, TEXT("\t\t<video>\n"));
-						_ftprintf(outFile, TEXT("\t\t\t<aspect>%s</aspect>\n"), getAspect(it->second.aspect).c_str());
-						_ftprintf(outFile, TEXT("\t\t\t<quality>%s</quality>\n"), getQuality(it->second.aspect).c_str());
+						_ftprintf(outFile, TEXT("\t\t\t<aspect>%s</aspect>\n"), getAspect(currentRecord.aspect).c_str());
+						_ftprintf(outFile, TEXT("\t\t\t<quality>%s</quality>\n"), getQuality(currentRecord.aspect).c_str());
 						_ftprintf(outFile, TEXT("\t\t</video>\n"));
 					}
 
-					if(it->second.CC == true)
+					if(currentRecord.CC == true)
 						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"onscreen\"/>\n"));
 
-					if(it->second.teletext == true)
+					if(currentRecord.teletext == true)
 						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"teletext\"/>\n"));
 
-					if(it->second.onscreen == true)
+					if(currentRecord.onscreen == true)
 						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"onscreen\"/>\n"));
 
-					if(it->second.vchipRating.empty() == false)
+					if(currentRecord.vchipRating.empty() == false)
 					{
 						_ftprintf(outFile, TEXT("\t\t<rating system=\"VCHIP\">\n"));
-						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.vchipRating.c_str());
+						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), currentRecord.vchipRating.c_str());
 						_ftprintf(outFile, TEXT("\t\t</rating>\n"));
 					}
 
-					if(it->second.vchipAdvisory != 0)
+					if(currentRecord.vchipAdvisory != 0)
 					{
-						if(it->second.vchipAdvisory & 0x01) dumpXmltvAdvisory(outFile, "Fantasy Violence");
-						if(it->second.vchipAdvisory & 0x02) dumpXmltvAdvisory(outFile, "Violence");
-						if(it->second.vchipAdvisory & 0x04) dumpXmltvAdvisory(outFile, "Sexual Situations");
-						if(it->second.vchipAdvisory & 0x08) dumpXmltvAdvisory(outFile, "Crude Language");
-						if(it->second.vchipAdvisory & 0x10) dumpXmltvAdvisory(outFile, "Suggestive Dialog");
+						if(currentRecord.vchipAdvisory & 0x01) dumpXmltvAdvisory(outFile, "Fantasy Violence");
+						if(currentRecord.vchipAdvisory & 0x02) dumpXmltvAdvisory(outFile, "Violence");
+						if(currentRecord.vchipAdvisory & 0x04) dumpXmltvAdvisory(outFile, "Sexual Situations");
+						if(currentRecord.vchipAdvisory & 0x08) dumpXmltvAdvisory(outFile, "Crude Language");
+						if(currentRecord.vchipAdvisory & 0x10) dumpXmltvAdvisory(outFile, "Suggestive Dialog");
 					}
 
-					if(it->second.mpaaRating.empty() == false)
+					if(currentRecord.mpaaRating.empty() == false)
 					{
 						_ftprintf(outFile, TEXT("\t\t<rating system=\"MPAA\">\n"));
-						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.mpaaRating.c_str());
+						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), currentRecord.mpaaRating.c_str());
 						_ftprintf(outFile, TEXT("\t\t</rating>\n"));
 					}
 
-					if(it->second.mpaaAdvisory != 0)
+					if(currentRecord.mpaaAdvisory != 0)
 					{
-						if(it->second.mpaaAdvisory & 0x01) dumpXmltvAdvisory(outFile, "Sexual Content");
-						if(it->second.mpaaAdvisory & 0x02) dumpXmltvAdvisory(outFile, "Language");
-						if(it->second.mpaaAdvisory & 0x04) dumpXmltvAdvisory(outFile, "Mild Sensuality");
-						if(it->second.mpaaAdvisory & 0x08) dumpXmltvAdvisory(outFile, "Fantasy Violence");
-						if(it->second.mpaaAdvisory & 0x10) dumpXmltvAdvisory(outFile, "Violence");
-						if(it->second.mpaaAdvisory & 0x20) dumpXmltvAdvisory(outFile, "Mild Peril");
-						if(it->second.mpaaAdvisory & 0x40) dumpXmltvAdvisory(outFile, "Nudity");
+						if(currentRecord.mpaaAdvisory & 0x01) dumpXmltvAdvisory(outFile, "Sexual Content");
+						if(currentRecord.mpaaAdvisory & 0x02) dumpXmltvAdvisory(outFile, "Language");
+						if(currentRecord.mpaaAdvisory & 0x04) dumpXmltvAdvisory(outFile, "Mild Sensuality");
+						if(currentRecord.mpaaAdvisory & 0x08) dumpXmltvAdvisory(outFile, "Fantasy Violence");
+						if(currentRecord.mpaaAdvisory & 0x10) dumpXmltvAdvisory(outFile, "Violence");
+						if(currentRecord.mpaaAdvisory & 0x20) dumpXmltvAdvisory(outFile, "Mild Peril");
+						if(currentRecord.mpaaAdvisory & 0x40) dumpXmltvAdvisory(outFile, "Nudity");
 					}
 
-					if(it->second.starRating.empty() == false)
+					if(currentRecord.starRating.empty() == false)
 					{
 						_ftprintf(outFile, TEXT("\t\t<star-rating>\n"));
-						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), it->second.starRating.c_str());
+						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), currentRecord.starRating.c_str());
 						_ftprintf(outFile, TEXT("\t\t</star-rating>\n"));
 					}
 
-					if(it->second.parentalRating != 0)
+					if(currentRecord.parentalRating != 0)
 					{
 						_ftprintf(outFile, TEXT("\t\t<rating>\n"));
-						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), getParentalRating(it->second.parentalRating).c_str());
+						_ftprintf(outFile, TEXT("\t\t\t<value>%s</value>\n"), getParentalRating(currentRecord.parentalRating).c_str());
 						_ftprintf(outFile, TEXT("\t\t</rating>\n"));
 					}
 					_ftprintf(outFile, TEXT("\t</programme>\n"));
@@ -948,6 +959,7 @@ void EIT::dumpXmltvFile(int onid)
 
 			_ftprintf(outFile, TEXT("</tv>\n"));
 			fclose(outFile);
+			CloseEitEventFile();
 	}
 			log(3, true, 0, TEXT("EIT dump of XMLTV data to %s is complete.\n"), fileName.c_str());
 }
@@ -1074,12 +1086,16 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 		lock();
 
 		// Let's try to find the event first
-		stdext::hash_map<UINT32, EITEvent>::iterator it = m_EITevents.find(getUniqueKey(eventID, serviceID));
+//		stdext::hash_map<UINT32, EITEvent>::iterator it = m_EITevents.find(getUniqueKey(eventID, serviceID));
 
 		// If not found or different version, go ahead
-		if(it == m_EITevents.end())
+//		if(it == m_EITevents.end())
+		hash_set<USHORT>::const_iterator it = m_eitEventIDs.find(eventID); 
+	    if(it == m_eitEventIDs.end())
 		{
 			EITEvent newEvent;
+
+			m_eitEventIDs.insert(eventID);
 
 			// Take care of dates
 			const int mjd = HILO(currentEvent->mjd);
@@ -1184,7 +1200,8 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				//log(3, false, 0, TEXT("<program end>\n"));
 
 				// Add the newly created event to the list
-				m_EITevents[getUniqueKey(eventID, serviceID)] = newEvent;
+				WriteEitEventRecord(&newEvent);
+//				m_EITevents[getUniqueKey(eventID, serviceID)] = newEvent;
 				unlock();
 			}
 		}
@@ -1430,10 +1447,10 @@ void EIT::decodeExtendedEvent(const BYTE* inputBuffer, EITEvent* newEvent)
 void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 {
 
-	FILE* outFile = NULL;
-	_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
-	fprintf(outFile, TEXT("[0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
-	fclose(outFile);
+	//FILE* outFile = NULL;
+	//_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
+	//fprintf(outFile, TEXT("[0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
+	//fclose(outFile);
 
 
 	// If this is for dish network or bell express, use the alternate routine
@@ -2280,3 +2297,241 @@ EPGLanguage EIT::GetDescriptionRecord(struct EITEvent rec)
 
 	return ret;	
 }
+
+// Serialize EIT Events to disk because otherwise we are too much of a memory pig
+// Create and/or open the temporary file
+bool EIT::OpenEitEventFile(bool read)
+{
+	m_eventsCount = 0;
+	string fileName = m_SaveXmltvFileLocation + "\\**eitEventTemp.txt";
+	if(read == false)
+		return (_tfopen_s(&m_eitEventFile, fileName.c_str(), TEXT("wt")) != 0);
+	else
+		return (_tfopen_s(&m_eitEventFile, fileName.c_str(), TEXT("rt")) != 0);
+}
+
+// Close the temporary file
+void EIT::CloseEitEventFile()
+{
+	string fileName = m_SaveXmltvFileLocation + "\\**eitEventTemp.txt";
+	remove(fileName.c_str());
+}
+
+// Delete the temporary file
+void EIT::DeleteEitEventFile()
+{
+	string fileName = m_SaveXmltvFileLocation + "\\**eitEventTemp.txt";
+	remove(fileName.c_str());
+}
+
+// Write a record out to the file
+bool EIT::WriteEitEventRecord(struct EITEvent *rec)
+{
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->eventID);
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->SID);
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->ONID);
+	_ftprintf(m_eitEventFile, TEXT("%ul\n"), rec->startTime);
+	_ftprintf(m_eitEventFile, TEXT("%ul\n"), rec->stopTime);
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->shortDescription.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->longDescription.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->startDateTime.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->startDateTimeSage.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->stopDateTime.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->durationTime.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->parentalRating);
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->starRating.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->mpaaRating.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->vchipRating.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vchipAdvisory);
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->mpaaAdvisory);
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->category.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->dishCategory1.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->dishCategory2.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->programID.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->seriesID.c_str());
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->aspect);
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->year);
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->stereo);
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->CC);
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->teletext);
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->onscreen);
+
+	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecLanguages.size());
+	EITEvent::ivecLanguages it = rec->vecLanguages.begin();
+	for (it = rec->vecLanguages.begin(); it != rec->vecLanguages.end(); ++it)
+	{
+		EPGLanguage& lang = *it;
+
+		_ftprintf(m_eitEventFile, TEXT("%ul\n"), (unsigned long)lang.language);
+		_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.eventText.c_str());
+		_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.text.c_str());
+		_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.shortDescription.c_str());
+		_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.longDescription.c_str());
+		_ftprintf(m_eitEventFile, TEXT("%u\n"), lang.parentalRating);
+		_ftprintf(m_eitEventFile, TEXT("%u\n"), lang.CR_added);
+	}
+	
+	m_eventsCount++;
+
+	return true;
+}
+
+// Read the next record out of the file
+bool EIT::ReadNextEitEventRecord(struct EITEvent *rec)
+{
+	char buffer[1024];
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->eventID = (USHORT)atoi(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->SID = atoi(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->ONID = atoi(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->startTime = atol(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->stopTime = atol(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->shortDescription = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->longDescription = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->startDateTime = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->startDateTimeSage = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->stopDateTime = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->durationTime = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->parentalRating = atoi(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->starRating = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->mpaaRating = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->vchipRating = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->vchipAdvisory = atoi(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->mpaaAdvisory = atoi(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->category = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->dishCategory1 = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->dishCategory2 = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->programID = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->seriesID = buffer;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->aspect = atoi(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->year = atoi(buffer);
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->stereo = (atoi(buffer) == 0) ? false : true;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->CC = (atoi(buffer) == 0) ? false : true;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->teletext = (atoi(buffer) == 0) ? false : true;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	rec->onscreen = (atoi(buffer) == 0) ? false : true;
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		return false;
+	int count = atoi(buffer);
+
+	for(int i = 0; i < count; i++)
+	{
+		EPGLanguage lang;
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			return false;
+		lang.language = atol(buffer);
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			return false;
+		lang.eventText = buffer;
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			return false;
+		lang.text = buffer;
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			return false;
+		lang.shortDescription = buffer;
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			return false;
+		lang.longDescription = buffer;
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			return false;
+		lang.parentalRating = atoi(buffer);
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			return false;
+		lang.CR_added = (atoi(buffer) == 0) ? false : true;
+
+		rec->vecLanguages.push_back(lang);
+	}
+
+	return true;
+}
+// End - Serialize EIT Events to disk because otherwise we are too much of a memory pig
