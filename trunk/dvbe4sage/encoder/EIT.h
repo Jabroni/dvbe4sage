@@ -173,6 +173,7 @@ private:
 
 	// Send data to SageTV
 	void sendToSage(int onid);
+	int getSageLogicalChannel( USHORT onid , USHORT SID);
 
 	void lock();
 	void unlock();
