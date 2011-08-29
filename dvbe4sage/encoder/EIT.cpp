@@ -2362,51 +2362,58 @@ void EIT::DeleteEitEventFile()
 // Write a record out to the file
 bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 {
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->eventID);
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->SID);
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->ONID);
-	_ftprintf(m_eitEventFile, TEXT("%ul\n"), rec->startTime);
-	_ftprintf(m_eitEventFile, TEXT("%ul\n"), rec->stopTime);
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->shortDescription.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->longDescription.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->startDateTime.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->startDateTimeSage.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->stopDateTime.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->durationTime.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->parentalRating);
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->starRating.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->mpaaRating.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->vchipRating.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vchipAdvisory);
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->mpaaAdvisory);
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->category.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->dishCategory1.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->dishCategory2.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->programID.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->seriesID.c_str());
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->aspect);
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->year);
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->stereo);
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->CC);
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->teletext);
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->onscreen);
-
-	_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecLanguages.size());
-	EITEvent::ivecLanguages it = rec->vecLanguages.begin();
-	for (it = rec->vecLanguages.begin(); it != rec->vecLanguages.end(); ++it)
+	// Only use events for ONIDs we care about
+	if(!g_pConfiguration->includeONIDs() || g_pConfiguration->includeONID((USHORT)rec->ONID))
 	{
-		EPGLanguage& lang = *it;
+		if(!g_pConfiguration->excludeONID((USHORT)rec->ONID))
+		{
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->eventID);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->SID);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->ONID);
+			_ftprintf(m_eitEventFile, TEXT("%ul\n"), rec->startTime);
+			_ftprintf(m_eitEventFile, TEXT("%ul\n"), rec->stopTime);
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->shortDescription.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->longDescription.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->startDateTime.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->startDateTimeSage.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->stopDateTime.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->durationTime.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->parentalRating);
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->starRating.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->mpaaRating.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->vchipRating.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vchipAdvisory);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->mpaaAdvisory);
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->category.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->dishCategory1.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->dishCategory2.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->programID.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%s\n"), rec->seriesID.c_str());
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->aspect);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->year);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->stereo);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->CC);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->teletext);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->onscreen);
 
-		_ftprintf(m_eitEventFile, TEXT("%ul\n"), (unsigned long)lang.language);
-		_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.eventText.c_str());
-		_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.text.c_str());
-		_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.shortDescription.c_str());
-		_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.longDescription.c_str());
-		_ftprintf(m_eitEventFile, TEXT("%u\n"), lang.parentalRating);
-		_ftprintf(m_eitEventFile, TEXT("%u\n"), lang.CR_added);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecLanguages.size());
+			EITEvent::ivecLanguages it = rec->vecLanguages.begin();
+			for (it = rec->vecLanguages.begin(); it != rec->vecLanguages.end(); ++it)
+			{
+				EPGLanguage& lang = *it;
+
+				_ftprintf(m_eitEventFile, TEXT("%ul\n"), (unsigned long)lang.language);
+				_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.eventText.c_str());
+				_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.text.c_str());
+				_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.shortDescription.c_str());
+				_ftprintf(m_eitEventFile, TEXT("%s\n"), lang.longDescription.c_str());
+				_ftprintf(m_eitEventFile, TEXT("%u\n"), lang.parentalRating);
+				_ftprintf(m_eitEventFile, TEXT("%u\n"), lang.CR_added);
+			}
+			
+			m_eventsCount++;
+		}
 	}
-	
-	m_eventsCount++;
 
 	return true;
 }
