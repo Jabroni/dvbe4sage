@@ -263,7 +263,7 @@ void EITtimer::RealEitCollectionCallback()
 		localtime_s (  &timeinfo, &rawtime );
 	
 		m_CollectionTimeHour = timeinfo.tm_hour;
-		m_CollectionTimeMin = timeinfo.tm_min;
+		m_CollectionTimeMin = timeinfo.tm_min + 1;
 	}
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
@@ -555,7 +555,7 @@ void EIT::RealEitCollectionCallback()
 
 	DeleteEitEventFile();
 	
-//	m_EITevents.empty();
+	
 
 }
 
@@ -565,7 +565,7 @@ int EIT::getSageLogicalChannel(USHORT sid, USHORT onid) {
 	// This function will check if we need to remap the channel to another logical channel for Sage to use on its lineup, returns 0 if use the same SID
 	int logical = 0 ;
 
-	// This is just a hardcoded test that will change all 3 digit channels to the 2xxx range
+	// This is just a hardcoded test that will change all 3 digit channels to the 1xxx range
 	if(sid>0 && sid<1000)
 		logical = sid + 1000;
 
@@ -2433,8 +2433,6 @@ bool EIT::ReadNextEitEventRecord(EITEvent* rec)
 	else
 		rec->SID = atoi(buffer);
 
-	log(3, false, 0, TEXT("Reads SID : %u\n"), rec->SID);
-
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
 		rec->ONID = 0;
 	else
@@ -2568,7 +2566,7 @@ bool EIT::ReadNextEitEventRecord(EITEvent* rec)
 	if(fgets(buffer, 1024, m_eitEventFile) != NULL)
 		count = atoi(buffer);
 	rec->vecLanguages.clear();
-	rec->vecLanguages.empty();
+	
 	for(int i = 0; i < count; i++)
 	{
 		EPGLanguage lang;

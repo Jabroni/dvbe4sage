@@ -2376,7 +2376,7 @@ void ESCAParser::sendToCam(const BYTE* const currentPacket,
 						   USHORT caPid)
 {
 	// Do this only if have plugins handler
-	if(m_pPluginsHandler != NULL)
+	if(m_pPluginsHandler != NULL  && !m_pParent->getForEIT())
 	{
 		// EMM/PMT and CAT packets go directly to the plugins
 		if(m_EMMCATypes.hasPid(caPid))
