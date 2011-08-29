@@ -489,7 +489,9 @@ void EIT::RealEitCollectionCallback()
 	time_t now;
 	char tempFile[MAX_PATH];
 
-	OpenEitEventFile(false);
+	if(OpenEitEventFile(false) == false )
+		log(2, true, 0, TEXT("Cant create EPG temp file\n"));
+
 	m_eitEventIDs.empty();
 
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
@@ -506,7 +508,7 @@ void EIT::RealEitCollectionCallback()
 	time(&m_Time);
 
 	// Allow for collection of the data
-	while(difftime(now, m_Time) < ( (m_CollectionDurationMinutes-1) * 60))
+	while(difftime(now, m_Time) < ( (m_CollectionDurationMinutes) * 60))
 	{
 		Sleep(5000);
 		if(m_EitCollectionThreadCanEnd == true)
@@ -534,6 +536,8 @@ void EIT::RealEitCollectionCallback()
 
 	//Sleep(5000);
 
+	CloseEitEventFile();
+	m_eitEventIDs.empty();
 
 	// Dump data to xmltv file if configured to do so
 	if(m_SaveXmltvFileLocation.length() > 0) {
@@ -554,6 +558,20 @@ void EIT::RealEitCollectionCallback()
 //	m_EITevents.empty();
 
 }
+
+
+
+int EIT::getSageLogicalChannel(USHORT sid, USHORT onid) {
+	// This function will check if we need to remap the channel to another logical channel for Sage to use on its lineup, returns 0 if use the same SID
+	int logical = 0 ;
+
+	// This is just a hardcoded test that will change all 3 digit channels to the 2xxx range
+	if(sid>0 && sid<1000)
+		logical = sid + 1000;
+
+	return logical;
+}
+
 
 void EIT::sendToSage(int onid)
 {
@@ -618,6 +636,8 @@ void EIT::sendToSage(int onid)
 			int chanNo = encoderNetworkProvider.getChannelForSid(usid);
 			if(chanNo == NULL) chanNo = encoderNetworkProvider.getSIDFromUniqueSID(usid);
 
+			int logChaNo = getSageLogicalChannel((USHORT)currentRecord.ONID, (USHORT)currentRecord.SID);
+
 			int eventID = (currentRecord.eventID == NULL) ? 0 : currentRecord.eventID;
 
 			string showID = "";
@@ -680,10 +700,10 @@ void EIT::sendToSage(int onid)
 			string eventName= lang.shortDescription;
 			string shortDesc = lang.shortDescription;
 			string longDesc = lang.longDescription;
-		
+			
 			char buffer[2000];
-			sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%d\t%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\r\n", 
-				chanNo,channelName,chanNo,eventID,showID.c_str(),currentRecord.startDateTimeSage.c_str(),currentRecord.durationTime.c_str(),category.c_str(), rating.c_str(),firstAired,
+			sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%d\t%d\t%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\r\n", 
+				chanNo,channelName,chanNo,logChaNo,eventID,showID.c_str(),currentRecord.startDateTimeSage.c_str(),currentRecord.durationTime.c_str(),category.c_str(), rating.c_str(),firstAired,
 				flag_lang, flag_gl, flag_n, flag_ssc, flag_v, flag_gv, flag_ac, flag_hd, flag_cc, flag_stereo, eventName.c_str(), shortDesc.c_str(), longDesc.c_str());
 			
 
@@ -704,16 +724,20 @@ void EIT::sendToSage(int onid)
 			//strcat_s(command,2056,"\tShort5");                // Short Description
 			//strcat_s(command,2056,"\tLong5\r\n");                 // Long Description
 			
-			log(3, true, 0, TEXT("Command send to SageTV: %s\n"),buffer);
-			if(send(s, buffer, strlen(buffer), 0) == SOCKET_ERROR)
-			{
-				shutdown(s, SD_SEND);
-				closesocket(s);
-				return ;
+			if( g_pConfiguration->includeONID(currentRecord.ONID) ) {
+				log(3, true, 0, TEXT("Command send to SageTV: %s"),buffer);
+				if(send(s, buffer, strlen(buffer), 0) == SOCKET_ERROR)
+				{
+					shutdown(s, SD_SEND);
+					closesocket(s);
+					return ;
+				}
+		
+				recv(s, command, strlen(command),0);
+				log(3, true, 0, TEXT("Responded command.\n"));
 			}
-	
-			recv(s, command, strlen(command),0);
-			log(3, true, 0, TEXT("Responded command.\n"));
+		} else {
+					log(3, true, 0, TEXT("EPG entry skipped ONID ignored.\n"));
 		}
 	}
 
@@ -863,7 +887,7 @@ void EIT::dumpXmltvFile(int onid)
 
 					_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
 										
-					if(currentRecord.category.empty() == false)
+					if(currentRecord.category.empty() == false )
 						_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), currentRecord.category.c_str());
 
 					if(currentRecord.dishCategory1.empty() == false) {
@@ -1061,7 +1085,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 	const USHORT serviceID = HILO(table->service_id);
 	const USHORT networkID = HILO(table->original_network_id);
-
+	
 	// Get hold on the input buffer
 	const BYTE* inputBuffer = (const BYTE*)table + EIT_LEN;
 
@@ -1454,10 +1478,16 @@ void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 
 
 	// If this is for dish network or bell express, use the alternate routine
-	if(m_provider == EIT_PROVIDER_DISH)
+	switch(m_provider) 
 	{
-		decodeContentDescriptorDish(inputBuffer,newEvent);
-		return;
+		case(EIT_PROVIDER_DISH):
+			decodeContentDescriptorDish(inputBuffer,newEvent);
+			return;
+
+		case(EIT_PROVIDER_SKY):
+
+			return;
+
 	}
 
 	const descr_content_t* const contentDescriptor = CastContentDescriptor(inputBuffer);
@@ -2055,11 +2085,6 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 		fprintf(outFile, TEXT("Description: %s\n  "), descriptionText.c_str() );
 		fclose(outFile);
 		
- 		if(descriptionText.length() > 0) {
-			log(3, false, 0, TEXT("\tLong Desc: %s\n"), descriptionText.c_str());
-			log(3, false, 0, TEXT("\tLong Category: %s\n"), newEvent->category.c_str());
-			log(3, false, 0, TEXT("\tLong Substr: %s\n"), descriptionText2.c_str());
-		}
 		newEvent->longDescription = descriptionText;
 
 		free(decompressed);
@@ -2303,7 +2328,7 @@ EPGLanguage EIT::GetDescriptionRecord(struct EITEvent rec)
 bool EIT::OpenEitEventFile(bool read)
 {
 	m_eventsCount = 0;
-	string fileName = m_SaveXmltvFileLocation + "\\**eitEventTemp.txt";
+	string fileName = m_SaveXmltvFileLocation + "\\eitEventTemp.txt";
 	if(read == false)
 		return (_tfopen_s(&m_eitEventFile, fileName.c_str(), TEXT("wt")) != 0);
 	else
@@ -2313,14 +2338,14 @@ bool EIT::OpenEitEventFile(bool read)
 // Close the temporary file
 void EIT::CloseEitEventFile()
 {
-	string fileName = m_SaveXmltvFileLocation + "\\**eitEventTemp.txt";
-	remove(fileName.c_str());
+	string fileName = m_SaveXmltvFileLocation + "\\eitEventTemp.txt";
+	fclose(m_eitEventFile);
 }
 
 // Delete the temporary file
 void EIT::DeleteEitEventFile()
 {
-	string fileName = m_SaveXmltvFileLocation + "\\**eitEventTemp.txt";
+	string fileName = m_SaveXmltvFileLocation + "\\eitEventTemp.txt";
 	remove(fileName.c_str());
 }
 
@@ -2377,158 +2402,195 @@ bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 }
 
 // Read the next record out of the file
-bool EIT::ReadNextEitEventRecord(struct EITEvent *rec)
+bool EIT::ReadNextEitEventRecord(EITEvent* rec)
 {
 	char buffer[1024];
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
 		return false;
-	rec->eventID = (USHORT)atoi(buffer);
+	else
+		rec->eventID = (USHORT)atoi(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->SID = atoi(buffer);
+		rec->SID = 0;
+	else
+		rec->SID = atoi(buffer);
+
+	log(3, false, 0, TEXT("Reads SID : %u\n"), rec->SID);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->ONID = atoi(buffer);
+		rec->ONID = 0;
+	else
+		rec->ONID = atoi(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->startTime = atol(buffer);
+		rec->startTime = 0;
+	else
+		rec->startTime = atol(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->stopTime = atol(buffer);
+		rec->stopTime = 0;
+	else
+		rec->stopTime = atol(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->shortDescription = buffer;
+		rec->shortDescription = "";
+	else 
+		rec->shortDescription = ReplaceAll(buffer, "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->longDescription = buffer;
+		rec->longDescription = "";
+	else
+		rec->longDescription  = ReplaceAll(buffer , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->startDateTime = buffer;
+		rec->startDateTime = "";
+	else 
+		rec->startDateTime  = ReplaceAll(buffer , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->startDateTimeSage = buffer;
+		rec->startDateTimeSage = "";
+	else 
+		rec->startDateTimeSage  = ReplaceAll(buffer , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->stopDateTime = buffer;
+		rec->stopDateTime = "";
+	else 
+		rec->stopDateTime  = ReplaceAll(buffer , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->durationTime = buffer;
+		rec->durationTime = "";
+	else
+		rec->durationTime  = ReplaceAll(buffer  , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
+		rec->parentalRating = 0;
 	rec->parentalRating = atoi(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->starRating = buffer;
+		rec->starRating = "";
+	else
+		rec->starRating  = ReplaceAll(buffer  , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->mpaaRating = buffer;
+		rec->mpaaRating = "";
+	else
+		rec->mpaaRating  = ReplaceAll(buffer  , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->vchipRating = buffer;
+		rec->vchipRating = "";
+	else 
+		rec->vchipRating  = ReplaceAll(buffer  , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->vchipAdvisory = atoi(buffer);
+		rec->vchipAdvisory = 0;
+	else
+		rec->vchipAdvisory = atoi(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->mpaaAdvisory = atoi(buffer);
+		rec->mpaaAdvisory = 0;
+	else
+		rec->mpaaAdvisory = atoi(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->category = buffer;
+		rec->category = "";
+	else
+		rec->category  = ReplaceAll(buffer , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->dishCategory1 = buffer;
+		rec->dishCategory1 = "";
+	else
+		rec->dishCategory1  = ReplaceAll(buffer  , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->dishCategory2 = buffer;
+		rec->dishCategory2 = "";
+	else
+		rec->dishCategory2  = ReplaceAll(buffer , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->programID = buffer;
+		rec->programID = "";
+	else
+		rec->programID  = ReplaceAll(buffer , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->seriesID = buffer;
+		rec->seriesID = "";
+	else
+		rec->seriesID  = ReplaceAll(buffer  , "\n", "");
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->aspect = atoi(buffer);
+		rec->aspect = 0;
+	else	
+		rec->aspect = atoi(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->year = atoi(buffer);
+		rec->year = 0;
+	else
+		rec->year = atoi(buffer);
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->stereo = (atoi(buffer) == 0) ? false : true;
+		rec->stereo = false;
+	else
+		rec->stereo = (atoi(buffer) == 0) ? false : true;
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->CC = (atoi(buffer) == 0) ? false : true;
+		rec->CC = false;
+	else
+		rec->CC = (atoi(buffer) == 0) ? false : true;
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->teletext = (atoi(buffer) == 0) ? false : true;
+		rec->teletext = false;
+	else
+		rec->teletext = (atoi(buffer) == 0) ? false : true;
 
 	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	rec->onscreen = (atoi(buffer) == 0) ? false : true;
+		rec->onscreen = false;
+	else
+		rec->onscreen = (atoi(buffer) == 0) ? false : true;
 
-	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		return false;
-	int count = atoi(buffer);
-
+	int count = 0;
+	if(fgets(buffer, 1024, m_eitEventFile) != NULL)
+		count = atoi(buffer);
+	rec->vecLanguages.clear();
+	rec->vecLanguages.empty();
 	for(int i = 0; i < count; i++)
 	{
 		EPGLanguage lang;
 
-		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-			return false;
-		lang.language = atol(buffer);
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL) 
+			lang.language = 0;
+		else
+			lang.language = atol(buffer);
 
 		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-			return false;
-		lang.eventText = buffer;
+			lang.eventText = "";
+		else
+			lang.eventText  = ReplaceAll(buffer  , "\n", "");
 
 		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-			return false;
-		lang.text = buffer;
+			lang.text = "";
+		else
+			lang.text  = ReplaceAll(buffer  , "\n", "");
 
 		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-			return false;
-		lang.shortDescription = buffer;
+			lang.shortDescription = "";
+		else
+			lang.shortDescription = ReplaceAll(buffer  , "\n", "");
 
 		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-			return false;
-		lang.longDescription = buffer;
+			lang.longDescription = "";
+		else
+			lang.longDescription = ReplaceAll(buffer  , "\n", "");
 
 		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-			return false;
-		lang.parentalRating = atoi(buffer);
+			lang.parentalRating = 0;
+		else
+			lang.parentalRating = atoi(buffer);
 
 		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-			return false;
-		lang.CR_added = (atoi(buffer) == 0) ? false : true;
-
+			lang.CR_added = false;
+		else
+			lang.CR_added = (atoi(buffer) == 0) ? false : true;
+		
 		rec->vecLanguages.push_back(lang);
 	}
 
