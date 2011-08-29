@@ -670,15 +670,25 @@ void EIT::sendToSage(int onid)
 					firstAired = currentRecord.year;
 
 			
-			int flag_lang = 0; //Detailed rating flag for Language
+			int flag_lang = 0; //Detailed rating flag for Language ("1" or "0").
+			if(currentRecord.mpaaAdvisory & 0x02 || currentRecord.vchipAdvisory & 0x10)
+				flag_lang = 1;
 			
 			int flag_gl = 0; // GL - Detailed rating flag for "Graphic Language" ("1" or "0").
+			if(currentRecord.vchipAdvisory & 0x08)
+				flag_gl = 1;
 			
 			int flag_n = 0; //N - Detailed rating flag for "Nudity" ("1" or "0").
+			if(currentRecord.mpaaAdvisory & 0x40)
+				flag_n = 1;
 			
 			int flag_ssc = 0; //SSC - Detailed rating flag for "Strong Sexual Content" ("1" or "0").
+			if(currentRecord.mpaaAdvisory & 0x01 || currentRecord.vchipAdvisory & 0x04)
+				flag_ssc = 1;
 			
 			int flag_v = 0; //V - Detailed rating flag for "Violence" ("1" or "0").
+			if(currentRecord.vchipAdvisory & 0x01 || currentRecord.vchipAdvisory & 0x02 || currentRecord.mpaaAdvisory & 0x10)
+				flag_v = 1;
 			
 			int flag_gv = 0 ; //GV - Detailed rating flag for "Graphic Violence" ("1" or "0").
 			
@@ -724,7 +734,7 @@ void EIT::sendToSage(int onid)
 			//strcat_s(command,2056,"\tShort5");                // Short Description
 			//strcat_s(command,2056,"\tLong5\r\n");                 // Long Description
 			
-			if( g_pConfiguration->includeONID(currentRecord.ONID) ) {
+			if( g_pConfiguration->includeONID((USHORT)currentRecord.ONID) ) {
 				log(3, true, 0, TEXT("Command send to SageTV: %s"),buffer);
 				if(send(s, buffer, strlen(buffer), 0) == SOCKET_ERROR)
 				{
