@@ -2653,6 +2653,9 @@ ESCAParser::~ESCAParser()
 // This function is called from the main filter thread!
 void ESCAParser::putToOutputBuffer(const BYTE* const packet)
 {
+	if(m_pParent->getForEIT() == true)
+		return;
+
 	// Do it in the critical section
 	CAutoLock lock(&m_csOutputBuffer);
 
