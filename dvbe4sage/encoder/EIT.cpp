@@ -1048,13 +1048,28 @@ void EIT::dumpXmltvFile(int onid)
 					}
 
 					if(currentRecord.CC == true)
-						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"onscreen\"/>\n"));
-
-					if(currentRecord.teletext == true)
 						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"teletext\"/>\n"));
 
-					if(currentRecord.onscreen == true)
-						_ftprintf(outFile, TEXT("\t\t<subtitles type=\"onscreen\"/>\n"));
+					EITEvent::ivecSubtitles it = currentRecord.vecSubtitles.begin();
+					for (it = currentRecord.vecSubtitles.begin(); it != currentRecord.vecSubtitles.end(); ++it)
+					{
+						EPGSubtitle& sub = *it;
+						if(sub.teletext == true)
+						{
+							if(sub.language.length() > 0)
+								_ftprintf(outFile, TEXT("\t\t<subtitles lang=\"%s\" type=\"teletext\"/>\n"), sub.language.c_str());
+							else
+								_ftprintf(outFile, TEXT("\t\t<subtitles type=\"teletext\"/>\n"));
+						}
+
+						if(sub.onscreen == true)
+						{
+							if(sub.language.length() > 0)
+								_ftprintf(outFile, TEXT("\t\t<subtitles lang=\"%s\" type=\"onscreen\"/>\n"), sub.language.c_str());
+							else
+								_ftprintf(outFile, TEXT("\t\t<subtitles type=\"onscreen\"/>\n"));
+						}
+					}
 
 					if(currentRecord.vchipRating.empty() == false)
 					{
@@ -2098,6 +2113,8 @@ void EIT::decodeContentDescriptorDish (const BYTE* inputBuffer, EITEvent* newEve
 void EIT::decodeComponentDescriptor(const BYTE* inputBuffer, EITEvent* newEvent)
 {
 	const descr_component_t* const componentDescriptor = CastComponentDescriptor(inputBuffer);
+	EPGSubtitle sub;
+	char tempLang[3];
 
 	// Take care of different kinds of components
 	switch(componentDescriptor->stream_content)
@@ -2127,10 +2144,19 @@ void EIT::decodeComponentDescriptor(const BYTE* inputBuffer, EITEvent* newEvent)
 		case 3:
 			// Subtitles
 			log(3, false, 0, TEXT("\tSubtitles Type: %s  Language: %.2s\n"), ((UINT)componentDescriptor->component_type & 0xF0) ? "teletext" : "onscreen", inputBuffer + 5);
+			sprintf_s(tempLang, 3, "%.2s", inputBuffer + 5);
+			sub.language = tempLang;
 			if(componentDescriptor->component_type & 0xF0)
-				newEvent->teletext = true;
+			{
+				sub.teletext = true;
+				sub.onscreen = false;
+			}
 			else
-				newEvent->onscreen = true;
+			{
+				sub.teletext = false;
+				sub.onscreen = true;
+			}
+			newEvent->vecSubtitles.push_back(sub);
 
 			break;
 #ifdef _DEBUG
@@ -2596,8 +2622,16 @@ bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->year);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->stereo);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->CC);
-			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->teletext);
-			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->onscreen);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecLanguages.size());
+			EITEvent::ivecSubtitles it2 = rec->vecSubtitles.begin();
+			for (it2 = rec->vecSubtitles.begin(); it2 != rec->vecSubtitles.end(); ++it2)
+			{
+				EPGSubtitle& sub = *it2;
+
+				_ftprintf(m_eitEventFile, TEXT("%s\n"), sub.language.c_str());
+				_ftprintf(m_eitEventFile, TEXT("%u\n"), sub.teletext);
+				_ftprintf(m_eitEventFile, TEXT("%u\n"), sub.onscreen);
+			}
 
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecLanguages.size());
 			EITEvent::ivecLanguages it = rec->vecLanguages.begin();
@@ -2755,17 +2789,43 @@ bool EIT::ReadNextEitEventRecord(EITEvent* rec)
 	else
 		rec->CC = (atoi(buffer) == 0) ? false : true;
 
-	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		rec->teletext = false;
-	else
-		rec->teletext = (atoi(buffer) == 0) ? false : true;
-
-	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
-		rec->onscreen = false;
-	else
-		rec->onscreen = (atoi(buffer) == 0) ? false : true;
-
+	
 	int count = 0;
+	if(fgets(buffer, 1024, m_eitEventFile) != NULL)
+		count = atoi(buffer);
+	rec->vecSubtitles.clear();
+	for(int i = 0; i < count; i++)
+	{
+		EPGSubtitle sub;
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL) 
+			sub.language = "";
+		else
+			sub.language =  ReplaceAll(buffer  , "\n", "");;
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			sub.teletext = false;
+		else
+			sub.teletext = (atoi(buffer) == 0) ? false : true;
+
+		if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+			sub.onscreen = false;
+		else
+			sub.onscreen = (atoi(buffer) == 0) ? false : true;
+
+		rec->vecSubtitles.push_back(sub);
+	}
+
+	//if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+	//	rec->teletext = false;
+	//else
+	//	rec->teletext = (atoi(buffer) == 0) ? false : true;
+
+	//if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+	//	rec->onscreen = false;
+	//else
+	//	rec->onscreen = (atoi(buffer) == 0) ? false : true;
+
 	if(fgets(buffer, 1024, m_eitEventFile) != NULL)
 		count = atoi(buffer);
 	rec->vecLanguages.clear();
