@@ -45,7 +45,7 @@ struct eitRecord
 };
 
 
-typedef  struct stEPGLanguage
+typedef struct stEPGLanguage
 {
 	DWORD language;
 	string eventText;
@@ -55,6 +55,13 @@ typedef  struct stEPGLanguage
 	unsigned int parentalRating;
 	bool CR_added;
 } EPGLanguage;
+
+typedef struct stEPGSubtitle
+{
+	string language;	
+	bool   teletext;
+	bool   onscreen;
+} EPGSubtitle;
 
 // Auxiliary structure for EIT eventsd
 struct EITEvent
@@ -85,8 +92,8 @@ struct EITEvent
 	int    year;					// Year first aired or 0 for new
 	bool   stereo;
 	bool   CC;
-	bool   teletext;
-	bool   onscreen;
+	vector<EPGSubtitle> vecSubtitles;
+	typedef vector<EPGSubtitle>::iterator ivecSubtitles;
 	vector<EPGLanguage> vecLanguages;
 	typedef vector<EPGLanguage>::iterator ivecLanguages;
 };
