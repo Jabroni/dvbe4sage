@@ -22,6 +22,13 @@ typedef enum
 	EIT_PROVIDER_SKY = 3
 } EIT_PROVIDER;
 
+typedef struct stRanges {
+	int from;
+	int to;
+	int offset;
+} Ranges;
+
+
 // Records of the ini file
 struct eitRecord
 {
@@ -30,7 +37,13 @@ struct eitRecord
 	ULONG chan;
 	EIT_PROVIDER eitProvider;
 	hash_set<USHORT> includedSIDs;
+	bool isONIDset;
+	vector<string> filterText;
+	vector<Ranges> logicalChannelOffset;
+	int useUSIDasSID;
+	int disabled;
 };
+
 
 typedef  struct stEPGLanguage
 {
@@ -173,7 +186,8 @@ private:
 
 	// Send data to SageTV
 	void sendToSage(int onid);
-	int getSageLogicalChannel( USHORT onid , USHORT SID);
+	int getSageLogicalChannel( USHORT onid , USHORT sid, USHORT fromONID, USHORT chno);
+	int getONIDfromSID(string epgname);
 
 	void lock();
 	void unlock();
@@ -189,10 +203,13 @@ private:
 	bool SendSocketCommand(char *command);
 
 	void parseEventDescriptors(const BYTE* inputBuffer, int remainingLength, const eit_t* const table, EITEvent* newEvent);
+	void decodeSkyDescriptor(const BYTE* inputBuffer, EITEvent* newEvent, int length);
+	void decodeSkyDescriptor2(const BYTE* inputBuffer, EITEvent* newEvent, int length);
 	void decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent);
 	void decodeExtendedEvent(const BYTE* inputBuffer, EITEvent* newEvent);
 	void decodeContentDescriptor(const BYTE* inputBuffer, EITEvent* newEvent);
 	void decodeContentDescriptorDish(const BYTE* inputBuffer, EITEvent* newEvent);
+	void decodeContentDescriptorSky(const BYTE* inputBuffer, EITEvent* newEvent);
 	void decodeComponentDescriptor(const BYTE* inputBuffer, EITEvent* newEvent);
 	//void decodeProviderIdDescriptor(const BYTE* inputBuffer, EITEvent* newEvent);
 	void decodeParentalRatingDescriptor(const BYTE* inputBuffer, EITEvent* newEvent);

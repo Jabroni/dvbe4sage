@@ -180,10 +180,12 @@ void EITtimer::ParseIniFile(void)
 			newrec.ONID = atoi(sections[i].c_str());
 			newrec.lineup = CIniFile::GetValue("Lineup", sections[i], fileName);	
 			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
+			newrec.useUSIDasSID = atol(CIniFile::GetValue("SendUSIDSage", sections[i], fileName).c_str());
 			string temp = CIniFile::GetValue("Provider", sections[i], fileName);
+			newrec.disabled = atoi(CIniFile::GetValue("Disabled", sections[i], fileName).c_str());
 			transform(temp.begin(), temp.end(), temp.begin(), tolower);
-
-			if(temp.compare("standard") == 0)
+			
+			if(temp.compare("standard") == 0)			
 				newrec.eitProvider = EIT_PROVIDER_STANDARD;
 			else
 			if(temp.compare("dish") == 0)
@@ -193,7 +195,7 @@ void EITtimer::ParseIniFile(void)
 				newrec.eitProvider = EIT_PROVIDER_SKY;
 			else
 				newrec.eitProvider = EIT_PROVIDER_STANDARD;		
-
+			
 			newrec.includedSIDs.clear();
 			buffer = CIniFile::GetValue("IncludedSIDs", sections[i], fileName);
 #pragma warning(disable:4996)
@@ -206,9 +208,80 @@ void EITtimer::ParseIniFile(void)
 					newrec.includedSIDs.insert((USHORT)_ttoi(token));
 			}
 
+			newrec.filterText.clear();
+			buffer = CIniFile::GetValue("FilterText", sections[i], fileName);
+#pragma warning(disable:4996)
+			length = buffer.copy(tbuffer, buffer.length(), 0);
+#pragma warning(default:4996)
+			buffer[length] = '\0';
+			if(buffer[0] != TCHAR(0))
+			{
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
+					newrec.filterText.push_back(token);
+			}			
+
+			newrec.logicalChannelOffset.clear();
+			buffer = CIniFile::GetValue("LogicalChannels", sections[i], fileName);
+#pragma warning(disable:4996)
+			length = buffer.copy(tbuffer, buffer.length(), 0);
+#pragma warning(default:4996)
+			buffer[length] = '\0';
+			string buffer2,buffer3;
+			if(buffer[0] != TCHAR(0))
+			{
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(";"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(";"), &context)) {
+					Ranges range;
+					LPTSTR context1,context2;
+					// Token1 = Channel/Ranges of channels   
+					// Token2 = Offset
+					LPCTSTR token1 = _tcstok_s(const_cast<char*>(token), TEXT(","), &context1);
+					LPCTSTR token2 = _tcstok_s(NULL, TEXT(";"), &context1);
+					range.offset = atoi(token2);
+
+					// We process the ranges
+					LPCTSTR token3 = _tcstok_s(const_cast<char*>(token1), TEXT("-"), &context2);
+					LPCTSTR token4 = _tcstok_s(NULL, TEXT("-"), &context2);
+					range.from = atoi(token3);
+					if(token4 != NULL)
+						range.to = atoi(token4);
+					else
+						range.to = 0;
+					
+					newrec.logicalChannelOffset.push_back((Ranges)range);
+				}
+			}
+
+
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
+			log(0, false, 0, TEXT("Disabled = %d\n"), newrec.disabled);
 			log(0, false, 0, TEXT("Lineup = %s\n"), newrec.lineup.c_str());
 			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
+			log(0, false, 0, TEXT("SendUSIDSage = %lu\n"), newrec.useUSIDasSID);
+
+			log(0, false, 0, TEXT("LogicalChannels = "));
+			for(unsigned int i=0 ; i < newrec.logicalChannelOffset.size(); i++) {
+				Ranges range = newrec.logicalChannelOffset[i];
+				log(0, false, 0, TEXT("%d"), range.from);
+				if(range.to>0)
+					log(0, false, 0, TEXT("-%d"), range.to);
+				log(0, false, 0, TEXT(",%d"), range.offset);
+				if(i < newrec.logicalChannelOffset.size()-1)
+					log(0, false, 0, TEXT(";"));
+			}
+
+			log(0, false, 0, TEXT("\n"));
+
+			
+			log(0, false, 0, TEXT("FilterText="));
+			for(unsigned int i=0 ; i < newrec.filterText.size(); i++) {
+				log(0, false, 0, TEXT("%s"), newrec.filterText[i].c_str());
+				if(i < newrec.logicalChannelOffset.size()-1)
+					log(0, false, 0, TEXT(","));
+			}
+			log(0, false, 0, TEXT("\n"));
+
+
+
 
 			log(0, false, 0, TEXT("IncludedSIDs="));
 			for(hash_set<USHORT>::const_iterator it = newrec.includedSIDs.begin(); it != newrec.includedSIDs.end();)
@@ -287,25 +360,28 @@ void EITtimer::RealEitCollectionCallback()
 		// Loop for all configured providers
 		for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
 		{
-			g_onid = eIter->ONID;
-			g_provider = eIter->eitProvider;
+			if(eIter->disabled != 1) {
+				g_onid = eIter->ONID;
+				g_provider = eIter->eitProvider;
+				UINT32 usid = NetworkProvider::getUniqueSID(g_onid,eIter->chan);
 
-			// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
-			// Send socket command make to us tune and lock the tuner
-			sprintf_s(command, sizeof(command), "START ***EITGATHERING***|0|%d|%d|%s|Fair\r\n", eIter->chan, m_CollectionDurationMinutes * 60 * 1000, tempFile);
-			SendSocketCommand(command);
+				// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
+				// Send socket command make to us tune and lock the tuner
+				sprintf_s(command, sizeof(command), "START ***EITGATHERING***|0|%d|%d|%s|Fair\r\n", usid, m_CollectionDurationMinutes * 60 * 1000, tempFile);
+				SendSocketCommand(command);
 
-			time(&now);
-			time(&m_Time);
-
-			// Allow for collection of the data
-			while(difftime(now, m_Time) < ((m_CollectionDurationMinutes + 5) * 60))
-			{
-				Sleep(10000);
 				time(&now);
-			}
+				time(&m_Time);
 
-			Sleep(10000);
+				// Allow for collection of the data
+				while(difftime(now, m_Time) < ((m_CollectionDurationMinutes + 5) * 60))
+				{
+					Sleep(10000);
+					time(&now);
+				}
+
+				Sleep(10000);
+			}
 		}
 
 		// Wait for 2 minutes then start over
@@ -430,7 +506,6 @@ void EIT::ParseIniFile(void)
 			newrec.ONID = atoi(sections[i].c_str());
 			newrec.lineup = CIniFile::GetValue("Lineup", sections[i], fileName);	
 			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
-
 			newrec.includedSIDs.clear();
 			buffer = CIniFile::GetValue("IncludedSIDs", sections[i], fileName);
 #pragma warning(disable:4996)
@@ -561,16 +636,56 @@ void EIT::RealEitCollectionCallback()
 
 
 
-int EIT::getSageLogicalChannel(USHORT sid, USHORT onid) {
+int EIT::getSageLogicalChannel(USHORT sid, USHORT onid, USHORT fromONID, USHORT chno) {
 	// This function will check if we need to remap the channel to another logical channel for Sage to use on its lineup, returns 0 if use the same SID
 	int logical = 0 ;
 
 	// This is just a hardcoded test that will change all 3 digit channels to the 1xxx range
+	for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
+	{
+		if(eIter->ONID == fromONID) {
+			for(int i=0 ; i < eIter->logicalChannelOffset.size(); i++) {
+				Ranges range = eIter->logicalChannelOffset[i];
+				if(range.to>0) {
+					// Its a range
+					if(chno == NULL) {
+						// We compare it agaisnt SIDS
+						if(sid>= range.from && sid<= range.to)
+							logical = sid + range.offset;
+					} else {
+						// We compare it agaisnt CHNo
+						if(chno>= range.from && chno<= range.to)
+							logical = chno + range.offset;
+
+					}
+
+
+				} else {
+					// We compare it directly
+					if(chno == NULL) {
+						// We compare it agaisnt SIDS
+						if(sid ==  range.from)
+							logical = sid + range.offset;
+					} else {
+						// We compare it agaisnt CHNo
+						if(chno == range.from)
+							logical = chno + range.offset;
+					}
+
+				}
+			}
+
+			
+		}
+		
+	}
+
 	if(sid>0 && sid<1000)
 		logical = sid + 1000;
 
 	return logical;
 }
+
 
 
 void EIT::sendToSage(int onid)
@@ -600,7 +715,10 @@ void EIT::sendToSage(int onid)
         return ;
 	
 	log(3, true, 0, TEXT("Tries START\n"));
-	char *command = "START Sky MX|\r\n";
+
+	char buffer[200];
+	sprintf_s(buffer,sizeof(buffer),"START %s|\r\n",lineup);	
+	char *command = &buffer[0] ;
 	if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
 	{
 		shutdown(s, SD_SEND);
@@ -634,9 +752,10 @@ void EIT::sendToSage(int onid)
 			encoderNetworkProvider.getServiceName(usid , channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 			int chanNo = encoderNetworkProvider.getChannelForSid(usid);
-			if(chanNo == NULL) chanNo = encoderNetworkProvider.getSIDFromUniqueSID(usid);
+			
 
-			int logChaNo = getSageLogicalChannel((USHORT)currentRecord.ONID, (USHORT)currentRecord.SID);
+			int logChaNo = getSageLogicalChannel((USHORT)currentRecord.SID, (USHORT)currentRecord.ONID, onid, chanNo );
+			if(chanNo == NULL) chanNo = encoderNetworkProvider.getSIDFromUniqueSID(usid);
 
 			int eventID = (currentRecord.eventID == NULL) ? 0 : currentRecord.eventID;
 
@@ -1125,7 +1244,8 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 		// If not found or different version, go ahead
 //		if(it == m_EITevents.end())
 		hash_set<USHORT>::const_iterator it = m_eitEventIDs.find(eventID); 
-	    if(it == m_eitEventIDs.end())
+	    //if(it == m_eitEventIDs.end())
+		if(true)
 		{
 			EITEvent newEvent;
 
@@ -1133,7 +1253,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 			// Take care of dates
 			const int mjd = HILO(currentEvent->mjd);
-
+			
 			/*
 			*  * Use the routine specified in ETSI EN 300 468 V1.8.1,
 			*  * "Specification for Service Information in Digital Video Broadcasting"
@@ -1169,15 +1289,16 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 			dvb_time.tm_sec =  bcdtoint(currentEvent->start_time_s);
 			dvb_time.tm_min =  bcdtoint(currentEvent->start_time_m);
 			dvb_time.tm_hour = bcdtoint(currentEvent->start_time_h);
-		//	const time_t startTime = _mkgmtime(&dvb_time);
-			const time_t startTime = mktime(&dvb_time);
-
+			
+			const time_t startTime = _mkgmtime(&dvb_time);
+		//	const time_t startTime = mktime(&dvb_time);
+			
 			// Get program end time
 			dvb_time.tm_sec  += bcdtoint(currentEvent->duration_s);
 			dvb_time.tm_min  += bcdtoint(currentEvent->duration_m);
 			dvb_time.tm_hour += bcdtoint(currentEvent->duration_h);
-		//	const time_t stopTime = _mkgmtime(&dvb_time);
-			const time_t stopTime = mktime(&dvb_time);
+			const time_t stopTime = _mkgmtime(&dvb_time);
+			//const time_t stopTime = mktime(&dvb_time);
 
 			// We save the duration of the program
 			char buffer[50];
@@ -1191,6 +1312,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 			// Basic bad date check. if the program ends before this time yesterday, 
 			// or two weeks from today, forget it.
 			if((difftime(stopTime, now) >= -86400 && difftime(now, stopTime) <= 86400 * 14))
+			
 			{
 				// Log the program info
 				log(3, false, 0, TEXT("<program start - NID: %d (0x%x)  SID: %d (0x%x) "), networkID, networkID, serviceID, serviceID);
@@ -1201,13 +1323,12 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 				// Start and stop times
 				tm nuTime;
-				localtime_s(&nuTime, &startTime);					
+				gmtime_s(&nuTime, &startTime);					
 				static char	date_strbuf[MAX_DATE_LENGTH];
 				strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);
 
 				log(3, false, 0, TEXT("start=%s +0000 "), date_strbuf);
 				newEvent.startDateTime = date_strbuf;
-
 
 				localtime_s(&nuTime, &startTime);	
 				
@@ -1227,6 +1348,10 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				// Service ID and Network ID
 				newEvent.SID = serviceID;
 				newEvent.ONID = networkID;
+
+				// Test for sky mexico
+				log(3, false, 0, TEXT("stop=%s +0000>\n"), date_strbuf);
+
 
 				// Descriptions and everything else
 				parseEventDescriptors(inputBuffer + EIT_EVENT_LEN, descriptorLoopLength, table, &newEvent);
@@ -1289,7 +1414,13 @@ void EIT::parseEventDescriptors(const BYTE* inputBuffer,
 
 			case 0x96: decodeDishSeriesDescriptor(inputBuffer, newEvent); break;
 
-			default: break;
+			//case 0x5f: decodeSkyDescriptor(inputBuffer, newEvent, 50); break;
+
+			//case 0x53: decodeSkyDescriptor2(inputBuffer, newEvent, 50); break;
+
+			default: 
+				//log(3, false, 0, TEXT("Unkown descriptor tag 0x%x\n"), generalDescriptor->descriptor_tag);
+				break;
 		}
 
 		// Adjust input Buffer
@@ -1299,6 +1430,40 @@ void EIT::parseEventDescriptors(const BYTE* inputBuffer,
 		remainingLength -= descriptorLength + DESCR_GEN_LEN;	
 	}
 }
+
+
+void EIT::decodeSkyDescriptor(const BYTE* inputBuffer, EITEvent* newEvent, int length) {
+	log(3, false, 0, TEXT("\tDescriptor 0x5f: "));
+	for(int i=0;i<length; i++) {
+		log(3, false, 0, TEXT("[%d] = 0x%x "), i, inputBuffer[i]);
+	}
+	log(3, false, 0, TEXT("\n"));
+	
+	log(3, false, 0, TEXT("\tString 0x5f: "));
+	for(int i=0;i<length; i++) {
+		log(3, false, 0, TEXT("%c "), inputBuffer[i]);
+	}
+	log(3, false, 0, TEXT("\n"));
+
+	//[0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
+}
+
+void EIT::decodeSkyDescriptor2(const BYTE* inputBuffer, EITEvent* newEvent, int length) {
+	log(3, false, 0, TEXT("\tDescriptor 0x52: "));
+	for(int i=0;i<length; i++) {
+		log(3, false, 0, TEXT("[%d] = 0x%x "), i, inputBuffer[i]);
+	}
+	log(3, false, 0, TEXT("\n"));
+
+	log(3, false, 0, TEXT("\tString 0x52: "));
+	for(int i=0;i<length; i++) {
+		log(3, false, 0, TEXT("%c "), inputBuffer[i]);
+	}
+	log(3, false, 0, TEXT("\n"));
+
+	//	log(3, false, 0, TEXT("\tDescriptor 0x53: [0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
+}
+
 
 void EIT::decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent)
 {
@@ -1352,6 +1517,11 @@ void EIT::decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent
 	lang.language = ISO_639_language_code;
 	lang.text = language;
 	newEvent->vecLanguages.push_back(lang);
+
+	//FILE* outFile = NULL;
+	//_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
+	//fprintf(outFile, TEXT("Description: %s\n  "), descriptionText.c_str() );
+	//fclose(outFile);
 
 	// Log the description of the event
 	log(3, false, 0, TEXT("\tDescription: !%s!\n"), descriptionText.c_str());
@@ -1481,11 +1651,12 @@ void EIT::decodeExtendedEvent(const BYTE* inputBuffer, EITEvent* newEvent)
 void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 {
 
-	//FILE* outFile = NULL;
-	//_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
-	//fprintf(outFile, TEXT("[0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
-	//fclose(outFile);
+	const UINT32 usid = NetworkProvider::getUniqueSID(newEvent->ONID, newEvent->SID);
+	NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();					
+	int chanNo = encoderNetworkProvider.getChannelForSid(usid);
 
+	log(3, false, 0, TEXT("\tChannel number: %d\n"),chanNo);
+	//log(3, false, 0, TEXT("\tBytes: [0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
 
 	// If this is for dish network or bell express, use the alternate routine
 	switch(m_provider) 
@@ -1495,7 +1666,7 @@ void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 			return;
 
 		case(EIT_PROVIDER_SKY):
-
+			decodeContentDescriptorSky(inputBuffer,newEvent);
 			return;
 
 	}
@@ -1665,6 +1836,45 @@ void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 		}
 		newEvent->category = genreText;
 	}
+}
+
+void EIT::decodeContentDescriptorSky (const BYTE* inputBuffer, EITEvent* newEvent)
+{
+	const descr_content_t* const contentDescriptor = CastContentDescriptor(inputBuffer);
+	int nibble=0;
+
+	// Let's loop through the nibbles
+	for(int i = 0; i < contentDescriptor->descriptor_length / DESCR_CONTENT_LEN; i++)
+	{
+		std::string genreText;
+		
+
+	switch(inputBuffer[2])
+		{
+				// Movie/Drama
+			//case 0x2230: genreText = std::string("movie/drama (general)");break;
+			case 0xff: genreText = std::string("Adultos");break;
+			case 0x11: genreText = std::string("Pelicula / Accion"); break;
+			
+			case 0x44: genreText = std::string("Deportes / Golf");break;
+			case 0xbb: genreText = std::string("Deportes / Futbol Amer."); break;
+			default: genreText = std::string(""); 
+					FILE* outFile = NULL;
+	//_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
+	//fprintf(outFile, TEXT("[0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
+	//fclose(outFile);
+
+				break;
+		}
+
+		// Output content if present
+		if(genreText.length() > 0)
+		{
+			log(3, false, 0, TEXT("\tCategory: %s\n"), genreText.c_str());
+		}
+		newEvent->category = genreText;
+	}
+
 }
 
 void EIT::decodeContentDescriptorDish (const BYTE* inputBuffer, EITEvent* newEvent)
@@ -2090,10 +2300,6 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 		// Get rid of annoying carriage returns
 		descriptionText = ReplaceAll(descriptionText, "\r", "");
 
-		FILE* outFile = NULL;
-		_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
-		fprintf(outFile, TEXT("Description: %s\n  "), descriptionText.c_str() );
-		fclose(outFile);
 		
 		newEvent->longDescription = descriptionText;
 
