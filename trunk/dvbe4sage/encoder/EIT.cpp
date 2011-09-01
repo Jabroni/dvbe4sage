@@ -680,9 +680,6 @@ int EIT::getSageLogicalChannel(USHORT sid, USHORT onid, USHORT fromONID, USHORT 
 		
 	}
 
-	if(sid>0 && sid<1000)
-		logical = sid + 1000;
-
 	return logical;
 }
 
