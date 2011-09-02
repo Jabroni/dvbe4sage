@@ -2443,17 +2443,19 @@ void EIT::decodeDishCcStereoDescriptor(const BYTE* inputBuffer, int tnum, EITEve
 	unsigned char* decompressed=NULL;
     decompressed=CDishDecode::Decompress(&inputBuffer[4], inputBuffer[1]-2, tnum);
 
+	log(3, false, 0, TEXT("decodeDishCcStereoDescriptor decompressed NULL = %s\n"), (decompressed == NULL) ? "True" : "False" );
 	if(decompressed)
 	{
-		std::string descriptionText((char *)decompressed); 
+		std::string descriptorText((char *)decompressed); 
+		log(3, false, 0, TEXT("decodeDishCcStereoDescriptor descriptor: %s\n"), descriptorText.c_str());
 		size_t found;
-		found = descriptionText.find("|CC");
+		found = descriptorText.find("|CC");
 		if (found == string::npos)
 			newEvent->CC = false;
 		else
 			newEvent->CC = true;
 
-		found = descriptionText.find("|Stereo");
+		found = descriptorText.find("|Stereo");
 		if (found == string::npos)
 			newEvent->stereo = false;
 		else
