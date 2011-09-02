@@ -15,6 +15,9 @@
 
 extern Encoder*	g_pEncoder;
 int g_onid = 0;
+int g_sendusidsage = 0;
+vector<string> g_filterText;
+
 EIT_PROVIDER g_provider = EIT_PROVIDER_STANDARD;
 
 // code page swapping
@@ -216,8 +219,10 @@ void EITtimer::ParseIniFile(void)
 			buffer[length] = '\0';
 			if(buffer[0] != TCHAR(0))
 			{
-				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
-					newrec.filterText.push_back(token);
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
+					string tok = token;
+					newrec.filterText.push_back((string)tok);
+				}
 			}			
 
 			newrec.logicalChannelOffset.clear();
@@ -251,7 +256,6 @@ void EITtimer::ParseIniFile(void)
 				}
 			}
 
-
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
 			log(0, false, 0, TEXT("Disabled = %d\n"), newrec.disabled);
 			log(0, false, 0, TEXT("Lineup = %s\n"), newrec.lineup.c_str());
@@ -274,11 +278,11 @@ void EITtimer::ParseIniFile(void)
 			
 			log(0, false, 0, TEXT("FilterText="));
 			for(unsigned int i=0 ; i < newrec.filterText.size(); i++) {
-				log(0, false, 0, TEXT("%s"), newrec.filterText[i].c_str());
-				if(i < newrec.logicalChannelOffset.size()-1)
-					log(0, false, 0, TEXT(","));
+				log(0, false, 0, TEXT(">%s<"), newrec.filterText[i].c_str());
+				if(i < newrec.filterText[i].size()-1)
+					log(0, false, 0, TEXT(">,<"));
 			}
-			log(0, false, 0, TEXT("\n"));
+			log(0, false, 0, TEXT("<<\n"));
 
 
 
@@ -361,9 +365,12 @@ void EITtimer::RealEitCollectionCallback()
 		for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
 		{
 			if(eIter->disabled != 1) {
+				
 				g_onid = eIter->ONID;
+				g_sendusidsage = eIter->useUSIDasSID;
+
 				g_provider = eIter->eitProvider;
-				UINT32 usid = NetworkProvider::getUniqueSID(g_onid,eIter->chan);
+				UINT32 usid = NetworkProvider::getUniqueSID((USHORT)g_onid,(USHORT)eIter->chan);
 
 				// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
 				// Send socket command make to us tune and lock the tuner
@@ -518,6 +525,51 @@ void EIT::ParseIniFile(void)
 					newrec.includedSIDs.insert((USHORT)_ttoi(token));
 			}
 
+			newrec.filterText.clear();
+			buffer = CIniFile::GetValue("FilterText", sections[i], fileName);
+#pragma warning(disable:4996)
+			length = buffer.copy(tbuffer, buffer.length(), 0);
+#pragma warning(default:4996)
+			buffer[length] = '\0';
+			if(buffer[0] != TCHAR(0))
+			{
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
+					string tok = token;
+					newrec.filterText.push_back((string)tok);
+				}
+			}			
+
+			newrec.logicalChannelOffset.clear();
+			buffer = CIniFile::GetValue("LogicalChannels", sections[i], fileName);
+#pragma warning(disable:4996)
+			length = buffer.copy(tbuffer, buffer.length(), 0);
+#pragma warning(default:4996)
+			buffer[length] = '\0';
+			string buffer2,buffer3;
+			if(buffer[0] != TCHAR(0))
+			{
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(";"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(";"), &context)) {
+					Ranges range;
+					LPTSTR context1,context2;
+					// Token1 = Channel/Ranges of channels   
+					// Token2 = Offset
+					LPCTSTR token1 = _tcstok_s(const_cast<char*>(token), TEXT(","), &context1);
+					LPCTSTR token2 = _tcstok_s(NULL, TEXT(";"), &context1);
+					range.offset = atoi(token2);
+
+					// We process the ranges
+					LPCTSTR token3 = _tcstok_s(const_cast<char*>(token1), TEXT("-"), &context2);
+					LPCTSTR token4 = _tcstok_s(NULL, TEXT("-"), &context2);
+					range.from = atoi(token3);
+					if(token4 != NULL)
+						range.to = atoi(token4);
+					else
+						range.to = 0;
+					
+					newrec.logicalChannelOffset.push_back((Ranges)range);
+				}
+			}
+
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
 			log(0, false, 0, TEXT("Lineup = %s\n"), newrec.lineup.c_str());
 			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
@@ -572,7 +624,16 @@ void EIT::RealEitCollectionCallback()
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
 	log(2, true, 0, TEXT("Collecting EIT Data for provider %d onid %hu.\n"), m_provider, m_onid);
-			
+
+
+	// We copy the FilterText to global var which will be used thru all the scanning process
+	eitRecord eitRec = GetEitRecord(g_onid);
+	g_filterText.clear();
+	for(unsigned int i=0;i<eitRec.filterText.size();i++)
+				g_filterText.push_back(eitRec.filterText[i]);
+	
+
+
 	lock();
 	// Get rid of the old stuff
 //	m_EITevents.clear();
@@ -644,7 +705,7 @@ int EIT::getSageLogicalChannel(USHORT sid, USHORT onid, USHORT fromONID, USHORT 
 	for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
 	{
 		if(eIter->ONID == fromONID) {
-			for(int i=0 ; i < eIter->logicalChannelOffset.size(); i++) {
+			for(unsigned int i=0 ; i < eIter->logicalChannelOffset.size(); i++) {
 				Ranges range = eIter->logicalChannelOffset[i];
 				if(range.to>0) {
 					// Its a range
@@ -748,11 +809,16 @@ void EIT::sendToSage(int onid)
 			UINT32 usid = encoderNetworkProvider.getUniqueSID((USHORT)currentRecord.ONID, (USHORT)currentRecord.SID);
 			encoderNetworkProvider.getServiceName(usid , channelName, sizeof(channelName) / sizeof(channelName[0]));
 
+			
+
 			int chanNo = encoderNetworkProvider.getChannelForSid(usid);
 			
 
-			int logChaNo = getSageLogicalChannel((USHORT)currentRecord.SID, (USHORT)currentRecord.ONID, onid, chanNo );
+			int logChaNo = getSageLogicalChannel((USHORT)currentRecord.SID, (USHORT)currentRecord.ONID, (USHORT)onid, (USHORT)chanNo );
 			if(chanNo == NULL) chanNo = encoderNetworkProvider.getSIDFromUniqueSID(usid);
+
+			if(g_sendusidsage == 1)
+				chanNo = usid;
 
 			int eventID = (currentRecord.eventID == NULL) ? 0 : currentRecord.eventID;
 
@@ -1368,7 +1434,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				// Descriptions and everything else
 				parseEventDescriptors(inputBuffer + EIT_EVENT_LEN, descriptorLoopLength, table, &newEvent);
 
-				//log(3, false, 0, TEXT("<program end>\n"));
+				log(3, false, 0, TEXT("<program end>\n"));
 
 				// Add the newly created event to the list
 				WriteEitEventRecord(&newEvent);
@@ -1663,7 +1729,7 @@ void EIT::decodeExtendedEvent(const BYTE* inputBuffer, EITEvent* newEvent)
 void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 {
 
-	const UINT32 usid = NetworkProvider::getUniqueSID(newEvent->ONID, newEvent->SID);
+	const UINT32 usid = NetworkProvider::getUniqueSID((USHORT)newEvent->ONID, (USHORT)newEvent->SID);
 	NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();					
 	int chanNo = encoderNetworkProvider.getChannelForSid(usid);
 
@@ -1853,7 +1919,7 @@ void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 void EIT::decodeContentDescriptorSky (const BYTE* inputBuffer, EITEvent* newEvent)
 {
 	const descr_content_t* const contentDescriptor = CastContentDescriptor(inputBuffer);
-	int nibble=0;
+	
 
 	// Let's loop through the nibbles
 	for(int i = 0; i < contentDescriptor->descriptor_length / DESCR_CONTENT_LEN; i++)
@@ -1871,7 +1937,7 @@ void EIT::decodeContentDescriptorSky (const BYTE* inputBuffer, EITEvent* newEven
 			case 0x44: genreText = std::string("Deportes / Golf");break;
 			case 0xbb: genreText = std::string("Deportes / Futbol Amer."); break;
 			default: genreText = std::string(""); 
-					FILE* outFile = NULL;
+	//				FILE* outFile = NULL;
 	//_tfopen_s(&outFile, "c:\\debug.txt", TEXT("at"));
 	//fprintf(outFile, TEXT("[0]=0x%x [1]=0x%x [2]=0x%x [3]=0x%x [4]=0x%x [5]=0x%x [6]=0x%x [7]=0x%x [8]=0x%x [9]=0x%x\n"), inputBuffer[0], inputBuffer[1], inputBuffer[2], inputBuffer[3], inputBuffer[4], inputBuffer[5], inputBuffer[6], inputBuffer[7], inputBuffer[8], inputBuffer[9]);
 	//fclose(outFile);
@@ -2323,7 +2389,14 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 		// Get rid of annoying carriage returns
 		descriptionText = ReplaceAll(descriptionText, "\r", "");
 
-		
+		// We check if we need to remove strings from the long description acording to the EIT.ini
+		log(3, false, 0, TEXT("\tLong Description: %d %s\n"),g_onid,descriptionText.c_str());		
+		if(descriptionText.size()>0 && g_filterText.size()>0) {
+			for(unsigned int i=0;i<g_filterText.size();i++) {
+				descriptionText = ReplaceAll(descriptionText, g_filterText[i], "");
+			}
+		}
+
 		newEvent->longDescription = descriptionText;
 
 		free(decompressed);
@@ -2339,6 +2412,9 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 			}
 		}
 		EPGLanguage lang;
+
+
+
 		lang.longDescription = descriptionText;
 		lang.parentalRating = 0;
 		lang.language = langENG;
@@ -2513,7 +2589,16 @@ struct eitRecord EIT::GetEitRecord(int onid)
 			ret.ONID = iter->ONID;
 			ret.lineup = iter->lineup;
 			ret.chan = iter->chan;
-//			ret.useLongChennelName = iter->useLongChennelName;
+			ret.disabled = iter->disabled;
+			ret.useUSIDasSID = iter->useUSIDasSID;
+
+			for(unsigned int i=0;i<iter->filterText.size();i++)
+				ret.filterText.push_back(iter->filterText[i]);
+
+			for(unsigned int i=0;i<iter->logicalChannelOffset.size();i++)
+				ret.logicalChannelOffset.push_back(iter->logicalChannelOffset[i]);
+
+
 
 			for(hash_set<USHORT>::const_iterator it = iter->includedSIDs.begin(); it != iter->includedSIDs.end();)
 				ret.includedSIDs.insert(*it);
@@ -2622,7 +2707,7 @@ bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->year);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->stereo);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->CC);
-			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecLanguages.size());
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecSubtitles.size());
 			EITEvent::ivecSubtitles it2 = rec->vecSubtitles.begin();
 			for (it2 = rec->vecSubtitles.begin(); it2 != rec->vecSubtitles.end(); ++it2)
 			{
