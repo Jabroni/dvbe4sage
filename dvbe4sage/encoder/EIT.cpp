@@ -1413,7 +1413,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				strftime(date_strbuf, sizeof(date_strbuf), "%m/%d/%Y %H:%M:%S", &nuTime);
 				newEvent.startDateTimeSage = date_strbuf;
 
-				localtime_s(&nuTime, &stopTime);
+				gmtime_s(&nuTime, &stopTime);
 				strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);
 
 				log(3, false, 0, TEXT("stop=%s +0000>\n"), date_strbuf);
