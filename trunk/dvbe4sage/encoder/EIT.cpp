@@ -204,7 +204,7 @@ void EITtimer::ParseIniFile(void)
 #pragma warning(disable:4996)
 			size_t length = buffer.copy(tbuffer, buffer.length(), 0);
 #pragma warning(default:4996)
-			buffer[length] = '\0';
+			tbuffer[length] = '\0';
 			if(buffer[0] != TCHAR(0))
 			{
 				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
@@ -216,7 +216,7 @@ void EITtimer::ParseIniFile(void)
 #pragma warning(disable:4996)
 			length = buffer.copy(tbuffer, buffer.length(), 0);
 #pragma warning(default:4996)
-			buffer[length] = '\0';
+			tbuffer[length] = '\0';
 			if(buffer[0] != TCHAR(0))
 			{
 				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
@@ -230,7 +230,7 @@ void EITtimer::ParseIniFile(void)
 #pragma warning(disable:4996)
 			length = buffer.copy(tbuffer, buffer.length(), 0);
 #pragma warning(default:4996)
-			buffer[length] = '\0';
+			tbuffer[length] = '\0';
 			string buffer2,buffer3;
 			if(buffer[0] != TCHAR(0))
 			{
@@ -278,11 +278,11 @@ void EITtimer::ParseIniFile(void)
 			
 			log(0, false, 0, TEXT("FilterText="));
 			for(unsigned int i=0 ; i < newrec.filterText.size(); i++) {
-				log(0, false, 0, TEXT(">%s<"), newrec.filterText[i].c_str());
+				log(0, false, 0, TEXT("%s"), newrec.filterText[i].c_str());
 				if(i < newrec.filterText[i].size()-1)
-					log(0, false, 0, TEXT(">,<"));
+					log(0, false, 0, TEXT(","));
 			}
-			log(0, false, 0, TEXT("<<\n"));
+			log(0, false, 0, TEXT("\n"));
 
 
 
@@ -518,7 +518,7 @@ void EIT::ParseIniFile(void)
 #pragma warning(disable:4996)
 			size_t length = buffer.copy(tbuffer, buffer.length(), 0);
 #pragma warning(default:4996)
-			buffer[length] = '\0';
+			tbuffer[length] = '\0';
 			if(buffer[0] != TCHAR(0))
 			{
 				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
@@ -530,7 +530,7 @@ void EIT::ParseIniFile(void)
 #pragma warning(disable:4996)
 			length = buffer.copy(tbuffer, buffer.length(), 0);
 #pragma warning(default:4996)
-			buffer[length] = '\0';
+			tbuffer[length] = '\0';
 			if(buffer[0] != TCHAR(0))
 			{
 				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
@@ -544,7 +544,7 @@ void EIT::ParseIniFile(void)
 #pragma warning(disable:4996)
 			length = buffer.copy(tbuffer, buffer.length(), 0);
 #pragma warning(default:4996)
-			buffer[length] = '\0';
+			tbuffer[length] = '\0';
 			string buffer2,buffer3;
 			if(buffer[0] != TCHAR(0))
 			{
