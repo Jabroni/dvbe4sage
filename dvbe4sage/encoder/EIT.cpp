@@ -622,6 +622,7 @@ void EIT::RealEitCollectionCallback()
 	// We copy the FilterText to global var which will be used thru all the scanning process
 	eitRecord eitRec = GetEitRecord(g_onid);
 	g_filterText.clear();
+	
 	for(unsigned int i=0;i<eitRec.filterText.size();i++)
 				g_filterText.push_back(eitRec.filterText[i]);
 	
@@ -1259,139 +1260,122 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 		const USHORT eventID = HILO(currentEvent->event_id);
 
 		// Get the version
-//				const BYTE version = table->version_number;
+		//const BYTE version = table->version_number;
 
 		lock();
 
-		// Let's try to find the event first
-//		stdext::hash_map<UINT32, EITEvent>::iterator it = m_EITevents.find(getUniqueKey(eventID, serviceID));
+		EITEvent newEvent;
 
-		// If not found or different version, go ahead
-//		if(it == m_EITevents.end())
-		hash_set<USHORT>::const_iterator it = m_eitEventIDs.find(eventID); 
-	    //if(it == m_eitEventIDs.end())
-		if(true)
-		{
-			EITEvent newEvent;
+		newEvent.aspect = 0;
 
-			newEvent.aspect = 0;
+		m_eitEventIDs.insert(eventID);
 
-			m_eitEventIDs.insert(eventID);
-
-			// Take care of dates
-			const int mjd = HILO(currentEvent->mjd);
+		// Take care of dates
+		const int mjd = HILO(currentEvent->mjd);
 			
-			/*
-			*  * Use the routine specified in ETSI EN 300 468 V1.8.1,
-			*  * "Specification for Service Information in Digital Video Broadcasting"
-			*  * to convert from Modified Julian Date to Year, Month, Day.
-			*  */
-			int year = (int)((mjd - 15078.2) / 365.25);
+		/*
+		*  * Use the routine specified in ETSI EN 300 468 V1.8.1,
+		*  * "Specification for Service Information in Digital Video Broadcasting"
+		*  * to convert from Modified Julian Date to Year, Month, Day.
+		*  */
+		int year = (int)((mjd - 15078.2) / 365.25);
 
-	//int month = int((odate - 14956.1 - int(year * 365.25)) / 30.6001);
-	//int day = odate - 14956 - int(year * 365.25) - int(month * 30.6001);
-	//int offset = 0;
-	//if ((month == 14) || (month == 15))    
-	//		offset = 1;
+		//int month = int((odate - 14956.1 - int(year * 365.25)) / 30.6001);
+		//int day = odate - 14956 - int(year * 365.25) - int(month * 30.6001);
+		//int offset = 0;
+		//if ((month == 14) || (month == 15))    
+		//		offset = 1;
 
-	//year = year + offset + 1900;
-	//month = month - 1 - (offset * 12);
+		//year = year + offset + 1900;
+		//month = month - 1 - (offset * 12);
 
-			int month = (int) ((mjd - 14956.1 - (int) (year * 365.25)) / 30.6001);
-			const int day = mjd - 14956 - (int)(year * 365.25) - (int)(month * 30.6001);
-			int k = (month == 14 || month == 15) ? 1 : 0;
-			year += k;
-			month = month - 2 - (k * 12);
+		int month = (int) ((mjd - 14956.1 - (int) (year * 365.25)) / 30.6001);
+		const int day = mjd - 14956 - (int)(year * 365.25) - (int)(month * 30.6001);
+		int k = (month == 14 || month == 15) ? 1 : 0;
+		year += k;
+		month = month - 2 - (k * 12);
 
-			tm dvb_time;
-			dvb_time.tm_mday = day;
-			dvb_time.tm_mon = month;
-			dvb_time.tm_year = year;
-			dvb_time.tm_isdst = 0;
-			dvb_time.tm_wday = dvb_time.tm_yday = 0;
+		tm dvb_time;
+		dvb_time.tm_mday = day;
+		dvb_time.tm_mon = month;
+		dvb_time.tm_year = year;
+		dvb_time.tm_isdst = 0;
+		dvb_time.tm_wday = dvb_time.tm_yday = 0;
 			
-			// Get program start time
-			dvb_time.tm_sec =  bcdtoint(currentEvent->start_time_s);
-			dvb_time.tm_min =  bcdtoint(currentEvent->start_time_m);
-			dvb_time.tm_hour = bcdtoint(currentEvent->start_time_h);
+		// Get program start time
+		dvb_time.tm_sec =  bcdtoint(currentEvent->start_time_s);
+		dvb_time.tm_min =  bcdtoint(currentEvent->start_time_m);
+		dvb_time.tm_hour = bcdtoint(currentEvent->start_time_h);
 			
-			const time_t startTime = _mkgmtime(&dvb_time);
+		const time_t startTime = _mkgmtime(&dvb_time);
 		//	const time_t startTime = mktime(&dvb_time);
 			
-			// Get program end time
-			dvb_time.tm_sec  += bcdtoint(currentEvent->duration_s);
-			dvb_time.tm_min  += bcdtoint(currentEvent->duration_m);
-			dvb_time.tm_hour += bcdtoint(currentEvent->duration_h);
-			const time_t stopTime = _mkgmtime(&dvb_time);
-			//const time_t stopTime = mktime(&dvb_time);
+		// Get program end time
+		dvb_time.tm_sec  += bcdtoint(currentEvent->duration_s);
+		dvb_time.tm_min  += bcdtoint(currentEvent->duration_m);
+		dvb_time.tm_hour += bcdtoint(currentEvent->duration_h);
+		const time_t stopTime = _mkgmtime(&dvb_time);
+		//const time_t stopTime = mktime(&dvb_time);
 
-			// We save the duration of the program
-			char buffer[50];
-			sprintf_s(buffer, "%02d:%02d:%02d", bcdtoint(currentEvent->duration_h), bcdtoint(currentEvent->duration_m), bcdtoint(currentEvent->duration_s));
-			newEvent.durationTime = buffer;
+		// We save the duration of the program
+		char buffer[50];
+		sprintf_s(buffer, "%02d:%02d:%02d", bcdtoint(currentEvent->duration_h), bcdtoint(currentEvent->duration_m), bcdtoint(currentEvent->duration_s));
+		newEvent.durationTime = buffer;
 
-			// Get time of right now
-			time_t now;
-			time(&now);
+		// Get time of right now
+		time_t now;
+		time(&now);
 
-			// Basic bad date check. if the program ends before this time yesterday, 
-			// or two weeks from today, forget it.
-			if((difftime(stopTime, now) >= -86400 && difftime(now, stopTime) <= 86400 * 14))
-			
-			{
-				// Log the program info
-				log(3, false, 0, TEXT("<program start - NID: %d (0x%x)  SID: %d (0x%x) "), networkID, networkID, serviceID, serviceID);
+		// Basic bad date check. if the program ends before this time yesterday, 
+		// or two weeks from today, forget it.
+		if((difftime(stopTime, now) >= -86400 && difftime(now, stopTime) <= 86400 * 14))
+		{
+			// Log the program info
+			log(3, false, 0, TEXT("<program start - NID: %d (0x%x)  SID: %d (0x%x) "), networkID, networkID, serviceID, serviceID);
 
-				// Save the raw start and stop times for pruning and sorting purposes later
-				newEvent.startTime = startTime;
-				newEvent.stopTime = stopTime;
+			// Save the raw start and stop times for pruning and sorting purposes later
+			newEvent.startTime = startTime;
+			newEvent.stopTime = stopTime;
 
-				// Start and stop times
-				tm nuTime;
-				gmtime_s(&nuTime, &startTime);					
-				static char	date_strbuf[MAX_DATE_LENGTH];
-				strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);
+			// Start and stop times
+			tm nuTime;
+			gmtime_s(&nuTime, &startTime);					
+			static char	date_strbuf[MAX_DATE_LENGTH];
+			strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);
 
-				log(3, false, 0, TEXT("start=%s +0000 "), date_strbuf);
-				newEvent.startDateTime = date_strbuf;
+			log(3, false, 0, TEXT("start=%s +0000 "), date_strbuf);
+			newEvent.startDateTime = date_strbuf;
 
-				localtime_s(&nuTime, &startTime);	
+			localtime_s(&nuTime, &startTime);	
 				
-				strftime(date_strbuf, sizeof(date_strbuf), "%m/%d/%Y %H:%M:%S", &nuTime);
-				newEvent.startDateTimeSage = date_strbuf;
+			strftime(date_strbuf, sizeof(date_strbuf), "%m/%d/%Y %H:%M:%S", &nuTime);
+			newEvent.startDateTimeSage = date_strbuf;
 
-				gmtime_s(&nuTime, &stopTime);
-				strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);
+			gmtime_s(&nuTime, &stopTime);
+			strftime(date_strbuf, sizeof(date_strbuf), "%Y%m%d%H%M%S", &nuTime);
 
-				log(3, false, 0, TEXT("stop=%s +0000>\n"), date_strbuf);
-				newEvent.stopDateTime = date_strbuf;
+			log(3, false, 0, TEXT("stop=%s +0000>\n"), date_strbuf);
+			newEvent.stopDateTime = date_strbuf;
 			
-				// Event ID
-				//log(3, false, 0, TEXT("\tEvent ID = 0x%x\n"), eventID);
-				newEvent.eventID = eventID;
+			newEvent.eventID = eventID;
 
-				// Service ID and Network ID
-				newEvent.SID = serviceID;
-				newEvent.ONID = networkID;
+			// Service ID and Network ID
+			newEvent.SID = serviceID;
+			newEvent.ONID = networkID;
+		
+			log(3, false, 0, TEXT("stop=%s +0000>\n"), date_strbuf);
 
-				// Test for sky mexico
-				log(3, false, 0, TEXT("stop=%s +0000>\n"), date_strbuf);
+			// Descriptions and everything else
+			parseEventDescriptors(inputBuffer + EIT_EVENT_LEN, descriptorLoopLength, table, &newEvent);
 
+			log(3, false, 0, TEXT("<program end>\n"));
 
-				// Descriptions and everything else
-				parseEventDescriptors(inputBuffer + EIT_EVENT_LEN, descriptorLoopLength, table, &newEvent);
+			// Add the newly created event to the list
+			WriteEitEventRecord(&newEvent);
 
-				log(3, false, 0, TEXT("<program end>\n"));
-
-				// Add the newly created event to the list
-				WriteEitEventRecord(&newEvent);
-//				m_EITevents[getUniqueKey(eventID, serviceID)] = newEvent;
-				unlock();
-			}
+			unlock();
 		}
-		else
-			log(3, false, 0, TEXT("Duplicate event found!  Event ID: 0x%x\n"), eventID);
-
+	
 		// Adjust input buffer
 		inputBuffer += descriptorLoopLength + EIT_EVENT_LEN;
 
