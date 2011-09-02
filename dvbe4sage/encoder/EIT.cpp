@@ -1274,6 +1274,8 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 		{
 			EITEvent newEvent;
 
+			newEvent.aspect = 0;
+
 			m_eitEventIDs.insert(eventID);
 
 			// Take care of dates
