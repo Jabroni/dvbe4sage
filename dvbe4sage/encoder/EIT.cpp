@@ -345,7 +345,7 @@ void EITtimer::RealEitCollectionCallback()
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
 	log(3, true, 0, TEXT("Waiting until %02d:%02d to collect and process EIT data.\n"), m_CollectionTimeHour, m_CollectionTimeMin);
-	
+
 	while(1 == 1)
 	{
 		// Wait until the start time or told to quit
@@ -666,7 +666,7 @@ void EIT::RealEitCollectionCallback()
 	// Send data to SageTV server if configured to do so
 	if(m_SageEitIP.length() > 0) {
 		log(3, true, 0, TEXT("Tries to send EPG to SageTV\n"));
-		//sendToSage(m_onid);
+		sendToSage(m_onid);
 	}
 	// Clean up after ourselves
 	DeleteFile(tempFile);
@@ -770,7 +770,6 @@ void EIT::sendToSage(int onid)
 	OpenEitEventFile(true);
 	struct EITEvent currentRecord;
 	while(ReadNextEitEventRecord(&currentRecord) == true)
-//	for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 	{
 		hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)currentRecord.SID); 
 		
@@ -1409,7 +1408,7 @@ void EIT::parseEventDescriptors(const BYTE* inputBuffer,
 			case 0x50: decodeComponentDescriptor(inputBuffer, newEvent); break;
 
 			case 0x55: decodeParentalRatingDescriptor(inputBuffer, newEvent); break;
-			////
+			
 			////case 0x5F: /* Private Data Descriptor */ break;
 
 			////case 0x86: DecodeProviderIdDescriptor(inputBuffer, newEvent); break;
@@ -1843,6 +1842,7 @@ void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 			log(3, false, 0, TEXT("\tCategory: %s\n"), genreText.c_str());
 		}
 		newEvent->category = genreText;
+
 	}
 }
 
@@ -1875,6 +1875,7 @@ void EIT::decodeContentDescriptorSky (const BYTE* inputBuffer, EITEvent* newEven
 			log(3, false, 0, TEXT("\tCategory: %s\n"), genreText.c_str());
 		}
 		newEvent->category = genreText;
+		//delete contentDescriptor;
 	}
 
 }
@@ -2097,6 +2098,7 @@ void EIT::decodeContentDescriptorDish (const BYTE* inputBuffer, EITEvent* newEve
 
 		newEvent->dishCategory1 = genreText;
 		newEvent->dishCategory2 = genreText2;
+
 	}
 }
 
@@ -2295,6 +2297,7 @@ void EIT::decodeDishShortDescription(const BYTE* inputBuffer, int tnum, EITEvent
 		lang.text = "en";
 		newEvent->vecLanguages.push_back(lang);
 	}
+
 }
 
 void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent* newEvent)
@@ -2386,6 +2389,7 @@ void EIT::decodeDishCcStereoDescriptor(const BYTE* inputBuffer, int tnum, EITEve
 		log(3, false, 0, TEXT("\tClosed Captioned: %s\n"), (newEvent->CC == true) ? "True" : "False");
 		log(3, false, 0, TEXT("\tStereo: %s\n"), (newEvent->stereo == true) ? "True" : "False");
 	}
+	free(decompressed);
 }
 
 void EIT::decodeDishVChipRatingDescriptor(const BYTE* inputBuffer, EITEvent* newEvent)
