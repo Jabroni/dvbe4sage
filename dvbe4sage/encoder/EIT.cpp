@@ -172,6 +172,9 @@ void EITtimer::ParseIniFile(void)
 			m_SageEitRemotePath = CIniFile::GetValue("SageEitRemotePath", sections[i], fileName);
 			log(0, false, 0, TEXT("SageEitRemotePath = %s\n"), m_SageEitRemotePath.c_str());
 
+			m_SageEitLineup = CIniFile::GetValue("SageEitLineup", sections[i], fileName);
+			log(0, false, 0, TEXT("SageEitLineup = %s\n"), m_SageEitLineup.c_str());
+
 			m_debugEpg = atoi(CIniFile::GetValue("DebugEPG", sections[i], fileName).c_str());
 			log(0, false, 0, TEXT("DebugEPG = %d\n"), m_debugEpg);
 
@@ -181,7 +184,6 @@ void EITtimer::ParseIniFile(void)
 		{
 			struct eitRecord newrec;
 			newrec.ONID = atoi(sections[i].c_str());
-			newrec.lineup = CIniFile::GetValue("Lineup", sections[i], fileName);	
 			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
 			newrec.useUSIDasSID = atol(CIniFile::GetValue("SendUSIDSage", sections[i], fileName).c_str());
 			string temp = CIniFile::GetValue("Provider", sections[i], fileName);
@@ -258,7 +260,6 @@ void EITtimer::ParseIniFile(void)
 
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
 			log(0, false, 0, TEXT("Disabled = %d\n"), newrec.disabled);
-			log(0, false, 0, TEXT("Lineup = %s\n"), newrec.lineup.c_str());
 			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
 			log(0, false, 0, TEXT("SendUSIDSage = %lu\n"), newrec.useUSIDasSID);
 
@@ -500,13 +501,16 @@ void EIT::ParseIniFile(void)
 			m_CollectionDurationMinutes = atoi(CIniFile::GetValue("CollectionDurationMinutes", sections[i], fileName).c_str());
 			log(0, false, 0, TEXT("CollectionDurationMinutes = %d\n"), m_CollectionDurationMinutes);
 
+			m_SageEitLineup = CIniFile::GetValue("SageEitLineup", sections[i], fileName);
+			log(0, false, 0, TEXT("SageEitLineup = %s\n"), m_SageEitLineup);
+
+
 			log(0, false, 0, TEXT("\n"));
 		}
 		else
 		{
 			struct eitRecord newrec;
 			newrec.ONID = atoi(sections[i].c_str());
-			newrec.lineup = CIniFile::GetValue("Lineup", sections[i], fileName);	
 			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
 			newrec.includedSIDs.clear();
 			buffer = CIniFile::GetValue("IncludedSIDs", sections[i], fileName);
@@ -566,9 +570,7 @@ void EIT::ParseIniFile(void)
 			}
 
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
-			log(0, false, 0, TEXT("Lineup = %s\n"), newrec.lineup.c_str());
 			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
-
 			log(0, false, 0, TEXT("IncludedSIDs="));
 			for(hash_set<USHORT>::const_iterator it = newrec.includedSIDs.begin(); it != newrec.includedSIDs.end();)
 			{
@@ -731,25 +733,19 @@ void EIT::sendToSage(int onid)
 	
 	log(3, true, 0, TEXT("EIT is attempting to send EPG to SAGETV\n"));
 	
-	string lineup = "";
-	// Loop for all configured providers to look for the Lineup name of the specified ONID
-	for (vector<eitRecord>::iterator eIter = m_eitRecords.begin(); eIter != m_eitRecords.end(); eIter++)
-	{
-		if(eIter->ONID == onid)
-			lineup = eIter->lineup;
-	}
-
+	
     if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET)
         return ;
 
     if (connect(s, (SOCKADDR *)&target, sizeof(target)) == SOCKET_ERROR)
         return ;
 	
-	log(3, true, 0, TEXT("Tries START\n"));
-
+	
+	
 	char buffer[200];
-	sprintf_s(buffer,sizeof(buffer),"START %s|\r\n",lineup);	
-	char *command = &buffer[0] ;
+	sprintf_s(buffer,sizeof(buffer),"START %s|\r\n",m_SageEitLineup.c_str());	
+	char *command = buffer;
+	log(3, true, 0, TEXT("Sends: %s\n"),command);
 	if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
 	{
 		shutdown(s, SD_SEND);
@@ -940,7 +936,7 @@ void EIT::dumpXmltvFile(int onid)
 
 	eitRecord eitRec = GetEitRecord(onid);
 
-	string fileName = m_SaveXmltvFileLocation + "\\" + eitRec.lineup + ".xml";
+	string fileName = m_SaveXmltvFileLocation + "\\" + m_SageEitLineup + ".xml";
 
 	log(3, true, 0, TEXT("EIT is attempting to dump XMLTV data to %s.\n"), fileName.c_str());
 	
@@ -949,7 +945,7 @@ void EIT::dumpXmltvFile(int onid)
 		// Standard header
 		_ftprintf(outFile, TEXT("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));
 		_ftprintf(outFile, TEXT("<!DOCTYPE tv SYSTEM \"xmltv.dtd\">\n"));
-		_ftprintf(outFile, TEXT("<tv source-info-name=\"%s\" generator-info-name=\"DVBE4SAGE\" generator-info-url=\"http://code.google.com/p/dvbe4sage/\">\n"), eitRec.lineup.c_str());
+		_ftprintf(outFile, TEXT("<tv source-info-name=\"%s\" generator-info-name=\"DVBE4SAGE\" generator-info-url=\"http://code.google.com/p/dvbe4sage/\">\n"), m_SageEitLineup);
 
 		// Loop through the services and create all the channel records
 		for(hash_map<UINT32, Service>::const_iterator it = encoderNetworkProvider.m_Services.begin(); it != encoderNetworkProvider.m_Services.end(); it++)
@@ -2515,7 +2511,6 @@ struct eitRecord EIT::GetEitRecord(int onid)
 		{
 			found = true;
 			ret.ONID = iter->ONID;
-			ret.lineup = iter->lineup;
 			ret.chan = iter->chan;
 			ret.disabled = iter->disabled;
 			ret.useUSIDasSID = iter->useUSIDasSID;
