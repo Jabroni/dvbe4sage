@@ -13,6 +13,7 @@
 #define	CRC_LENGTH			4
 #define TABLE_PREFIX_LEN	3
 
+
 extern Encoder*	g_pEncoder;
 int g_onid = 0;
 int g_sendusidsage = 0;
@@ -665,7 +666,7 @@ void EIT::RealEitCollectionCallback()
 	// Send data to SageTV server if configured to do so
 	if(m_SageEitIP.length() > 0) {
 		log(3, true, 0, TEXT("Tries to send EPG to SageTV\n"));
-		sendToSage(m_onid);
+		//sendToSage(m_onid);
 	}
 	// Clean up after ourselves
 	DeleteFile(tempFile);
@@ -999,7 +1000,6 @@ void EIT::dumpXmltvFile(int onid)
 		OpenEitEventFile(true);
 		struct EITEvent currentRecord;
 		while(ReadNextEitEventRecord(&currentRecord) == true)
-//			for(hash_map<UINT32, EITEvent>::const_iterator it = m_EITevents.begin(); it != m_EITevents.end(); it++)
 		{
 			hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)currentRecord.SID); 
 			hash_map<UINT32, Service>::iterator it3 = encoderNetworkProvider.m_Services.find(NetworkProvider::getUniqueSID((USHORT)currentRecord.ONID, (USHORT)currentRecord.SID)); 
@@ -1024,6 +1024,9 @@ void EIT::dumpXmltvFile(int onid)
 				// Convert utf-8 to ANSI:
 				wText2 = CodePageToUnicode(65001,lang.longDescription.c_str());	
 				ansiText = UnicodeToCodePage(1252,wText2);
+
+				free(ansiText);
+				free(wText2);
 
 				_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
 									
@@ -1372,7 +1375,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 			// Add the newly created event to the list
 			WriteEitEventRecord(&newEvent);
-
+			
 			unlock();
 		}
 	
@@ -1438,6 +1441,7 @@ void EIT::parseEventDescriptors(const BYTE* inputBuffer,
 		// Adjust remaining length
 		remainingLength -= descriptorLength + DESCR_GEN_LEN;	
 	}
+	
 }
 
 void EIT::decodeSkyDescriptor(const BYTE* inputBuffer, EITEvent* newEvent, int length) 
