@@ -502,7 +502,7 @@ void EIT::ParseIniFile(void)
 			log(0, false, 0, TEXT("CollectionDurationMinutes = %d\n"), m_CollectionDurationMinutes);
 
 			m_SageEitLineup = CIniFile::GetValue("SageEitLineup", sections[i], fileName);
-			log(0, false, 0, TEXT("SageEitLineup = %s\n"), m_SageEitLineup);
+			log(0, false, 0, TEXT("SageEitLineup = %s\n"), m_SageEitLineup.c_str());
 
 
 			log(0, false, 0, TEXT("\n"));
@@ -945,7 +945,7 @@ void EIT::dumpXmltvFile(int onid)
 		// Standard header
 		_ftprintf(outFile, TEXT("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));
 		_ftprintf(outFile, TEXT("<!DOCTYPE tv SYSTEM \"xmltv.dtd\">\n"));
-		_ftprintf(outFile, TEXT("<tv source-info-name=\"%s\" generator-info-name=\"DVBE4SAGE\" generator-info-url=\"http://code.google.com/p/dvbe4sage/\">\n"), m_SageEitLineup);
+		_ftprintf(outFile, TEXT("<tv source-info-name=\"%s\" generator-info-name=\"DVBE4SAGE\" generator-info-url=\"http://code.google.com/p/dvbe4sage/\">\n"), m_SageEitLineup.c_str());
 
 		// Loop through the services and create all the channel records
 		for(hash_map<UINT32, Service>::const_iterator it = encoderNetworkProvider.m_Services.begin(); it != encoderNetworkProvider.m_Services.end(); it++)
@@ -1260,16 +1260,16 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 		// Get the version
 		//const BYTE version = table->version_number;
 
-		hash_set<__int64>::const_iterator it = m_eitEventIDs.find(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID); 
-	    if(it == m_eitEventIDs.end())
-		{
+		//hash_set<__int64>::const_iterator it = m_eitEventIDs.find(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID); 
+	    //if(it == m_eitEventIDs.end())
+		//{
 			lock();
 
 			EITEvent newEvent;
 
 			newEvent.aspect = 0;
 
-			m_eitEventIDs.insert(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
+			//m_eitEventIDs.insert(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
 
 			// Take care of dates
 			const int mjd = HILO(currentEvent->mjd);
@@ -1376,7 +1376,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				
 				unlock();
 			}
-		}
+		//}
 	
 		// Adjust input buffer
 		inputBuffer += descriptorLoopLength + EIT_EVENT_LEN;
