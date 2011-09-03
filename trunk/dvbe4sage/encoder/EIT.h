@@ -33,7 +33,6 @@ typedef struct stRanges {
 struct eitRecord
 {
 	int ONID;
-	string lineup;
 	ULONG chan;
 	EIT_PROVIDER eitProvider;
 	hash_set<USHORT> includedSIDs;
@@ -124,6 +123,7 @@ private:
 	int m_CollectionDurationMinutes;
 	string m_SageEitLocalPath;
 	string m_SageEitRemotePath;
+	string	m_SageEitLineup;
 	int m_debugEpg;
 
 	vector<eitRecord> m_eitRecords;
@@ -178,6 +178,7 @@ private:
 	USHORT m_SageEitPort;
 	string m_SaveXmltvFileLocation;
 	string m_TempFileLocation;
+	string	m_SageEitLineup;
 	
 	int m_CollectionDurationMinutes;
 	bool m_CollectEIT;
