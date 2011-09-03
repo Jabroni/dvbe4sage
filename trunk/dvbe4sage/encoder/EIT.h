@@ -166,7 +166,7 @@ private:
 	bool WriteEitEventRecord(struct EITEvent *rec);
 	bool ReadNextEitEventRecord(struct EITEvent *rec);
 	ULONG m_eventsCount;
-	hash_set<USHORT>	m_eitEventIDs;
+	hash_set<__int64>	m_eitEventIDs;
 
 	struct eitRecord GetEitRecord(int onid);
 	EPGLanguage GetDescriptionRecord(struct EITEvent rec);
