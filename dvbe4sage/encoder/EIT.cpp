@@ -1257,17 +1257,14 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 		// Get the event ID
 		const USHORT eventID = HILO(currentEvent->event_id);
 
-		log(3, false, 0, TEXT("EventID: %d (0x%x) NID: %d (0x%x)  SID: %d (0x%x)  uid = %I64d (0x%I64x)\n"), eventID, eventID, networkID, networkID, serviceID, serviceID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
-
 		// Get the version
 		//const BYTE version = table->version_number;
 
+		log(3, false, 0, TEXT("EventID: %d (0x%x) NID: %d (0x%x)  SID: %d (0x%x)  uid = %I64d (0x%I64x)\n"), eventID, eventID, networkID, networkID, serviceID, serviceID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
 		hash_set<__int64>::const_iterator it = m_eitEventIDs.find(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID); 
 	    if(it == m_eitEventIDs.end())
+		{
 			log(3, false, 0, TEXT("EventID is NOT a duplicate\n"));
-		else
-			log(3, false, 0, TEXT("EventID is a duplicate\n"));
-
 
 			lock();
 
@@ -1382,7 +1379,11 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				
 				unlock();
 			}
-		//}
+		}
+		else
+		{
+			log(3, false, 0, TEXT("EventID is a duplicate\n"));
+		}
 	
 		// Adjust input buffer
 		inputBuffer += descriptorLoopLength + EIT_EVENT_LEN;
