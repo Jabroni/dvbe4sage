@@ -962,7 +962,7 @@ void EIT::dumpXmltvFile(int onid)
 				if(chanNo== NULL) {
 					chanNo = it->second.sid;
 				}
-					(it->second.channelNumber == NULL) ? it->second.sid : it->second.channelNumber;
+//					(it->second.channelNumber == NULL) ? it->second.sid : it->second.channelNumber;
 				encoderNetworkProvider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 				string chName = ReplaceAll((string)channelName, "&", "&amp;");
