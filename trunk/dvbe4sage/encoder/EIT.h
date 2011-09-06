@@ -35,7 +35,8 @@ struct eitRecord
 	int ONID;
 	ULONG chan;
 	EIT_PROVIDER eitProvider;
-	hash_set<USHORT> includedSIDs;
+	vector<Ranges> includedSIDs;
+	vector<Ranges> excludedSIDs;
 	bool isONIDset;
 	vector<string> filterText;
 	vector<Ranges> logicalChannelOffset;
@@ -179,6 +180,7 @@ private:
 	string m_SaveXmltvFileLocation;
 	string m_TempFileLocation;
 	string	m_SageEitLineup;
+	eitRecord m_eitRec;
 	
 	int m_CollectionDurationMinutes;
 	bool m_CollectEIT;
@@ -193,9 +195,10 @@ private:
 	string getParentalRating(int rating);
 
 	// Send data to SageTV
-	void sendToSage(int onid);
+	void sendToSage(int onid, bool savefile);
 	int getSageLogicalChannel( USHORT onid , USHORT sid, USHORT fromONID, USHORT chno);
 	int getONIDfromSID(string epgname);
+	bool IsSIDAllowed(USHORT sid);
 
 	void lock();
 	void unlock();
