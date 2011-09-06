@@ -18,6 +18,8 @@ extern Encoder*	g_pEncoder;
 int g_onid = 0;
 int g_sendusidsage = 0;
 vector<string> g_filterText;
+vector<Ranges> g_includedSIDs;
+vector<Ranges> g_excludedSIDs;
 
 EIT_PROVIDER g_provider = EIT_PROVIDER_STANDARD;
 
@@ -201,6 +203,7 @@ void EITtimer::ParseIniFile(void)
 			else
 				newrec.eitProvider = EIT_PROVIDER_STANDARD;		
 			
+			
 			newrec.includedSIDs.clear();
 			buffer = CIniFile::GetValue("IncludedSIDs", sections[i], fileName);
 #pragma warning(disable:4996)
@@ -209,8 +212,42 @@ void EITtimer::ParseIniFile(void)
 			tbuffer[length] = '\0';
 			if(buffer[0] != TCHAR(0))
 			{
-				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
-					newrec.includedSIDs.insert((USHORT)_ttoi(token));
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
+					Ranges range;
+					LPTSTR context1;
+					LPCTSTR token3 = _tcstok_s(const_cast<char*>(token), TEXT("-"), &context1);
+					LPCTSTR token4 = _tcstok_s(NULL, TEXT("-"), &context1);
+					
+					range.from = _ttoi(token3);
+					if(token4 == NULL)
+						range.to = 0;
+					else
+						range.to = _ttoi(token4);
+					newrec.includedSIDs.push_back((Ranges)range);
+				}
+			}
+
+			newrec.excludedSIDs.clear();
+			buffer = CIniFile::GetValue("ExcludedSIDs", sections[i], fileName);
+#pragma warning(disable:4996)
+			length = buffer.copy(tbuffer, buffer.length(), 0);
+#pragma warning(default:4996)
+			tbuffer[length] = '\0';
+			if(buffer[0] != TCHAR(0))
+			{
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
+					Ranges range;
+					LPTSTR context1;
+					LPCTSTR token3 = _tcstok_s(const_cast<char*>(token), TEXT("-"), &context1);
+					LPCTSTR token4 = _tcstok_s(NULL, TEXT("-"), &context1);
+					
+					range.from = _ttoi(token3);
+					if(token4 == NULL)
+						range.to = 0;
+					else
+						range.to = _ttoi(token4);
+					newrec.excludedSIDs.push_back((Ranges)range);
+				}
 			}
 
 			newrec.filterText.clear();
@@ -221,7 +258,7 @@ void EITtimer::ParseIniFile(void)
 			tbuffer[length] = '\0';
 			if(buffer[0] != TCHAR(0))
 			{
-				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT("|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT("|"), &context)) {
 					string tok = token;
 					newrec.filterText.push_back((string)tok);
 				}
@@ -258,6 +295,8 @@ void EITtimer::ParseIniFile(void)
 				}
 			}
 
+
+
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
 			log(0, false, 0, TEXT("Disabled = %d\n"), newrec.disabled);
 			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
@@ -281,21 +320,39 @@ void EITtimer::ParseIniFile(void)
 			for(unsigned int i=0 ; i < newrec.filterText.size(); i++) {
 				log(0, false, 0, TEXT("%s"), newrec.filterText[i].c_str());
 				if(i < newrec.filterText[i].size()-1)
-					log(0, false, 0, TEXT(","));
+					log(0, false, 0, TEXT("|"));
 			}
 			log(0, false, 0, TEXT("\n"));
 
 
 
-
+			
 			log(0, false, 0, TEXT("IncludedSIDs="));
-			for(hash_set<USHORT>::const_iterator it = newrec.includedSIDs.begin(); it != newrec.includedSIDs.end();)
+			for(vector<Ranges>::const_iterator it = newrec.includedSIDs.begin(); it != newrec.includedSIDs.end();)
 			{
-				log(0, false, 0, TEXT("%d"), *it);
+				if(it->to == 0)
+					log(0, false, 0, TEXT("%d"), it->from);
+				else
+					log(0, false, 0, TEXT("%d-%d"), it->from, it->to);
 				if(++it != newrec.includedSIDs.end())
 					log(0, false, 0, TEXT(","));
 			}
 			log(0, false, 0, TEXT("\n"));
+
+			log(0, false, 0, TEXT("ExcludedSIDs ="));
+			for(vector<Ranges>::const_iterator it = newrec.excludedSIDs.begin(); it != newrec.excludedSIDs.end();)
+			{
+				if(it->to == 0)
+					log(0, false, 0, TEXT("%d"), it->from);
+				else
+					log(0, false, 0, TEXT("%d-%d"), it->from, it->to);
+				if(++it != newrec.excludedSIDs.end())
+					log(0, false, 0, TEXT(","));
+			}
+			log(0, false, 0, TEXT("\n"));
+
+
+
 			log(0, false, 0, TEXT("\n"));
 
 			m_eitRecords.push_back(newrec);
@@ -512,6 +569,8 @@ void EIT::ParseIniFile(void)
 			struct eitRecord newrec;
 			newrec.ONID = atoi(sections[i].c_str());
 			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
+
+			
 			newrec.includedSIDs.clear();
 			buffer = CIniFile::GetValue("IncludedSIDs", sections[i], fileName);
 #pragma warning(disable:4996)
@@ -520,12 +579,24 @@ void EIT::ParseIniFile(void)
 			tbuffer[length] = '\0';
 			if(buffer[0] != TCHAR(0))
 			{
-				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context))
-					newrec.includedSIDs.insert((USHORT)_ttoi(token));
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
+					Ranges range;
+					LPTSTR context1;
+					LPCTSTR token3 = _tcstok_s(const_cast<char*>(token), TEXT("-"), &context1);
+					LPCTSTR token4 = _tcstok_s(NULL, TEXT("-"), &context1);
+					
+					range.from = _ttoi(token3);
+					if(token4 == NULL)
+						range.to = 0;
+					else
+						range.to = _ttoi(token4);
+					newrec.includedSIDs.push_back((Ranges)range);
+				}
 			}
+			
 
-			newrec.filterText.clear();
-			buffer = CIniFile::GetValue("FilterText", sections[i], fileName);
+			newrec.excludedSIDs.clear();
+			buffer = CIniFile::GetValue("ExcludedSIDs", sections[i], fileName);
 #pragma warning(disable:4996)
 			length = buffer.copy(tbuffer, buffer.length(), 0);
 #pragma warning(default:4996)
@@ -533,6 +604,30 @@ void EIT::ParseIniFile(void)
 			if(buffer[0] != TCHAR(0))
 			{
 				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT(",|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT(",|"), &context)) {
+					Ranges range;
+					LPTSTR context1;
+					LPCTSTR token3 = _tcstok_s(const_cast<char*>(token), TEXT("-"), &context1);
+					LPCTSTR token4 = _tcstok_s(NULL, TEXT("-"), &context1);
+					
+					range.from = _ttoi(token3);
+					if(token4 == NULL)
+						range.to = 0;
+					else
+						range.to = _ttoi(token4);
+					newrec.excludedSIDs.push_back((Ranges)range);
+				}
+			}
+
+
+			newrec.filterText.clear();
+			buffer = CIniFile::GetValue("FilterText", sections[i], fileName);
+#pragma warning(disable:4996)
+			  length = buffer.copy(tbuffer, buffer.length(), 0);
+#pragma warning(default:4996)
+			tbuffer[length] = '\0';
+			if(buffer[0] != TCHAR(0))
+			{
+				for(LPCTSTR token = _tcstok_s(tbuffer, TEXT("|"), &context); token != NULL; token = _tcstok_s(NULL, TEXT("|"), &context)) {
 					string tok = token;
 					newrec.filterText.push_back((string)tok);
 				}
@@ -571,14 +666,33 @@ void EIT::ParseIniFile(void)
 
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
 			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
+			
+			
 			log(0, false, 0, TEXT("IncludedSIDs="));
-			for(hash_set<USHORT>::const_iterator it = newrec.includedSIDs.begin(); it != newrec.includedSIDs.end();)
+			for(vector<Ranges>::const_iterator it = newrec.includedSIDs.begin(); it != newrec.includedSIDs.end();)
 			{
-				log(0, false, 0, TEXT("%d"), *it);
+				if(it->to == 0)
+					log(0, false, 0, TEXT("%d"), it->from);
+				else
+					log(0, false, 0, TEXT("%d-%d"), it->from, it->to);
 				if(++it != newrec.includedSIDs.end())
 					log(0, false, 0, TEXT(","));
 			}
 			log(0, false, 0, TEXT("\n"));
+
+			log(0, false, 0, TEXT("ExcludedSIDs="));
+			for(vector<Ranges>::const_iterator it = newrec.excludedSIDs.begin(); it != newrec.excludedSIDs.end();)
+			{
+				if(it->to == 0)
+					log(0, false, 0, TEXT("%d"), it->from);
+				else
+					log(0, false, 0, TEXT("%d-%d"), it->from, it->to);
+				if(++it != newrec.excludedSIDs.end())
+					log(0, false, 0, TEXT(","));
+			}
+			log(0, false, 0, TEXT("\n"));
+
+
 			log(0, false, 0, TEXT("\n"));
 
 			m_eitRecords.push_back(newrec);
@@ -624,10 +738,19 @@ void EIT::RealEitCollectionCallback()
 
 	// We copy the FilterText to global var which will be used thru all the scanning process
 	eitRecord eitRec = GetEitRecord(g_onid);
+	m_eitRec = GetEitRecord(g_onid);
 	g_filterText.clear();
 	
 	for(unsigned int i=0;i<eitRec.filterText.size();i++)
 				g_filterText.push_back(eitRec.filterText[i]);
+
+	for(unsigned int i=0;i<eitRec.includedSIDs.size();i++)
+				g_includedSIDs.push_back(eitRec.includedSIDs[i]);
+
+	for(unsigned int i=0;i<eitRec.excludedSIDs.size();i++)
+		g_excludedSIDs.push_back(eitRec.excludedSIDs[i]);
+
+
 	
 	lock();
 	m_CollectEIT = true;
@@ -668,8 +791,10 @@ void EIT::RealEitCollectionCallback()
 	// Send data to SageTV server if configured to do so
 	if(m_SageEitIP.length() > 0) {
 		log(3, true, 0, TEXT("Tries to send EPG to SageTV\n"));
-		sendToSage(m_onid);
+		sendToSage(m_onid, true);
 	}
+
+
 	// Clean up after ourselves
 	DeleteFile(tempFile);
 
@@ -719,10 +844,46 @@ int EIT::getSageLogicalChannel(USHORT sid, USHORT onid, USHORT fromONID, USHORT 
 	return logical;
 }
 
+bool EIT::IsSIDAllowed(USHORT sid) {
 
 
-void EIT::sendToSage(int onid)
+	// If its on the IncludedSIDS we return TRUE
+	for(unsigned int i=0;i<g_includedSIDs.size();i++) {
+		Ranges range = g_includedSIDs[i];
+		if(range.to == 0) {
+			if(range.from == sid) 
+			{
+				return true;
+			}
+		} else {
+			if(range.from <= sid && range.to >= sid) {
+				return true;
+			}
+		}
+	}
+
+	// If we found it on any of the exlude list we return FALSE
+	for(unsigned int i=0;i<g_excludedSIDs.size();i++) {
+		Ranges range = g_excludedSIDs[i];
+		if(range.to == 0) {
+			if(range.from == sid) 
+			{
+				return false;
+			}
+		} else {
+			if(range.from <= sid && range.to >= sid) {
+				return false;
+			}
+		}
+	}
+
+	// If it didnt match any exclude filter, we return valid
+	return true;
+}
+
+void EIT::sendToSage(int onid, bool savefile)
 {
+	// if saveFile == true it means we will just process the EPG entries, save the file and then try to send the command to Sage with the path
 
 	SOCKET s; 
     SOCKADDR_IN target; 
@@ -743,34 +904,42 @@ void EIT::sendToSage(int onid)
 	
 	
 	char buffer[200];
-	sprintf_s(buffer,sizeof(buffer),"START %s|\r\n",m_SageEitLineup.c_str());	
-	char *command = buffer;
-	log(3, true, 0, TEXT("Sends: %s\n"),command);
-	if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
-	{
-		shutdown(s, SD_SEND);
-		closesocket(s);
-        return ;
+	char *command;
+
+	if(savefile==false) {
+		sprintf_s(buffer,sizeof(buffer),"START %s|\r\n",m_SageEitLineup.c_str());	
+		command = buffer;
+		log(3, true, 0, TEXT("Sends: %s\n"),command);
+		if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
+		{
+			shutdown(s, SD_SEND);
+			closesocket(s);
+			return ;
+		}
+
+		recv(s, command, strlen(command),0);
+		log(3, true, 0, TEXT("Responded START\n"));
 	}
 
-	recv(s, command, strlen(command),0);
-	log(3, true, 0, TEXT("Responded START\n"));
 
 	NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
-
 	eitRecord eitRec = GetEitRecord(onid);
 
 	command = new char [2056];
 	TCHAR channelName[256];
 
+	FILE* outFile = NULL;
+	string fileName = NULL;
+	if(savefile==true) {
+		fileName = m_SaveXmltvFileLocation + "\\" + m_SageEitLineup + ".epg";
+		// File to print all the commands send to sage
+		_tfopen_s(&outFile, fileName.c_str(), TEXT("wt"));
+	}
+
 	OpenEitEventFile(true);
 	struct EITEvent currentRecord;
 	while(ReadNextEitEventRecord(&currentRecord) == true)
 	{
-		hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)currentRecord.SID); 
-		
-		if(eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end())
-		{
 			EPGLanguage lang = GetDescriptionRecord(currentRecord);
 
 			channelName[0] = TCHAR('\0');
@@ -863,21 +1032,34 @@ void EIT::sendToSage(int onid)
 				flag_lang, flag_gl, flag_n, flag_ssc, flag_v, flag_gv, flag_ac, flag_hd, flag_cc, flag_stereo, eventName.c_str(), shortDesc.c_str(), longDesc.c_str());
 			
 			if( g_pConfiguration->includeONID((USHORT)currentRecord.ONID) ) {
+				
+				
 				log(3, true, 0, TEXT("Command send to SageTV: %s"),buffer);
-				if(send(s, buffer, strlen(buffer), 0) == SOCKET_ERROR)
-				{
-					shutdown(s, SD_SEND);
-					closesocket(s);
-					return ;
+				if(savefile == false) {
+					// Means we need to send the command to the socket
+
+					if(send(s, buffer, strlen(buffer), 0) == SOCKET_ERROR)
+					{
+						shutdown(s, SD_SEND);
+						closesocket(s);
+						return ;
+					}
+			
+					recv(s, command, strlen(command),0);
+					log(3, true, 0, TEXT("Responded command.\n"));
+				} else {
+					// We just print out to the file
+					fprintf(outFile, buffer );
 				}
-		
-				recv(s, command, strlen(command),0);
-				log(3, true, 0, TEXT("Responded command.\n"));
+
 			}
-		} else {
-					log(3, true, 0, TEXT("EPG entry skipped ONID ignored.\n"));
-		}
+		
 	}
+
+	if(savefile == true)
+	{
+		fclose(outFile);
+	} 
 
 
 	log(3, true, 0, TEXT("Tries END"));
@@ -886,10 +1068,11 @@ void EIT::sendToSage(int onid)
 	{
 		shutdown(s, SD_SEND);
 		closesocket(s);
-        return ;
+		return ;
 	}
 	recv(s, command, strlen(command),0);
 	log(3, true, 0, TEXT("Responded END"));
+	
 
 	shutdown(s, SD_SEND);
 	closesocket(s);
@@ -950,9 +1133,7 @@ void EIT::dumpXmltvFile(int onid)
 		// Loop through the services and create all the channel records
 		for(hash_map<UINT32, Service>::const_iterator it = encoderNetworkProvider.m_Services.begin(); it != encoderNetworkProvider.m_Services.end(); it++)
 		{
-			hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find(it->second.sid); 
-		//	if(onid == it->second.onid && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
-			if(eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end())
+			if(IsSIDAllowed(it->second.sid))
 			{
 				// Get the channel name and the mapped number 
 				channelName[0] = TCHAR('\0');
@@ -962,7 +1143,6 @@ void EIT::dumpXmltvFile(int onid)
 				if(chanNo== NULL) {
 					chanNo = it->second.sid;
 				}
-//					(it->second.channelNumber == NULL) ? it->second.sid : it->second.channelNumber;
 				encoderNetworkProvider.getServiceName(usid, channelName, sizeof(channelName) / sizeof(channelName[0]));
 
 				string chName = ReplaceAll((string)channelName, "&", "&amp;");
@@ -996,10 +1176,10 @@ void EIT::dumpXmltvFile(int onid)
 		struct EITEvent currentRecord;
 		while(ReadNextEitEventRecord(&currentRecord) == true)
 		{
-			hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)currentRecord.SID); 
+			//hash_set<USHORT>::const_iterator it2 = eitRec.includedSIDs.find((USHORT)currentRecord.SID); 
 			hash_map<UINT32, Service>::iterator it3 = encoderNetworkProvider.m_Services.find(NetworkProvider::getUniqueSID((USHORT)currentRecord.ONID, (USHORT)currentRecord.SID)); 
-		//	if(onid == currentRecord.ONID && (eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()))
-			if((eitRec.includedSIDs.empty() == true || it2 != eitRec.includedSIDs.end()) && it3 != encoderNetworkProvider.m_Services.end())
+			
+			if( IsSIDAllowed((USHORT)currentRecord.SID) && it3 != encoderNetworkProvider.m_Services.end())
 			{
 				EPGLanguage lang = GetDescriptionRecord(currentRecord);
 
@@ -1244,7 +1424,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 	// Update remaining length by removing the CRC and the header
 	remainingLength -= CRC_LENGTH + EIT_LEN;
-
+  
 	// Loop through the events
 	while(remainingLength != 0)
 	{
@@ -1262,7 +1442,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 		log(3, false, 0, TEXT("EventID: %d (0x%x) NID: %d (0x%x)  SID: %d (0x%x)  uid = %I64d (0x%I64x)\n"), eventID, eventID, networkID, networkID, serviceID, serviceID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
 		hash_set<__int64>::const_iterator it = m_eitEventIDs.find(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID); 
-	    if(it == m_eitEventIDs.end())
+	    if(it == m_eitEventIDs.end() && IsSIDAllowed(serviceID) )
 		{
 			log(3, false, 0, TEXT("EventID is NOT a duplicate\n"));
 
@@ -1382,7 +1562,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 		}
 		else
 		{
-			log(3, false, 0, TEXT("EventID is a duplicate\n"));
+			log(3, false, 0, TEXT("EventID is a duplicate OR SID is excluded\n"));
 		}
 	
 		// Adjust input buffer
@@ -2280,6 +2460,15 @@ void EIT::decodeDishShortDescription(const BYTE* inputBuffer, int tnum, EITEvent
 		// Get rid of annoying carriage returns
 		descriptionText = ReplaceAll(descriptionText, "\r", " ");
 
+		// We check if we need to remove strings from the long description acording to the EIT.ini
+		if(descriptionText.size()>0 && g_filterText.size()>0) {
+			for(unsigned int i=0;i<g_filterText.size();i++) {
+				descriptionText = ReplaceAll(descriptionText, g_filterText[i], "");
+			}
+		}
+
+
+
 		if(descriptionText.length() > 0)
 			log(3, false, 0, TEXT("\tShort Desc: %s\n"), descriptionText.c_str());
 
@@ -2324,13 +2513,13 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 		descriptionText = ReplaceAll(descriptionText, "\r", "");
 
 		// We check if we need to remove strings from the long description acording to the EIT.ini
-		log(3, false, 0, TEXT("\tLong Description: %d %s\n"),g_onid,descriptionText.c_str());		
 		if(descriptionText.size()>0 && g_filterText.size()>0) {
 			for(unsigned int i=0;i<g_filterText.size();i++) {
 				descriptionText = ReplaceAll(descriptionText, g_filterText[i], "");
 			}
 		}
 
+		log(3, false, 0, TEXT("\tLong Description: %d %s\n"),g_onid,descriptionText.c_str());		
 		newEvent->longDescription = descriptionText;
 
 		free(decompressed);
@@ -2532,10 +2721,13 @@ struct eitRecord EIT::GetEitRecord(int onid)
 			for(unsigned int i=0;i<iter->logicalChannelOffset.size();i++)
 				ret.logicalChannelOffset.push_back(iter->logicalChannelOffset[i]);
 
+			for(unsigned int i=0;i<iter->includedSIDs.size();i++)
+				ret.includedSIDs.push_back(iter->includedSIDs[i]);
+
+			for(unsigned int i=0;i<iter->excludedSIDs.size();i++)
+				ret.excludedSIDs.push_back(iter->excludedSIDs[i]);
 
 
-			for(hash_set<USHORT>::const_iterator it = iter->includedSIDs.begin(); it != iter->includedSIDs.end();)
-				ret.includedSIDs.insert(*it);
 		}
 	}
 
