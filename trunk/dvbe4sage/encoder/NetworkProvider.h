@@ -56,6 +56,7 @@ public:
 	bool isServiceExist(UINT32 usid) const;
 	bool isChNoExist(USHORT channel) const;
 	bool getSidForChannel(USHORT channel, UINT32& sid) const;
+	UINT32 getUSIDFromChannelONID(USHORT channel, USHORT onid) const;
 	bool getTransponderForSid(UINT32 sid, Transponder& transponder) const;
 	bool getOnidForSid(USHORT sid, USHORT& onid) const;
 	bool canBeCopied() const													{ return !m_Transponders.empty() && !m_Services.empty(); }
@@ -85,4 +86,5 @@ public:
 	static UINT32 getUniqueSID(USHORT onid, USHORT sid)							{ return (((UINT32)onid) << 16) + (UINT32)sid; }
 	static USHORT getSIDFromUniqueSID(UINT32 usid)								{ return (USHORT)(usid & 0xFFFF); }
 	static USHORT getONIDFromUniqueSID(UINT32 usid)								{ return (USHORT)(usid >> 16); }
+	
 };

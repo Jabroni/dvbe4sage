@@ -37,7 +37,7 @@ struct eitRecord
 	EIT_PROVIDER eitProvider;
 	vector<Ranges> includedSIDs;
 	vector<Ranges> excludedSIDs;
-	bool isONIDset;
+	int useBouquets;
 	vector<string> filterText;
 	vector<Ranges> logicalChannelOffset;
 	int useUSIDasSID;
@@ -179,6 +179,7 @@ private:
 	USHORT m_SageEitPort;
 	string m_SaveXmltvFileLocation;
 	string m_TempFileLocation;
+	string m_SageEitRemotePath;
 	string	m_SageEitLineup;
 	eitRecord m_eitRec;
 	
