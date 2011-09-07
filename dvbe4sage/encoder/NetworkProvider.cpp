@@ -57,6 +57,19 @@ bool NetworkProvider::isChNoExist(USHORT channel) const {
 	return true;
 }
 
+UINT32 NetworkProvider::getUSIDFromChannelONID(USHORT channel, USHORT onid) const {
+
+	hash_map<USHORT, UINT32>::const_iterator it = m_Channels.find(channel);
+	if(it != m_Channels.end())
+	{
+		return it->second;
+	}
+	else
+		return 0;
+
+
+}
+
 bool NetworkProvider::getSidForChannel(USHORT channel,
 									   UINT32& usid) const
 {

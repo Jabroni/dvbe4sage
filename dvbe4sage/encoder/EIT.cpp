@@ -190,6 +190,7 @@ void EITtimer::ParseIniFile(void)
 			newrec.useUSIDasSID = atol(CIniFile::GetValue("SendUSIDSage", sections[i], fileName).c_str());
 			string temp = CIniFile::GetValue("Provider", sections[i], fileName);
 			newrec.disabled = atoi(CIniFile::GetValue("Disabled", sections[i], fileName).c_str());
+			newrec.useBouquets = atoi(CIniFile::GetValue("UseBouquet", sections[i], fileName).c_str());
 			transform(temp.begin(), temp.end(), temp.begin(), tolower);
 			
 			if(temp.compare("standard") == 0)			
@@ -299,6 +300,7 @@ void EITtimer::ParseIniFile(void)
 
 			log(0, false, 0, TEXT("[%d]\n"), newrec.ONID);
 			log(0, false, 0, TEXT("Disabled = %d\n"), newrec.disabled);
+			log(0, false, 0, TEXT("UseBouquet = %d\n"), newrec.useBouquets);
 			log(0, false, 0, TEXT("ChanOrSID = %lu\n"), newrec.chan);
 			log(0, false, 0, TEXT("SendUSIDSage = %lu\n"), newrec.useUSIDasSID);
 
@@ -424,11 +426,21 @@ void EITtimer::RealEitCollectionCallback()
 		{
 			if(eIter->disabled != 1) {
 				
+
 				g_onid = eIter->ONID;
 				g_sendusidsage = eIter->useUSIDasSID;
-
 				g_provider = eIter->eitProvider;
-				UINT32 usid = NetworkProvider::getUniqueSID((USHORT)g_onid,(USHORT)eIter->chan);
+				
+				USHORT sid = 0;
+				UINT32 usid = 0;
+				if(eIter->useBouquets == 0){
+					sid = (USHORT)eIter->chan;
+					usid = NetworkProvider::getUniqueSID((USHORT)g_onid,(USHORT)eIter->chan);
+				} else {
+					NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
+					usid = encoderNetworkProvider.getUSIDFromChannelONID((USHORT)eIter->chan,(USHORT)g_onid);
+				}
+				 
 
 				// "START SageTV DVB-S2 Enhancer 1 Digital TV Tuner|1576479146|268969251|2599483936192|D:\tivo\DontForgettheLyrics-8312556-0.ts|Fair"
 				// Send socket command make to us tune and lock the tuner
@@ -560,6 +572,9 @@ void EIT::ParseIniFile(void)
 
 			m_SageEitLineup = CIniFile::GetValue("SageEitLineup", sections[i], fileName);
 			log(0, false, 0, TEXT("SageEitLineup = %s\n"), m_SageEitLineup.c_str());
+			
+			m_SageEitRemotePath = CIniFile::GetValue("SageEitRemotePath", sections[i], fileName);
+			log(0, false, 0, TEXT("SageEitRemotePath = %s\n"), m_SageEitRemotePath.c_str());
 
 
 			log(0, false, 0, TEXT("\n"));
@@ -569,6 +584,9 @@ void EIT::ParseIniFile(void)
 			struct eitRecord newrec;
 			newrec.ONID = atoi(sections[i].c_str());
 			newrec.chan = atol(CIniFile::GetValue("ChanOrSID", sections[i], fileName).c_str());
+
+			newrec.disabled = atoi(CIniFile::GetValue("Disabled", sections[i], fileName).c_str());
+			newrec.useBouquets = atoi(CIniFile::GetValue("UseBouquet", sections[i], fileName).c_str());
 
 			
 			newrec.includedSIDs.clear();
@@ -791,7 +809,14 @@ void EIT::RealEitCollectionCallback()
 	// Send data to SageTV server if configured to do so
 	if(m_SageEitIP.length() > 0) {
 		log(3, true, 0, TEXT("Tries to send EPG to SageTV\n"));
-		sendToSage(m_onid, true);
+		if(m_SageEitRemotePath.length() > 0 ) {
+			// We invoke the sendToSage method with the flag to save to file and send the remotepath to the file to sage
+			sendToSage(m_onid, true);
+		} else {
+			// We invoke sendToSage method with the flag to send all the EPG data thru the same socket
+			sendToSage(m_onid, false);
+		}
+		
 	}
 
 
@@ -929,9 +954,10 @@ void EIT::sendToSage(int onid, bool savefile)
 	TCHAR channelName[256];
 
 	FILE* outFile = NULL;
-	string fileName = NULL;
+	string fileName = "";
 	if(savefile==true) {
-		fileName = m_SaveXmltvFileLocation + "\\" + m_SageEitLineup + ".epg";
+		fileName =  m_SaveXmltvFileLocation + "\\sagetv.epg";
+		log(3, true, 0, TEXT("EPG Filename : %s \n"),fileName.c_str());
 		// File to print all the commands send to sage
 		_tfopen_s(&outFile, fileName.c_str(), TEXT("wt"));
 	}
@@ -1027,7 +1053,7 @@ void EIT::sendToSage(int onid, bool savefile)
 			string longDesc = lang.longDescription;
 			
 			char buffer[2000];
-			sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%d\t%d\t%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\r\n", 
+			sprintf_s(buffer,sizeof(buffer),"%d\t%s\t%d\t%d\t%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\n", 
 				chanNo,channelName,chanNo,logChaNo,eventID,showID.c_str(),currentRecord.startDateTimeSage.c_str(),currentRecord.durationTime.c_str(),category.c_str(), rating.c_str(),firstAired,
 				flag_lang, flag_gl, flag_n, flag_ssc, flag_v, flag_gv, flag_ac, flag_hd, flag_cc, flag_stereo, eventName.c_str(), shortDesc.c_str(), longDesc.c_str());
 			
@@ -1049,7 +1075,7 @@ void EIT::sendToSage(int onid, bool savefile)
 					log(3, true, 0, TEXT("Responded command.\n"));
 				} else {
 					// We just print out to the file
-					fprintf(outFile, buffer );
+					fputs( buffer, outFile );
 				}
 
 			}
@@ -1058,7 +1084,25 @@ void EIT::sendToSage(int onid, bool savefile)
 
 	if(savefile == true)
 	{
+		// We close the file
 		fclose(outFile);
+
+		//And we send the message to start processing to the SageTV socket
+		string fileName = m_SageEitRemotePath + "\\sagetv.epg";
+		char buffer[2000];
+		sprintf_s(buffer,sizeof(buffer),"START %s|%s\r\n",m_SageEitLineup.c_str(),fileName.c_str());
+		command = buffer;
+		log(3, true, 0, TEXT("Sends: %s\n"),command);
+		if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
+		{
+			shutdown(s, SD_SEND);
+			closesocket(s);
+			return ;
+		}
+
+		recv(s, command, strlen(command),0);
+		log(3, true, 0, TEXT("Responded START\n"));
+
 	} 
 
 
@@ -1440,9 +1484,9 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 		// Get the version
 		//const BYTE version = table->version_number;
 
-		log(3, false, 0, TEXT("EventID: %d (0x%x) NID: %d (0x%x)  SID: %d (0x%x)  uid = %I64d (0x%I64x)\n"), eventID, eventID, networkID, networkID, serviceID, serviceID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
+		log(3, true, 0, TEXT("EventID: %d (0x%x) NID: %d (0x%x)  SID: %d (0x%x)  uid = %I64d (0x%I64x)\n"), eventID, eventID, networkID, networkID, serviceID, serviceID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
 		hash_set<__int64>::const_iterator it = m_eitEventIDs.find(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID); 
-	    if(it == m_eitEventIDs.end() && IsSIDAllowed(serviceID) )
+		if(it == m_eitEventIDs.end() && IsSIDAllowed(serviceID) )
 		{
 			log(3, false, 0, TEXT("EventID is NOT a duplicate\n"));
 
@@ -2461,7 +2505,7 @@ void EIT::decodeDishShortDescription(const BYTE* inputBuffer, int tnum, EITEvent
 		descriptionText = ReplaceAll(descriptionText, "\r", " ");
 
 		// We check if we need to remove strings from the long description acording to the EIT.ini
-		if(descriptionText.size()>0 && g_filterText.size()>0) {
+		if(descriptionText.length()>0 && g_filterText.size()>0) {
 			for(unsigned int i=0;i<g_filterText.size();i++) {
 				descriptionText = ReplaceAll(descriptionText, g_filterText[i], "");
 			}
@@ -2513,7 +2557,7 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 		descriptionText = ReplaceAll(descriptionText, "\r", "");
 
 		// We check if we need to remove strings from the long description acording to the EIT.ini
-		if(descriptionText.size()>0 && g_filterText.size()>0) {
+		if(descriptionText.length()>0 && g_filterText.size()>0) {
 			for(unsigned int i=0;i<g_filterText.size();i++) {
 				descriptionText = ReplaceAll(descriptionText, g_filterText[i], "");
 			}
