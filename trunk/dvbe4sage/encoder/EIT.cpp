@@ -23,6 +23,18 @@ vector<Ranges> g_excludedSIDs;
 
 EIT_PROVIDER g_provider = EIT_PROVIDER_STANDARD;
 
+struct InvalidChar
+{
+    bool operator()(char c) const 
+	{
+		bool ret = false;
+		if(!isprint((unsigned)c))
+			ret = true;
+        return ret;
+    }
+};
+
+
 // code page swapping
 // 65001 is utf-8.
 wchar_t *CodePageToUnicode(int codePage, const char *src)
@@ -1158,6 +1170,7 @@ void EIT::dumpXmltvFile(int onid)
 {
 	TCHAR channelName[256];
 	FILE* outFile = NULL;
+	string stripped;
 
 	NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
 
@@ -1234,20 +1247,39 @@ void EIT::dumpXmltvFile(int onid)
 				// Convert utf-8 to ANSI:
 				wchar_t *wText2 = CodePageToUnicode(65001,lang.shortDescription.c_str());	
 				char *ansiText = UnicodeToCodePage(1252,wText2);
-				_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), ansiText);
+				// Strip out all non printable
+				stripped = ansiText;
+				stripped.erase(remove_if(stripped.begin(),stripped.end(),InvalidChar()), stripped.end());
+
+				_ftprintf(outFile, TEXT("\t\t<title lang=\"%s\">%s</title>\n"), lang.text.c_str(), stripped.c_str());
 
 				lang.longDescription = ReplaceAll(lang.longDescription, "&", "&amp;");
 				lang.longDescription = trim(lang.longDescription);
-				lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
 
 				// Convert utf-8 to ANSI:
 				wText2 = CodePageToUnicode(65001,lang.longDescription.c_str());	
 				ansiText = UnicodeToCodePage(1252,wText2);
+				// Strip out all non printable
+				stripped = ansiText;
+				stripped.erase(remove_if(stripped.begin(),stripped.end(),InvalidChar()), stripped.end());
 
 				free(ansiText);
 				free(wText2);
 
-				_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), (lang.longDescription.empty() == false) ? lang.longDescription.c_str() : lang.eventText.c_str());
+				if(stripped.length() <= 0)
+				{
+					lang.eventText = ReplaceAll(lang.eventText, "&", "&amp;");
+					wText2 = CodePageToUnicode(65001,lang.eventText.c_str());	
+					ansiText = UnicodeToCodePage(1252,wText2);
+					// Strip out all non printable
+					stripped = ansiText;
+					stripped.erase(remove_if(stripped.begin(),stripped.end(),InvalidChar()), stripped.end());
+
+					free(ansiText);
+					free(wText2);
+				}
+
+				_ftprintf(outFile, TEXT("\t\t<desc lang=\"%s\">%s</desc>\n"), lang.text.c_str(), stripped.c_str());
 									
 				if(currentRecord.category.empty() == false )
 					_ftprintf(outFile, TEXT("\t\t<category lang=\"%s\">%s</category>\n"), lang.text.c_str(), currentRecord.category.c_str());
