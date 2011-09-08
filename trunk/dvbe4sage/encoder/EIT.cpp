@@ -1049,7 +1049,7 @@ void EIT::sendToSage(int onid, bool savefile)
 			int flag_ac = 0 ; //AC - Detailed rating flag for "Adult Content" ("1" or "0").
 			
 			int flag_hd = 0 ; //HD - Flag for HD content ("1" or "0").
-			if(currentRecord.aspect >= 9) 
+			if(currentRecord.HD == true) 
 				flag_hd = 1;
 
 			int flag_cc = 0 ; //CC - Flag for closed captioning present ("1" or "0").
@@ -2572,6 +2572,22 @@ void EIT::decodeDishShortDescription(const BYTE* inputBuffer, int tnum, EITEvent
 
 }
 
+void EIT::determineProgramCapabilities(string descriptionText, EITEvent* newEvent)
+{
+	size_t found;
+    found = descriptionText.find("(HD)");
+    if (found!=string::npos)
+		newEvent->HD = true;
+
+	found = descriptionText.find("(CC)");
+    if (found!=string::npos)
+		newEvent->CC = true;
+
+	found = descriptionText.find("(Stereo)");
+    if (found!=string::npos)
+		newEvent->stereo = true;
+}
+
 void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent* newEvent)
 {
 	unsigned char* decompressed=NULL;
@@ -2587,6 +2603,9 @@ void EIT::decodeDishLongDescription(const BYTE* inputBuffer, int tnum, EITEvent*
 		
 		// Get rid of annoying carriage returns
 		descriptionText = ReplaceAll(descriptionText, "\r", "");
+
+		// Parse the string looking for flags to indicate HD, CC, and Stereo
+		determineProgramCapabilities(descriptionText, newEvent);
 
 		// We check if we need to remove strings from the long description acording to the EIT.ini
 		if(descriptionText.length()>0 && g_filterText.size()>0) {
@@ -2909,6 +2928,7 @@ bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->year);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->stereo);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->CC);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->HD);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecSubtitles.size());
 			EITEvent::ivecSubtitles it2 = rec->vecSubtitles.begin();
 			for (it2 = rec->vecSubtitles.begin(); it2 != rec->vecSubtitles.end(); ++it2)
@@ -3076,6 +3096,10 @@ bool EIT::ReadNextEitEventRecord(EITEvent* rec)
 	else
 		rec->CC = (atoi(buffer) == 0) ? false : true;
 
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		rec->HD = false;
+	else
+		rec->HD = (atoi(buffer) == 0) ? false : true;
 	
 	int count = 0;
 	if(fgets(buffer, 1024, m_eitEventFile) != NULL)

@@ -92,6 +92,7 @@ struct EITEvent
 	int    year;					// Year first aired or 0 for new
 	bool   stereo;
 	bool   CC;
+	bool   HD;
 	vector<EPGSubtitle> vecSubtitles;
 	typedef vector<EPGSubtitle>::iterator ivecSubtitles;
 	vector<EPGLanguage> vecLanguages;
@@ -231,5 +232,6 @@ private:
 	void decodeDishCcStereoDescriptor(const BYTE* inputBuffer, int tnum, EITEvent* newEvent);
 	void decodeDishVChipRatingDescriptor(const BYTE* inputBuffer, EITEvent* newEvent);
 	void decodeDishSeriesDescriptor(const BYTE* inputBuffer, EITEvent* newEvent);
+	void determineProgramCapabilities(string descriptionText, EITEvent* newEvent);
 	std::string ReplaceAll(std::string result, const std::string& replaceWhat, const std::string& replaceWithWhat);
 };
