@@ -126,6 +126,7 @@ private:
 	string m_SageEitLocalPath;
 	string m_SageEitRemotePath;
 	string	m_SageEitLineup;
+	string m_SageEitIP;
 	int m_debugEpg;
 
 	vector<eitRecord> m_eitRecords;
@@ -167,6 +168,7 @@ private:
 	void DeleteEitEventFile();
 	bool WriteEitEventRecord(struct EITEvent *rec);
 	bool ReadNextEitEventRecord(struct EITEvent *rec);
+	void ResetEventVars(struct EITEvent *rec);
 	ULONG m_eventsCount;
 	hash_set<__int64>	m_eitEventIDs;
 

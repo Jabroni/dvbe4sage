@@ -168,6 +168,9 @@ void EITtimer::ParseIniFile(void)
 		{
 			log(0, false, 0, TEXT("[General]\n"));
 
+			m_SageEitIP = CIniFile::GetValue("SageEitIP", sections[i], fileName);
+			log(0, false, 0, TEXT("SageEitIP = %s\n"), m_SageEitIP.c_str());
+
 			m_CollectionTimeHour = atoi(CIniFile::GetValue("CollectionTimeHour", sections[i], fileName).c_str());
 			log(0, false, 0, TEXT("CollectionTimeHour = %d\n"), m_CollectionTimeHour);
 						
@@ -416,10 +419,13 @@ void EITtimer::RealEitCollectionCallback()
 	}
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
-	log(3, true, 0, TEXT("Waiting until %02d:%02d to collect and process EIT data.\n"), m_CollectionTimeHour, m_CollectionTimeMin);
+	
 
 	while(1 == 1)
 	{
+		
+		log(3, true, 0, TEXT("Waiting until %02d:%02d to collect and process EIT data.\n"), m_CollectionTimeHour, m_CollectionTimeMin);
+
 		// Wait until the start time or told to quit
 		while (1 == 1)
 		{
@@ -462,19 +468,21 @@ void EITtimer::RealEitCollectionCallback()
 				time(&now);
 				time(&m_Time);
 
-				// Allow for collection of the data
-				while(difftime(now, m_Time) < ((m_CollectionDurationMinutes + 5) * 60))
-				{
-					Sleep(10000);
-					time(&now);
+				// Allow for collection of the data.. we give it 30 mins time in case Sage needs time processing the current EIT entries for the next provider
+				if(m_SageEitIP.length() >0 ) {
+					while(difftime(now, m_Time) < ((m_CollectionDurationMinutes+30) * 60))
+					{
+						Sleep(10000);
+						time(&now);
+					} 
 				}
 
-				Sleep(10000);
+				
 			}
 		}
 
-		// Wait for 2 minutes then start over
-		for(int i = 0; i < 24; i++)
+		// Wait for 1 minute then start over
+		for(int i = 0; i < 12; i++)
 		{
 			Sleep(5000);
 			if(m_EitTimerThreadCanEnd == true)
@@ -831,7 +839,6 @@ void EIT::RealEitCollectionCallback()
 		
 	}
 
-
 	// Clean up after ourselves
 	DeleteFile(tempFile);
 
@@ -975,6 +982,7 @@ void EIT::sendToSage(int onid, bool savefile)
 	}
 
 	OpenEitEventFile(true);
+	
 	struct EITEvent currentRecord;
 	while(ReadNextEitEventRecord(&currentRecord) == true)
 	{
@@ -1093,6 +1101,8 @@ void EIT::sendToSage(int onid, bool savefile)
 			}
 		
 	}
+	
+	CloseEitEventFile();
 
 	if(savefile == true)
 	{
@@ -1486,6 +1496,7 @@ void EIT::unlock()
 	m_cs.Unlock();
 }
 
+
 // Parse the guide data out of the EIT
 void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 {
@@ -1526,7 +1537,7 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 			EITEvent newEvent;
 
-			newEvent.aspect = 0;
+			ResetEventVars(&newEvent);
 
 			m_eitEventIDs.insert(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
 
@@ -1693,7 +1704,7 @@ void EIT::parseEventDescriptors(const BYTE* inputBuffer,
 			//case 0x53: decodeSkyDescriptor2(inputBuffer, newEvent, 50); break;
 
 			default: 
-				//log(3, false, 0, TEXT("Unkown descriptor tag 0x%x\n"), generalDescriptor->descriptor_tag);
+				log(3, false, 0, TEXT("Unkown descriptor tag 0x%x\n"), generalDescriptor->descriptor_tag);
 				break;
 		}
 
@@ -1704,6 +1715,13 @@ void EIT::parseEventDescriptors(const BYTE* inputBuffer,
 		remainingLength -= descriptorLength + DESCR_GEN_LEN;	
 	}
 	
+}
+
+void EIT::ResetEventVars(EITEvent* newEvent) {
+	newEvent->aspect = 0;
+	newEvent->HD = false;
+	newEvent->stereo = false;
+	newEvent->CC = false;
 }
 
 void EIT::decodeSkyDescriptor(const BYTE* inputBuffer, EITEvent* newEvent, int length) 
@@ -2375,6 +2393,7 @@ void EIT::decodeComponentDescriptor(const BYTE* inputBuffer, EITEvent* newEvent)
 	switch(componentDescriptor->stream_content)
 	{
 		case 1:
+			log(3, false, 0, TEXT("\tCase1 : 0x%02X\n"), (UINT)componentDescriptor->component_type);
 		case 5:
 			// Video
 			log(3, false, 0, TEXT("\tVideo Aspect: 0x%02X\n"), (UINT)componentDescriptor->component_type);
@@ -2414,11 +2433,11 @@ void EIT::decodeComponentDescriptor(const BYTE* inputBuffer, EITEvent* newEvent)
 			newEvent->vecSubtitles.push_back(sub);
 
 			break;
-#ifdef _DEBUG
+
 		default:
 			log(3, false, 0, TEXT("??? Unknown type of content %02X\n"), (UINT)componentDescriptor->stream_content);
 			break;
-#endif
+
 	}
 }
 
@@ -2578,7 +2597,9 @@ void EIT::determineProgramCapabilities(string descriptionText, EITEvent* newEven
     found = descriptionText.find("(HD)");
     if (found!=string::npos)
 		newEvent->HD = true;
-
+	else 
+		newEvent->HD = false;
+	
 	found = descriptionText.find("(CC)");
     if (found!=string::npos)
 		newEvent->CC = true;
@@ -2875,9 +2896,9 @@ bool EIT::OpenEitEventFile(bool read)
 	m_eventsCount = 0;
 	string fileName = m_SaveXmltvFileLocation + "\\eitEventTemp.txt";
 	if(read == false)
-		return (_tfopen_s(&m_eitEventFile, fileName.c_str(), TEXT("wt")) != 0);
+		return (_tfopen_s(&m_eitEventFile, fileName.c_str(), TEXT("wt")) == 0);
 	else
-		return (_tfopen_s(&m_eitEventFile, fileName.c_str(), TEXT("rt")) != 0);
+		return (_tfopen_s(&m_eitEventFile, fileName.c_str(), TEXT("rt")) == 0);
 }
 
 // Close the temporary file
@@ -2897,6 +2918,7 @@ void EIT::DeleteEitEventFile()
 // Write a record out to the file
 bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 {
+	
 	// Only use events for ONIDs we care about
 	if(!g_pConfiguration->includeONIDs() || g_pConfiguration->includeONID((USHORT)rec->ONID))
 	{
