@@ -93,6 +93,7 @@ struct EITEvent
 	bool   stereo;
 	bool   CC;
 	bool   HD;
+	bool	isNew;
 	vector<EPGSubtitle> vecSubtitles;
 	typedef vector<EPGSubtitle>::iterator ivecSubtitles;
 	vector<EPGLanguage> vecLanguages;
@@ -236,4 +237,6 @@ private:
 	void decodeDishSeriesDescriptor(const BYTE* inputBuffer, EITEvent* newEvent);
 	void determineProgramCapabilities(string descriptionText, EITEvent* newEvent);
 	std::string ReplaceAll(std::string result, const std::string& replaceWhat, const std::string& replaceWithWhat);
+	std::string ReplaceLatinChars(std::string text);
+	
 };
