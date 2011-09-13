@@ -20,6 +20,8 @@ int g_sendusidsage = 0;
 vector<string> g_filterText;
 vector<Ranges> g_includedSIDs;
 vector<Ranges> g_excludedSIDs;
+int g_eventTotalCounter = 0;
+int g_eventProcessedCounter = 0;
 
 EIT_PROVIDER g_provider = EIT_PROVIDER_STANDARD;
 
@@ -415,7 +417,7 @@ void EITtimer::RealEitCollectionCallback()
 		localtime_s (  &timeinfo, &rawtime );
 	
 		m_CollectionTimeHour = timeinfo.tm_hour;
-		m_CollectionTimeMin = timeinfo.tm_min + 1;
+		m_CollectionTimeMin = timeinfo.tm_min + 2;
 	}
 	sprintf_s(tempFile, sizeof(tempFile), "%s\\TempEitGathering.ts",  m_TempFileLocation.c_str());
 
@@ -842,7 +844,7 @@ void EIT::RealEitCollectionCallback()
 	// Clean up after ourselves
 	DeleteFile(tempFile);
 
-	DeleteEitEventFile();
+	//DeleteEitEventFile();
 }
 
 int EIT::getSageLogicalChannel(USHORT sid, USHORT onid, USHORT fromONID, USHORT chno) 
@@ -982,7 +984,7 @@ void EIT::sendToSage(int onid, bool savefile)
 	}
 
 	OpenEitEventFile(true);
-	
+	int cont = 0;
 	struct EITEvent currentRecord;
 	while(ReadNextEitEventRecord(&currentRecord) == true)
 	{
@@ -1006,7 +1008,7 @@ void EIT::sendToSage(int onid, bool savefile)
 			if(currentRecord.programID.empty() == false)
 				showID = currentRecord.programID;
 			else 
-				showID = "EP4152486907";
+				showID = "0";
 			
 			string category = "NA";
 			if(currentRecord.dishCategory1.empty() == false) {
@@ -1077,8 +1079,6 @@ void EIT::sendToSage(int onid, bool savefile)
 				chanNo,channelName,chanNo,logChaNo,eventID,showID.c_str(),currentRecord.startDateTimeSage.c_str(),currentRecord.durationTime.c_str(),category.c_str(), rating.c_str(),firstAired,
 				flag_lang, flag_gl, flag_n, flag_ssc, flag_v, flag_gv, flag_ac, flag_hd, flag_cc, flag_stereo, eventName.c_str(), shortDesc.c_str(), longDesc.c_str());
 			
-			if( g_pConfiguration->includeONID((USHORT)currentRecord.ONID) ) {
-				
 				
 				log(3, true, 0, TEXT("Command send to SageTV: %s"),buffer);
 				if(savefile == false) {
@@ -1097,11 +1097,12 @@ void EIT::sendToSage(int onid, bool savefile)
 					// We just print out to the file
 					fputs( buffer, outFile );
 				}
-
-			}
 		
+				cont++;	
+
 	}
-	
+	log(3, true, 0, TEXT("Parsed %d lines \n"),cont);
+
 	CloseEitEventFile();
 
 	if(savefile == true)
@@ -1143,6 +1144,17 @@ void EIT::sendToSage(int onid, bool savefile)
 	shutdown(s, SD_SEND);
 	closesocket(s);
 }
+
+std::string EIT::ReplaceLatinChars(string text) {
+	text = ReplaceAll(text,"ñ","n");
+	text = ReplaceAll(text,"á","a");
+	text = ReplaceAll(text,"é","e");
+	text = ReplaceAll(text,"í","i");
+	text = ReplaceAll(text,"ó","o");
+	text = ReplaceAll(text,"ú","u");
+	return text;
+}
+
 
 bool EIT::SendSocketCommand(char *command)
 {
@@ -1505,7 +1517,9 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 	const USHORT serviceID = HILO(table->service_id);
 	const USHORT networkID = HILO(table->original_network_id);
-	
+
+	NetworkProvider& encoderNetworkProvider =  g_pEncoder->getNetworkProvider();
+
 	// Get hold on the input buffer
 	const BYTE* inputBuffer = (const BYTE*)table + EIT_LEN;
 
@@ -1526,12 +1540,17 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 
 		// Get the version
 		//const BYTE version = table->version_number;
-
-		log(3, true, 0, TEXT("EventID: %d (0x%x) NID: %d (0x%x)  SID: %d (0x%x)  uid = %I64d (0x%I64x)\n"), eventID, eventID, networkID, networkID, serviceID, serviceID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID);
+		g_eventTotalCounter++;
+		log(3, true, 0, TEXT("EventID: %d (0x%x) NID: %d (0x%x)  SID: %d (0x%x)  uid = %I64d (0x%I64x) Counter: %d/%d\n"), eventID, eventID, networkID, networkID, serviceID, serviceID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID, ((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID, g_eventTotalCounter, g_eventProcessedCounter);
 		hash_set<__int64>::const_iterator it = m_eitEventIDs.find(((__int64)eventID << 32) + ((__int64)serviceID << 16) + networkID); 
-		if(it == m_eitEventIDs.end() && IsSIDAllowed(serviceID) )
+
+		hash_map<UINT32, Service>::iterator it3 = encoderNetworkProvider.m_Services.find(NetworkProvider::getUniqueSID((USHORT)networkID, (USHORT)serviceID)); 
+
+		// We skip the event if the event is duplicated, if its on the blacklist of SIDs or the service is not on our DB
+		if(it == m_eitEventIDs.end() && IsSIDAllowed(serviceID) && it3 != encoderNetworkProvider.m_Services.end() )
 		{
 			log(3, false, 0, TEXT("EventID is NOT a duplicate\n"));
+			g_eventProcessedCounter++;
 
 			lock();
 
@@ -1704,7 +1723,7 @@ void EIT::parseEventDescriptors(const BYTE* inputBuffer,
 			//case 0x53: decodeSkyDescriptor2(inputBuffer, newEvent, 50); break;
 
 			default: 
-				log(3, false, 0, TEXT("Unkown descriptor tag 0x%x\n"), generalDescriptor->descriptor_tag);
+				//log(3, false, 0, TEXT("Unkown descriptor tag 0x%x\n"), generalDescriptor->descriptor_tag);
 				break;
 		}
 
@@ -1722,6 +1741,7 @@ void EIT::ResetEventVars(EITEvent* newEvent) {
 	newEvent->HD = false;
 	newEvent->stereo = false;
 	newEvent->CC = false;
+	newEvent->isNew = false;
 }
 
 void EIT::decodeSkyDescriptor(const BYTE* inputBuffer, EITEvent* newEvent, int length) 
@@ -1772,6 +1792,7 @@ void EIT::decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent
 
 	// Sky seems to have these characters as some sort of delimiter
 	eventText = ReplaceAll(eventText, "", "");
+	eventText = ReplaceLatinChars(eventText);
 
 	// log the title of the event
 	log(3, false, 0, TEXT("\tTitle: !%s!\n"), eventText.c_str());
@@ -1787,6 +1808,7 @@ void EIT::decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent
 
 	// Sky seems to have these characters as some sort of delimiter
 	descriptionText = ReplaceAll(descriptionText, "", "");
+	descriptionText = ReplaceLatinChars(descriptionText);
 
 	unsigned long ISO_639_language_code = (shortDescription->lang_code1<<16) + (shortDescription->lang_code2<<8) + shortDescription->lang_code3;
 
@@ -1954,7 +1976,7 @@ void EIT::decodeContentDescriptor (const BYTE* inputBuffer, EITEvent* newEvent)
 			return;
 
 		case(EIT_PROVIDER_SKY):
-			decodeContentDescriptorSky(inputBuffer,newEvent);
+			//decodeContentDescriptorSky(inputBuffer,newEvent);
 			return;
 
 	}
@@ -2555,7 +2577,7 @@ void EIT::decodeDishShortDescription(const BYTE* inputBuffer, int tnum, EITEvent
 		// Get rid of annoying carriage returns
 		descriptionText = ReplaceAll(descriptionText, "\r", " ");
 
-		// We check if we need to remove strings from the long description acording to the EIT.ini
+		// We check if we need to remove strings from the short description acording to the EIT.ini
 		if(descriptionText.length()>0 && g_filterText.size()>0) {
 			for(unsigned int i=0;i<g_filterText.size();i++) {
 				descriptionText = ReplaceAll(descriptionText, g_filterText[i], "");
@@ -2597,9 +2619,12 @@ void EIT::determineProgramCapabilities(string descriptionText, EITEvent* newEven
     found = descriptionText.find("(HD)");
     if (found!=string::npos)
 		newEvent->HD = true;
-	else 
-		newEvent->HD = false;
 	
+    found = descriptionText.find("New.");
+    if (found!=string::npos)
+		newEvent->isNew = true;
+	
+
 	found = descriptionText.find("(CC)");
     if (found!=string::npos)
 		newEvent->CC = true;
@@ -2904,6 +2929,8 @@ bool EIT::OpenEitEventFile(bool read)
 // Close the temporary file
 void EIT::CloseEitEventFile()
 {
+	log(3, true, 0, TEXT("Event Count Save to Temp: %d\n"), m_eventsCount);	
+	m_eventsCount = 0;
 	string fileName = m_SaveXmltvFileLocation + "\\eitEventTemp.txt";
 	fclose(m_eitEventFile);
 }
@@ -2919,11 +2946,6 @@ void EIT::DeleteEitEventFile()
 bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 {
 	
-	// Only use events for ONIDs we care about
-	if(!g_pConfiguration->includeONIDs() || g_pConfiguration->includeONID((USHORT)rec->ONID))
-	{
-		if(!g_pConfiguration->excludeONID((USHORT)rec->ONID))
-		{
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->eventID);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->SID);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->ONID);
@@ -2951,6 +2973,7 @@ bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->stereo);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->CC);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->HD);
+			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->isNew);
 			_ftprintf(m_eitEventFile, TEXT("%u\n"), rec->vecSubtitles.size());
 			EITEvent::ivecSubtitles it2 = rec->vecSubtitles.begin();
 			for (it2 = rec->vecSubtitles.begin(); it2 != rec->vecSubtitles.end(); ++it2)
@@ -2978,8 +3001,6 @@ bool EIT::WriteEitEventRecord(struct EITEvent *rec)
 			}
 			
 			m_eventsCount++;
-		}
-	}
 
 	return true;
 }
@@ -3122,7 +3143,13 @@ bool EIT::ReadNextEitEventRecord(EITEvent* rec)
 		rec->HD = false;
 	else
 		rec->HD = (atoi(buffer) == 0) ? false : true;
-	
+
+	if(fgets(buffer, 1024, m_eitEventFile) == NULL)
+		rec->isNew = false;
+	else
+		rec->isNew = (atoi(buffer) == 0) ? false : true;
+
+
 	int count = 0;
 	if(fgets(buffer, 1024, m_eitEventFile) != NULL)
 		count = atoi(buffer);
