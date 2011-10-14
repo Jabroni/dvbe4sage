@@ -470,13 +470,9 @@ void EITtimer::RealEitCollectionCallback()
 				time(&now);
 				time(&m_Time);
 
-				// Allow for collection of the data.. we give it 30 mins time in case Sage needs time processing the current EIT entries for the next provider
+				// Allow for collection of the data.. we give it 3 times the capture minutes
 				if(m_SageEitIP.length() >0 ) {
-					while(difftime(now, m_Time) < ((m_CollectionDurationMinutes+30) * 60))
-					{
-						Sleep(10000);
-						time(&now);
-					} 
+					Sleep((m_CollectionDurationMinutes * 3 ) * 60);
 				}
 
 				
@@ -490,6 +486,18 @@ void EITtimer::RealEitCollectionCallback()
 			if(m_EitTimerThreadCanEnd == true)
 				return;			
 		}
+
+		// If debug flag is set, move the next run time now+2 minutes
+		if(m_debugEpg == 1) {
+			time_t rawtime;
+			time ( &rawtime );
+			struct tm timeinfo;
+			localtime_s (  &timeinfo, &rawtime );
+		
+			m_CollectionTimeHour = timeinfo.tm_hour;
+			m_CollectionTimeMin = timeinfo.tm_min + 2;
+		}
+
 	}
 }
 
@@ -506,16 +514,21 @@ bool EITtimer::SendSocketCommand(char *command)
 	log(3, true, 0, TEXT("EIT Timer is attempting to send the following command to DVBE4SAGE:\n"));
 	log(3, false, 0, TEXT("%s\n"), command);
 
-    if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET)
+	if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET) {
+		log(3, true, 0, TEXT("Socket Error: Invalid Socket\n"));
         return false; 
+	}
 
-    if (connect(s, (SOCKADDR *)&target, sizeof(target)) == SOCKET_ERROR)
+	if (connect(s, (SOCKADDR *)&target, sizeof(target)) == SOCKET_ERROR) {
+		log(3, true, 0, TEXT("Socket Error: Socket Error\n"));
         return false; 
+	}
 	
 	if(send(s, command, strlen(command), 0) == SOCKET_ERROR)
 	{
 		shutdown(s, SD_SEND);
 		closesocket(s);
+		log(3, true, 0, TEXT("Socket Error: Socket Error2\n"));
         return false; 
 	}
 
@@ -941,11 +954,15 @@ void EIT::sendToSage(int onid, bool savefile)
 	log(3, true, 0, TEXT("EIT is attempting to send EPG to SAGETV\n"));
 	
 	
-    if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET)
+	if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET) {
+		log(3, true, 0, TEXT("SendToSage :: Invalid Socket\n"));
         return ;
+	}
 
-    if (connect(s, (SOCKADDR *)&target, sizeof(target)) == SOCKET_ERROR)
+	if (connect(s, (SOCKADDR *)&target, sizeof(target)) == SOCKET_ERROR) {
+		log(3, true, 0, TEXT("SendToSage :: Socket Error\n"));
         return ;
+	}
 	
 	
 	
@@ -1030,9 +1047,8 @@ void EIT::sendToSage(int onid, bool savefile)
 			}
 
 			int firstAired = 0; // 0 = new
-			if(currentRecord.year != 0)
+			if(currentRecord.year > 1900 && currentRecord.year < 2050)
 					firstAired = currentRecord.year;
-
 			
 			int flag_lang = 0; //Detailed rating flag for Language ("1" or "0").
 			if(currentRecord.mpaaAdvisory & 0x02 || currentRecord.vchipAdvisory & 0x10)
@@ -1663,6 +1679,8 @@ void EIT::parseEITTable(const eit_t* const table, int remainingLength)
 				// Add the newly created event to the list
 				WriteEitEventRecord(&newEvent);
 				
+				newEvent.vecLanguages.clear();
+
 				unlock();
 			}
 		}
@@ -1783,7 +1801,12 @@ void EIT::decodeShortEventDescriptor(const BYTE* inputBuffer, EITEvent* newEvent
 	const descr_short_event_t* const shortDescription = CastShortEventDescriptor(inputBuffer);
 
 	// Let's see first what language it is in
-	const std::string language((const char*)inputBuffer + DESCR_GEN_LEN, 3);
+	const std::string tempstr((const char*)inputBuffer + DESCR_GEN_LEN, 3);
+
+	// NULL terminate the language
+	char tempBuf[4];
+	sprintf_s(tempBuf,sizeof(tempBuf), "%.3s", tempstr.c_str());
+	const std::string language = tempBuf;
 
 	// Decompress it
 	CAutoString buffer(shortDescription->event_name_length + 10);
