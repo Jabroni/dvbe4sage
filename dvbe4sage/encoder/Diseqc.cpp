@@ -280,13 +280,11 @@ bool DiSEqC::SendRawDiseqcCommandToDriver(IKsPropertySet* ksTunerPropSet, DVBFil
 		{
 			pBDADiseqCommand->put_EnableDiseqCommands(TRUE);
 			pBDADiseqCommand->put_DiseqUseToneBurst(TRUE);
-			for(int i = 0; i <= m_diseqcRepeats; i++)
+			pBDADiseqCommand->put_DiseqRepeats(m_diseqcRepeats);
+			if (FAILED(pBDADiseqCommand->put_DiseqSendCommand(requestID, commandLength, command)))
 			{
-				if (FAILED(pBDADiseqCommand->put_DiseqSendCommand(requestID, commandLength, command)))
-				{
-					log(3, false, 0, TEXT("Diseqc send failed.\n"));
-					return false;
-				}
+				log(3, false, 0, TEXT("Diseqc send failed.\n"));
+				return false;
 			}
 
 			log(3, false, 0, TEXT("Diseqc send succeeded.\n"));
