@@ -13,6 +13,7 @@ m_latitude(0.0),
 m_longitude(0.0),
 m_diseqcRepeats(0),
 m_MovementTimeSec(15),
+m_DelayAfterSend(100),
 m_currentOrbitalLocation(-1.0),
 m_CurrentPosition(-1)
 {
@@ -80,6 +81,10 @@ void DiSEqC::ParseIniFile(void)
 
 			m_MovementTimeSec = atoi(CIniFile::GetValue("MovementTimeSec", sections[i], fileName).c_str());
 			log(0, false, 0, TEXT("MovementTimeSec = %hu\n"), m_MovementTimeSec);
+
+			m_DelayAfterSend = atoi(CIniFile::GetValue("DelayAfterSend", sections[i], fileName).c_str());
+			log(0, false, 0, TEXT("DelayAfterSend = %hu\n"), m_DelayAfterSend);
+
 			log(0, false, 0, TEXT("\n"));
 		}
 		else
@@ -288,6 +293,10 @@ bool DiSEqC::SendRawDiseqcCommandToDriver(IKsPropertySet* ksTunerPropSet, DVBFil
 			}
 
 			log(3, false, 0, TEXT("Diseqc send succeeded.\n"));
+
+			if(m_DelayAfterSend > 0)
+				Sleep(m_DelayAfterSend * 1000);
+
 			return true;
 		}
 	}
@@ -339,9 +348,12 @@ bool DiSEqC::SendCustomGenpixCommand(IKsPropertySet* ksTunerPropSet, DVBFilterGr
 
 	if (FAILED(hr))
 	{
-		log(3, true, 0, TEXT("Genpix DiSEqC Get failed. Error 0x%.08X\n"), hr);
+		log(3, true, 0, TEXT("Genpix DiSEqC Set failed. Error 0x%.08X\n"), hr);
 		return FALSE;
 	}
+
+	if(m_DelayAfterSend > 0)
+		Sleep(m_DelayAfterSend * 1000);
 
 	return true;
 }
@@ -379,9 +391,12 @@ bool DiSEqC::SendCustomProf7500Command(IKsPropertySet* ksTunerPropSet, DVBFilter
 
 	if (FAILED(hr))
 	{
-		log(3, true, 0, TEXT("Prof 7500 DiSEqC Get failed. Error 0x%.08X"), hr);
+		log(3, true, 0, TEXT("Prof 7500 DiSEqC Set failed. Error 0x%.08X"), hr);
 		return false;
 	}
+
+	if(m_DelayAfterSend > 0)
+		Sleep(m_DelayAfterSend * 1000);
 
 	return true;
 }
@@ -415,6 +430,9 @@ bool DiSEqC::SendCustomTechnotrendCommand(IKsPropertySet* ksTunerPropSet, DVBFil
 			log(3, true, 0, TEXT("Technotrend bdaapiSetDiSEqCMsg failed."));
 			return false;
 		}
+
+		if(m_DelayAfterSend > 0)
+			Sleep(m_DelayAfterSend * 1000);
 
 		return true;
 	}

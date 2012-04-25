@@ -83,4 +83,5 @@ private:
 	int m_MovementTimeSec;
 	double m_currentOrbitalLocation;
 	int m_CurrentPosition;
+	int m_DelayAfterSend;
 };
